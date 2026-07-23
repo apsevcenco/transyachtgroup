@@ -1,0 +1,85 @@
+Create a premium luxury website for a brand called "TRANSYACHTGROUP" with the slogan:
+
+"Art of Unlimited Mobility"
+
+The platform offers high-end yacht and luxury car rentals. The website should feel like an exclusive private mobility club, not a typical rental marketplace.
+
+STYLE & DESIGN:
+- Dark luxury aesthetic (black, deep graphite backgrounds)
+- Gold accents (#C8A96A) for highlights, buttons, and typography
+- Minimalistic, elegant, high-end UI (inspired by brands like Rolls-Royce, Aman, Ferrari)
+- Smooth animations (fade, slow transitions, subtle motion)
+- Use large cinematic images (yachts, luxury cars, ocean, night driving)
+- Lots of spacing, clean layout, no clutter
+
+STRUCTURE:
+
+1. HERO SECTION:
+- Fullscreen background (video or image: yacht + luxury car transition)
+- Centered logo text: "TRANSYACHTGROUP"
+- Subtitle: "Art of Unlimited Mobility"
+- Tagline: "Where ocean meets asphalt. Where movement becomes art."
+- Two CTA buttons:
+  - "Explore Collection"
+  - "Instant Request"
+
+2. CATEGORY SECTION (Split layout):
+- Two equal sections:
+
+LEFT:
+Title: "Ocean Prestige"
+Subtitle: "Curated fleet of exceptional yachts"
+
+RIGHT:
+Title: "Road Sovereign"
+Subtitle: "Elite automotive experiences without limits"
+
+- Add hover animations (wave motion for yachts, light/speed effect for cars)
+
+3. COLLECTION / SHOWCASE:
+- Grid layout of vehicles and yachts
+- Each card includes:
+  - Image
+  - Name (e.g., Lamborghini Urus, Sunseeker 28m)
+  - Price (or "On Request")
+  - Button: "Request" or "View Details"
+
+4. LIFESTYLE SECTION:
+- Large cinematic image (yacht + luxury car)
+- Text:
+  "Not transportation. A statement."
+
+5. BOOKING FLOW:
+- Simple 3-step explanation:
+  1. Select
+  2. Request
+  3. Confirm
+
+- Include option for WhatsApp / direct contact
+
+6. EXCLUSIVITY SECTION:
+- Text:
+  "Some assets are not publicly listed. Private access available upon request."
+
+7. FOOTER:
+- Minimal
+- Contact info
+- Logo
+- Dark luxury styling
+
+FUNCTIONALITY:
+- Responsive design (mobile + desktop)
+- Smooth scrolling
+- Hover effects on buttons and cards
+- Basic request form (name, contact, request details)
+- Optional: modal popup for booking request
+
+TECH STACK:
+- Use modern frontend (React or Next.js preferred)
+- Tailwind CSS for styling
+- Clean component-based structure
+
+GOAL:
+The website must feel premium, emotional, and exclusive — like a luxury lifestyle brand, not a rental catalog.
+
+Focus on visuals, spacing, and atmosphere more than text.

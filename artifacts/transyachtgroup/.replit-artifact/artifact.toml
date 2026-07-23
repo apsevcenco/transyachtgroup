@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "TransYacht Group"
+version = "1.0.0"
+id = "artifacts/transyachtgroup"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22314
+
+[services.development]
+run = "pnpm --filter @workspace/transyachtgroup run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/transyachtgroup", "run", "build" ]
+publicDir = "artifacts/transyachtgroup/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22314"
+BASE_PATH = "/"

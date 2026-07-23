@@ -1,0 +1,477 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: 'Porter FT';
+  src: url('/fonts/PorterFT-Regular_1774708404403.woff2') format('woff2'),
+       url('/fonts/PorterFT-Regular_1774708404403.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Porter FT';
+  src: url('/fonts/PorterFT-SemiBold_1774708404404.woff2') format('woff2'),
+       url('/fonts/PorterFT-SemiBold_1774708404404.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Wix MadeFor Display';
+  src: url('/fonts/WixMadeforDisplay-Regular_1774708404406.woff2') format('woff2'),
+       url('/fonts/WixMadeforDisplay-Regular_1774708404406.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Wix MadeFor Display';
+  src: url('/fonts/WixMadeforDisplay-SemiBold_1774708404407.woff2') format('woff2'),
+       url('/fonts/WixMadeforDisplay-SemiBold_1774708404407.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Wix MadeFor Display';
+  src: url('/fonts/WixMadeforDisplay-Bold_1774708404405.woff2') format('woff2'),
+       url('/fonts/WixMadeforDisplay-Bold_1774708404405.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Kalissa: small subset (Latin + Latin-1) loaded first for hero slogan,
+   full font loaded only for chars outside subset (e.g. CMS content). */
+@font-face {
+  font-family: 'Kalissa';
+  src: url('/fonts/KalissaRegular.subset.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0020-007E, U+00A0-00FF, U+2013-2014, U+2018-2019, U+201C-201D, U+2026;
+}
+
+@font-face {
+  font-family: 'Kalissa';
+  src: url('/fonts/KalissaRegular.woff2') format('woff2'),
+       url('/fonts/KalissaRegular.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Antro Vectra';
+  src: url('/fonts/AntroVectraBolder.woff2') format('woff2'),
+       url('/fonts/AntroVectraBolder.otf') format('opentype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-card-border: hsl(var(--card-border));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-gold: hsl(var(--gold));
+  --color-gold-light: hsl(var(--gold-light));
+  --color-gold-dark: hsl(var(--gold-dark));
+
+  --font-sans: 'Wix MadeFor Display', sans-serif;
+  --font-serif: 'Porter FT', serif;
+  --font-display: 'Porter FT', serif;
+  --font-allison: 'Kalissa', cursive;
+  --font-antro: 'Antro Vectra', cursive;
+  --font-porter: 'Porter FT', serif;
+  --font-wix: 'Wix MadeFor Display', sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  
+  --animate-fade-in: fade-in 1s ease-out forwards;
+  --animate-fade-up: fade-up 1s ease-out forwards;
+  --animate-shimmer: shimmer 3s ease-in-out infinite;
+  --animate-glow-pulse: glow-pulse 4s ease-in-out infinite;
+  --animate-float: float 6s ease-in-out infinite;
+}
+
+:root {
+  --background: 0 0% 3%;
+  --foreground: 0 0% 98%;
+  
+  --card: 0 0% 6%;
+  --card-foreground: 0 0% 98%;
+  --card-border: 0 0% 12%;
+  
+  --popover: 0 0% 6%;
+  --popover-foreground: 0 0% 98%;
+  
+  --primary: 43 67% 55%;
+  --primary-foreground: 0 0% 4%;
+  
+  --secondary: 0 0% 12%;
+  --secondary-foreground: 0 0% 98%;
+  
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 65%;
+  
+  --accent: 43 67% 55%;
+  --accent-foreground: 0 0% 4%;
+  
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  
+  --border: 0 0% 15%;
+  --input: 0 0% 12%;
+  --ring: 43 67% 55%;
+  
+  --gold: 43 67% 55%;
+  --gold-light: 48 72% 63%;
+  --gold-dark: 38 60% 40%;
+  
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground selection:bg-gold/30 selection:text-white;
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+    &::-webkit-scrollbar-track {
+      background: hsl(var(--background));
+    }
+    &::-webkit-scrollbar-thumb {
+      background: hsl(var(--gold) / 0.2);
+      border-radius: 3px;
+    }
+    &::-webkit-scrollbar-thumb:hover {
+      background: hsl(var(--gold) / 0.5);
+    }
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif tracking-tight text-foreground;
+  }
+}
+
+@layer utilities {
+  .text-gradient-gold {
+    background: linear-gradient(135deg, hsl(48 72% 63%), hsl(43 67% 55%), hsl(38 60% 40%), hsl(43 67% 55%), hsl(48 72% 63%));
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer-text 4s ease-in-out infinite;
+  }
+
+  .text-gradient-gold-static {
+    background: linear-gradient(135deg, hsl(48 80% 68%), hsl(43 67% 55%), hsl(35 55% 42%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .glass-panel {
+    @apply bg-background/40 backdrop-blur-xl border border-white/[0.06];
+    box-shadow: 
+      0 0 0 1px rgba(255,255,255,0.03) inset,
+      0 20px 60px -15px rgba(0,0,0,0.5);
+  }
+
+  .hover-glow-gold {
+    @apply transition-all duration-700;
+    &:hover {
+      box-shadow: 0 0 40px -8px rgba(212,168,67,0.25), 0 0 80px -20px rgba(212,168,67,0.1);
+      border-color: rgba(212,168,67,0.4);
+    }
+  }
+
+  .gold-shimmer-border {
+    position: relative;
+    &::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(135deg, transparent 20%, hsl(43 67% 55% / 0.4) 40%, hsl(48 72% 63% / 0.6) 50%, hsl(43 67% 55% / 0.4) 60%, transparent 80%);
+      background-size: 300% 300%;
+      animation: border-shimmer 6s ease-in-out infinite;
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+    }
+  }
+
+  .cinematic-vignette {
+    box-shadow: inset 0 0 150px 60px rgba(0,0,0,0.7);
+  }
+
+  .gold-line {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, hsl(43 67% 55% / 0.5), hsl(48 72% 63% / 0.8), hsl(43 67% 55% / 0.5), transparent);
+  }
+
+  .gold-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: hsl(43 67% 55%);
+    box-shadow: 0 0 8px 2px hsl(43 67% 55% / 0.4);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes shimmer-text {
+  0% { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(1.05); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes border-shimmer {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+@keyframes slow-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(30px, -20px) scale(1.02); }
+  50% { transform: translate(-10px, 15px) scale(0.98); }
+  75% { transform: translate(-25px, -10px) scale(1.01); }
+}
+
+@keyframes grain {
+  0%, 100% { transform: translate(0,0); }
+  10% { transform: translate(-5%,-10%); }
+  20% { transform: translate(-15%,5%); }
+  30% { transform: translate(7%,-25%); }
+  40% { transform: translate(-5%,25%); }
+  50% { transform: translate(-15%,10%); }
+  60% { transform: translate(15%,0%); }
+  70% { transform: translate(0%,15%); }
+  80% { transform: translate(3%,35%); }
+  90% { transform: translate(-10%,10%); }
+}
+
+.hero-bg-mask {
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, black 28%, transparent 68%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, black 28%, transparent 68%);
+}
+
+@media (max-width: 767px) {
+  .hero-bg-mask {
+    mask-image: radial-gradient(ellipse 75% 60% at 50% 45%, black 28%, transparent 68%);
+    -webkit-mask-image: radial-gradient(ellipse 75% 60% at 50% 45%, black 28%, transparent 68%);
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+.ProseMirror {
+  outline: none;
+  min-height: 150px;
+}
+.ProseMirror p {
+  margin: 0.4em 0;
+}
+.ProseMirror h2 {
+  font-size: 1.4em;
+  font-weight: 600;
+  margin: 0.6em 0 0.3em;
+}
+.ProseMirror h3 {
+  font-size: 1.15em;
+  font-weight: 600;
+  margin: 0.5em 0 0.2em;
+}
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.5em;
+  margin: 0.4em 0;
+}
+.ProseMirror blockquote {
+  border-left: 3px solid hsl(43, 67%, 55%);
+  padding-left: 1em;
+  margin: 0.5em 0;
+  opacity: 0.8;
+}
+
+.rich-text-preview p {
+  margin: 0.3em 0;
+}
+.rich-text-preview h2 {
+  font-size: 1.2em;
+  font-weight: 600;
+}
+.rich-text-preview h3 {
+  font-size: 1.05em;
+  font-weight: 600;
+}
+.rich-text-preview ul,
+.rich-text-preview ol {
+  padding-left: 1.5em;
+}
+.rich-text-preview blockquote {
+  border-left: 2px solid hsl(43, 67%, 55%);
+  padding-left: 0.8em;
+  opacity: 0.8;
+}
+
+.rich-text-content p {
+  margin-bottom: 0.8em;
+}
+.rich-text-content p:last-child {
+  margin-bottom: 0;
+}
+[style*="text-align: left"] { text-align: left !important; }
+[style*="text-align: center"] { text-align: center !important; }
+[style*="text-align: right"] { text-align: right !important; }
+[style*="text-align: justify"] { text-align: justify !important; }
+.rich-text-content h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  margin-bottom: 0.5em;
+}
+.rich-text-content h3 {
+  font-size: 1.2em;
+  font-weight: 600;
+  margin-bottom: 0.4em;
+}
+.rich-text-content ul,
+.rich-text-content ol {
+  padding-left: 1.5em;
+  margin-bottom: 0.8em;
+}
+.rich-text-content blockquote {
+  border-left: 3px solid hsl(43, 67%, 55%);
+  padding-left: 1em;
+  margin-bottom: 0.8em;
+  opacity: 0.85;
+}
+
+.font-porter {
+  font-family: 'Porter FT', serif;
+}
+.font-wix {
+  font-family: 'Wix MadeFor Display', sans-serif;
+}
+
+/* Vehicle description / fullDescription content is sanitized rich text that
+   may carry inline font-family/font-size/color/text-align styles from
+   imported sources or the admin rich-text editor (see CmsContent's DOMPurify
+   ALLOWED_CSS_PROPERTIES). Force it to always match the surrounding
+   element's own styling instead of whatever the source embedded. */
+.vehicle-description :where(span, p, div, strong, em, u, s) {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  color: inherit !important;
+  text-align: inherit !important;
+}
+
+/* Price display (pricePerDay/pricePerThreeDays/pricePerMonth) is preserved
+   via wrapWithOriginalStyle/withOriginalStyle, which keeps whatever font the
+   admin's rich-text editor happened to embed. For manually-entered vehicles
+   that's normally Porter FT, but scraped/imported prices are plain numbers
+   with no embedded style at all, and any manually-entered price with a
+   different embedded font would slip through too. Force Porter FT
+   unconditionally, regardless of embedded content. */
+.vehicle-price,
+.vehicle-price :where(span, p, div, strong, em, u, s) {
+  font-family: 'Porter FT', serif !important;
+}
+
+.about-hero-img {
+}
+.about-hero-gradient-top {
+  background: linear-gradient(to top, rgba(0,0,0,0.45), rgba(0,0,0,0.05), rgba(0,0,0,0.2));
+}
+.about-hero-blur {
+  box-shadow: inset 0 0 40px 25px hsl(0 0% 4%);
+}
+
+@media (min-width: 1024px) {
+  .about-hero-img {
+  }
+  .about-hero-gradient-top {
+    background: linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0.3), rgba(0,0,0,0.5));
+  }
+  .about-hero-blur {
+    box-shadow: inset 0 0 100px 70px hsl(0 0% 4%);
+  }
+}
+.spec-label {
+  font-family: 'Porter FT', serif;
+  font-size: 9px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.spec-value {
+  font-family: 'Porter FT', serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.82);
+}

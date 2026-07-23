@@ -1,0 +1,17 @@
+packages:
+  "framer-motion": "For premium cinematic scroll animations and reveals"
+  "clsx": "For conditional class merging in reusable components"
+  "tailwind-merge": "For merging tailwind classes effectively"
+
+images:
+  - path: "artifacts/transyachtgroup/public/images/hero-bg.png"
+    description: "Ultra dark, cinematic abstract background with very subtle, elegant gold dust or fine light streaks, deep obsidian black base, premium luxury feel"
+    aspect_ratio: "16:9"
+  - path: "artifacts/transyachtgroup/public/images/lifestyle-bg.png"
+    description: "Dark, moody out-of-focus background showing the silhouette of a luxury yacht on dark water at night with minimal warm gold lighting reflections"
+    aspect_ratio: "16:9"
+
+notes:
+  - Single page landing website, using anchor links for navigation
+  - Form submission will be simulated with a toast notification
+  - The application is enforced to be in dark mode

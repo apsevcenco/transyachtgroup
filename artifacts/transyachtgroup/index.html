@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en" style="height: 100%">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>TRANSYACHTGROUP — Art of Unlimited Mobility</title>
+
+  <meta name="description" content="Luxury yacht and car rentals. Private access. Exclusive mobility experience.">
+  <meta name="theme-color" content="#0a0a0a">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="TRANSYACHTGROUP">
+  <meta property="og:description" content="Art of Unlimited Mobility">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/opengraph.jpg">
+
+  <!-- Critical font preload (only the fonts used above the fold) -->
+  <link rel="preload" as="font" type="font/woff2" href="/fonts/AntroVectraBolder.woff2" crossorigin>
+  <link rel="preload" as="font" type="font/woff2" href="/fonts/PorterFT-Regular_1774708404403.woff2" crossorigin>
+  <link rel="preload" as="font" type="font/woff2" href="/fonts/WixMadeforDisplay-Regular_1774708404406.woff2" crossorigin>
+
+  <!-- Hero image preload (mobile + desktop via media query) -->
+  <link rel="preload" as="image" href="/images/hero-bg-mobile.webp" type="image/webp" media="(max-width: 767px)" fetchpriority="high">
+  <link rel="preload" as="image" href="/images/hero-bg.webp" type="image/webp" media="(min-width: 768px)" fetchpriority="high">
+
+  <!-- Logo + favicon -->
+  <link rel="preload" as="image" href="/images/logo-transparent.png">
+  <link rel="icon" href="/images/logo-transparent.png">
+</head>
+
+<body style="height:100%; margin:0; background:#0a0a0a; color:white;">
+  <div id="root" style="height: 100%">
+    <div id="initial-loader" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#0a0a0a;color:#d4a843;font-family:Georgia,serif;letter-spacing:0.3em;font-size:13px;text-align:center;padding:24px;">
+      <div>TRANSYACHT GROUP</div>
+      <div style="width:40px;height:1px;background:#d4a843;opacity:0.5;"></div>
+      <div style="font-size:10px;opacity:0.4;letter-spacing:0.2em;">LOADING</div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>

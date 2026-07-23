@@ -1,0 +1,50 @@
+2026-05-11T17:15:35.205248037Z {"level":30,"time":1778519735205,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-57f8f9b448-vjvl8","req":{"id":41,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+2026-05-11T17:15:40.205824474Z {"level":30,"time":1778519740205,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-57f8f9b448-vjvl8","req":{"id":42,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":0,"msg":"request completed"}
+2026-05-11T17:15:45.20553335Z {"level":30,"time":1778519745205,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-57f8f9b448-vjvl8","req":{"id":43,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+2026-05-11T17:15:49.981794563Z {"level":30,"time":1778519749981,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-57f8f9b448-vjvl8","req":{"id":44,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+2026-05-11T17:15:50.205726016Z {"level":30,"time":1778519750205,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-57f8f9b448-vjvl8","req":{"id":45,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":0,"msg":"request completed"}
+2026-05-11T17:15:55.205253391Z {"level":30,"time":1778519755205,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-57f8f9b448-vjvl8","req":{"id":46,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":0,"msg":"request completed"}
+2026-05-11T17:15:56.189819901Z ==> Deploying...
+2026-05-11T17:15:56.41252939Z ==> Setting WEB_CONCURRENCY=1 by default, based on available CPUs in the instance
+2026-05-11T17:16:00.205318661Z {"level":30,"time":1778519760205,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-57f8f9b448-vjvl8","req":{"id":47,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+2026-05-11T17:16:05.206054301Z {"level":30,"time":1778519765205,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-57f8f9b448-vjvl8","req":{"id":48,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+2026-05-11T17:16:10.205172565Z {"level":30,"time":1778519770204,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-57f8f9b448-vjvl8","req":{"id":49,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":0,"msg":"request completed"}
+2026-05-11T17:16:15.205195983Z {"level":30,"time":1778519775204,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-57f8f9b448-vjvl8","req":{"id":50,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":0,"msg":"request completed"}
+2026-05-11T17:16:19.981289341Z {"level":30,"time":1778519779981,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-57f8f9b448-vjvl8","req":{"id":51,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+2026-05-11T17:16:20.20582085Z {"level":30,"time":1778519780205,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-57f8f9b448-vjvl8","req":{"id":52,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":0,"msg":"request completed"}
+2026-05-11T17:16:21.905105051Z ==> Running 'pnpm --filter @workspace/api-server run start'
+2026-05-11T17:16:22.446674774Z 
+2026-05-11T17:16:22.446702595Z > @workspace/api-server@0.0.0 start /opt/render/project/src/artifacts/api-server
+2026-05-11T17:16:22.446711175Z > node --enable-source-maps ./dist/index.mjs
+2026-05-11T17:16:22.446713765Z 
+2026-05-11T17:16:22.684288151Z [dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+2026-05-11T17:16:22.810718008Z {"level":30,"time":1778519782810,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-58958c97ff-lkgm8","port":10000,"msg":"Server listening"}
+2026-05-11T17:16:23.151204029Z {"level":30,"time":1778519783150,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-58958c97ff-lkgm8","req":{"id":1,"method":"HEAD","url":"/"},"res":{"statusCode":404},"responseTime":4,"msg":"request completed"}
+2026-05-11T17:16:25.20583359Z {"level":30,"time":1778519785205,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-57f8f9b448-vjvl8","req":{"id":53,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":0,"msg":"request completed"}
+2026-05-11T17:16:26.219495507Z {"level":30,"time":1778519786219,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-58958c97ff-lkgm8","req":{"id":2,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":2,"msg":"request completed"}
+2026-05-11T17:16:26.879520828Z {"level":30,"time":1778519786879,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-58958c97ff-lkgm8","req":{"id":3,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+2026-05-11T17:16:27.992600656Z ==> Your service is live 🎉
+2026-05-11T17:16:28.190509675Z ==> 
+2026-05-11T17:16:28.192084218Z ==> ///////////////////////////////////////////////////////////
+2026-05-11T17:16:28.193983282Z ==> 
+2026-05-11T17:16:28.196691979Z ==> Available at your primary URL https://transyacht-api.onrender.com
+2026-05-11T17:16:28.198370719Z ==> 
+2026-05-11T17:16:28.200136514Z ==> ///////////////////////////////////////////////////////////
+2026-05-11T17:16:28.472051699Z {"level":50,"time":1778519788471,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-57f8f9b448-vjvl8","err":{"type":"Error","message":"ENOENT: no such file or directory, stat '/opt/render/project/src/artifacts/api-server/artifacts/transyachtgroup/dist/public/index.html'","stack":"Error: ENOENT: no such file or directory, stat '/opt/render/project/src/artifacts/api-server/artifacts/transyachtgroup/dist/public/index.html'","errno":-2,"code":"ENOENT","syscall":"stat","path":"/opt/render/project/src/artifacts/api-server/artifacts/transyachtgroup/dist/public/index.html","expose":false,"statusCode":404,"status":404},"msg":"ENOENT: no such file or directory, stat '/opt/render/project/src/artifacts/api-server/artifacts/transyachtgroup/dist/public/index.html'"}
+2026-05-11T17:16:28.473000857Z {"level":30,"time":1778519788472,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-57f8f9b448-vjvl8","req":{"id":54,"method":"GET","url":"/"},"res":{"statusCode":404},"responseTime":14,"msg":"request completed"}
+2026-05-11T17:16:28.473460009Z clientIP="35.185.195.125" requestID="e4c54539-cb0f-4414" responseTimeMS=36 responseBytes=1117 userAgent="Go-http-client/2.0"
+2026-05-11T17:16:30.205595375Z {"level":30,"time":1778519790205,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-57f8f9b448-vjvl8","req":{"id":55,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+2026-05-11T17:16:31.879439179Z {"level":30,"time":1778519791879,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-58958c97ff-lkgm8","req":{"id":4,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+2026-05-11T17:16:35.205806759Z {"level":30,"time":1778519795205,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-57f8f9b448-vjvl8","req":{"id":56,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":0,"msg":"request completed"}
+2026-05-11T17:16:36.879442192Z {"level":30,"time":1778519796879,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-58958c97ff-lkgm8","req":{"id":5,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+2026-05-11T17:16:40.206597678Z {"level":30,"time":1778519800205,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-57f8f9b448-vjvl8","req":{"id":57,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":0,"msg":"request completed"}
+2026-05-11T17:16:41.88035022Z {"level":30,"time":1778519801880,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-58958c97ff-lkgm8","req":{"id":6,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+2026-05-11T17:16:45.20560654Z {"level":30,"time":1778519805205,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-57f8f9b448-vjvl8","req":{"id":58,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+2026-05-11T17:16:46.879200631Z {"level":30,"time":1778519806878,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-58958c97ff-lkgm8","req":{"id":7,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":0,"msg":"request completed"}
+2026-05-11T17:16:50.205809175Z {"level":30,"time":1778519810205,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-57f8f9b448-vjvl8","req":{"id":59,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":0,"msg":"request completed"}
+2026-05-11T17:16:51.879506662Z {"level":30,"time":1778519811879,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-58958c97ff-lkgm8","req":{"id":8,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+2026-05-11T17:16:55.205937517Z {"level":30,"time":1778519815205,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-57f8f9b448-vjvl8","req":{"id":60,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":0,"msg":"request completed"}
+2026-05-11T17:16:56.21862679Z {"level":30,"time":1778519816218,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-58958c97ff-lkgm8","req":{"id":9,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+2026-05-11T17:16:56.879967947Z {"level":30,"time":1778519816879,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-58958c97ff-lkgm8","req":{"id":10,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+2026-05-11T17:17:00.205028596Z {"level":30,"time":1778519820204,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-57f8f9b448-vjvl8","req":{"id":61,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":0,"msg":"request completed"}
+2026-05-11T17:17:01.879025894Z {"level":30,"time":1778519821878,"pid":83,"hostname":"srv-d774fiudqaus73e0t330-58958c97ff-lkgm8","req":{"id":11,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":0,"msg":"request completed"}
