@@ -8,10 +8,12 @@ const DEFAULT_CONTENT: Record<string, string> = {
   hero_title: "The Art of Unlimited\nMobility",
   hero_tagline: "Exquisite Cars · Superyachts · Pure Luxury",
   hero_subtitle: "Where ocean meets asphalt. Where movement becomes art.",
+  hero_background: "",
 
   about_title: "About Us",
   about_slogan: "The Art of\nExtraordinary Mobility",
   about_text: "TRANSYACHTGROUP was founded on a singular belief: that true luxury is not merely possessed — it is experienced. We are a private concierge house specializing in the curation of the world's finest superyachts and hypercars for those who accept nothing less than perfection.\n\nOur journey began in the heart of the Mediterranean, where a passion for maritime excellence and automotive artistry converged into a vision — to create a seamless bridge between the world's most extraordinary vessels and vehicles and the discerning individuals who deserve them.\n\nToday, we serve a private circle of clients across Europe, the Middle East, and Asia, delivering bespoke charter and rental experiences that transcend expectations. Every engagement is personal. Every detail, considered.",
+  about_background: "",
 
   yacht_section_title: "Ocean Prestige",
   yacht_section_subtitle: "Superyacht Collection",

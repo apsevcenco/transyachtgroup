@@ -41,6 +41,9 @@ export default function About() {
   const aboutTitle = content.about_title || "About Us";
   const slogan = content.about_slogan || DEFAULT_SLOGAN;
   const text = content.about_text || DEFAULT_TEXT;
+  const aboutBackground =
+    (content.about_background || "").trim() ||
+    `${import.meta.env.BASE_URL}images/hero-bg.jpg`;
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
@@ -63,7 +66,7 @@ export default function About() {
             >
               <div className="relative rounded-2xl overflow-hidden aspect-[4/3] lg:aspect-[3/4]">
                 <img
-                  src={`${import.meta.env.BASE_URL}images/hero-bg.jpg`}
+                  src={aboutBackground}
                   alt=""
                   className="w-full h-full object-cover about-hero-img"
                   style={{

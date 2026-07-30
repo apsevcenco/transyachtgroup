@@ -138,29 +138,40 @@ export default function Home() {
             <div
               className="hero-bg-mask relative w-[95vw] h-[95vh] md:w-[90vw] md:h-[82vh] max-w-[1300px] max-h-[850px]"
             >
-              <picture>
-                <source
-                  media="(max-width: 767px)"
-                  srcSet={`${import.meta.env.BASE_URL}images/hero-bg-mobile.webp`}
-                  type="image/webp"
-                />
-                <source
-                  media="(max-width: 767px)"
-                  srcSet={`${import.meta.env.BASE_URL}images/hero-bg-mobile.jpg`}
-                />
-                <source
-                  srcSet={`${import.meta.env.BASE_URL}images/hero-bg.webp`}
-                  type="image/webp"
-                />
+              {(siteContent.hero_background || "").trim() ? (
                 <img
-                  src={`${import.meta.env.BASE_URL}images/hero-bg.jpg`}
+                  src={siteContent.hero_background.trim()}
                   alt=""
                   className="w-full h-full object-cover"
                   {...({ fetchpriority: "high" } as any)}
                   decoding="async"
                   style={{ objectPosition: "35% 50%" }}
                 />
-              </picture>
+              ) : (
+                <picture>
+                  <source
+                    media="(max-width: 767px)"
+                    srcSet={`${import.meta.env.BASE_URL}images/hero-bg-mobile.webp`}
+                    type="image/webp"
+                  />
+                  <source
+                    media="(max-width: 767px)"
+                    srcSet={`${import.meta.env.BASE_URL}images/hero-bg-mobile.jpg`}
+                  />
+                  <source
+                    srcSet={`${import.meta.env.BASE_URL}images/hero-bg.webp`}
+                    type="image/webp"
+                  />
+                  <img
+                    src={`${import.meta.env.BASE_URL}images/hero-bg.jpg`}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    {...({ fetchpriority: "high" } as any)}
+                    decoding="async"
+                    style={{ objectPosition: "35% 50%" }}
+                  />
+                </picture>
+              )}
             </div>
           </div>
           <div className="hidden md:block absolute top-1/4 left-1/3 w-[600px] h-[600px] bg-gold/[0.07] rounded-full blur-[180px]" style={{ animation: 'glow-pulse 8s ease-in-out infinite' }} />

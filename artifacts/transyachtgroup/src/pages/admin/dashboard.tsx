@@ -2240,9 +2240,11 @@ function ContentTab({
     hero_title: "Hero Title (Slogan)",
     hero_tagline: "Hero Tagline",
     hero_subtitle: "Hero Subtitle",
+    hero_background: "Home Hero Background",
     about_title: "About Us — Title",
     about_slogan: "About Us — Slogan",
     about_text: "About Us — Main Text",
+    about_background: "About Page Background",
     yacht_section_title: "Yacht Section Title",
     yacht_section_subtitle: "Yacht Section Subtitle",
     yacht_section_desc: "Yacht Section Description",
@@ -2269,12 +2271,17 @@ function ContentTab({
     "phone_number",
     "whatsapp_number",
     "admin_email",
+    "hero_background",
+    "about_background",
     "yacht_section_bg",
     "car_section_bg",
     "office_photos",
   ]);
   const isBackgroundImageKey = (key: string) =>
-    key === "yacht_section_bg" || key === "car_section_bg";
+    key === "hero_background" ||
+    key === "about_background" ||
+    key === "yacht_section_bg" ||
+    key === "car_section_bg";
   const isPhotoArrayKey = (key: string) => key === "office_photos";
   const isRichText = (key: string) => !plainTextKeys.has(key);
 
@@ -2446,12 +2453,21 @@ function ContentTab({
   const translatable = (key: string) => !NON_TRANSLATABLE.has(key);
 
   const aboutKeys = new Set(["about_title", "about_slogan", "about_text"]);
+  const backgroundKeys = new Set([
+    "hero_background",
+    "about_background",
+    "yacht_section_bg",
+    "car_section_bg",
+  ]);
   const legalKeys = new Set(["privacy_policy_content", "legal_notice_content"]);
 
   const aboutItems = content.filter((i) => aboutKeys.has(i.key));
   const legalItems = content.filter((i) => legalKeys.has(i.key));
   const otherItems = content.filter(
-    (i) => !aboutKeys.has(i.key) && !legalKeys.has(i.key),
+    (i) =>
+      !aboutKeys.has(i.key) &&
+      !legalKeys.has(i.key) &&
+      !backgroundKeys.has(i.key),
   );
 
   const translationCount = (item: ContentItem) => {
@@ -2732,29 +2748,23 @@ function ContentTab({
       <h2 className="font-serif text-xl text-white mb-6">Site Text Content</h2>
       <div className="space-y-3">
         {otherItems
-          .filter(
-            (item) =>
-              item.key !== "yacht_section_bg" && item.key !== "car_section_bg",
-          )
+          .filter((item) => !backgroundKeys.has(item.key))
           .map(renderContentItem)}
       </div>
 
       {/* 👉 НОВЫЙ БЛОК */}
       <div className="mt-10">
         <h2 className="font-serif text-xl text-white mb-2">
-          Category Backgrounds
+          Page & Category Backgrounds
         </h2>
         <p className="text-white/30 text-xs mb-4">
-          Background images for yacht and car sections
+          Background images for the home hero, About page, yacht section and
+          car section
         </p>
 
         <div className="space-y-3">
           {content
-            .filter(
-              (item) =>
-                item.key === "yacht_section_bg" ||
-                item.key === "car_section_bg",
-            )
+            .filter((item) => backgroundKeys.has(item.key))
             .map(renderContentItem)}
         </div>
       </div>
