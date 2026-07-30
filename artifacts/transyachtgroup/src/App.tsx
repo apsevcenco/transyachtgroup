@@ -1,4 +1,11 @@
-import { lazy, Suspense, useEffect } from "react";
+import {
+  Component,
+  lazy,
+  Suspense,
+  useEffect,
+  type ErrorInfo,
+  type ReactNode,
+} from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -26,6 +33,47 @@ const NotFound = lazy(() => import("@/pages/not-found"));
 
 const queryClient = new QueryClient();
 
+class AppErrorBoundary extends Component<
+  { children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("Application render error", error, info.componentStack);
+  }
+
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <div
+        role="alert"
+        className="min-h-screen bg-[hsl(0,0%,3%)] text-white flex items-center justify-center px-6"
+      >
+        <div className="max-w-md text-center">
+          <p className="text-gold text-xs uppercase tracking-[0.25em] mb-4">
+            Trans Yacht Group
+          </p>
+          <h1 className="font-serif text-3xl mb-4">Something went wrong</h1>
+          <p className="text-white/50 text-sm mb-7">
+            The page could not be displayed. Reload it to continue.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="rounded-md bg-gold px-5 py-3 text-xs uppercase tracking-[0.15em] text-black"
+          >
+            Reload page
+          </button>
+        </div>
+      </div>
+    );
+  }
+}
+
 function FloatingContactWrapper() {
   const [location] = useLocation();
 
@@ -37,38 +85,59 @@ function FloatingContactWrapper() {
 }
 
 function PageFallback() {
-  return null;
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="min-h-screen bg-[hsl(0,0%,3%)] flex items-center justify-center"
+    >
+      <div className="flex items-center gap-3 text-white/40">
+        <span className="h-5 w-5 rounded-full border border-gold/30 border-t-gold animate-spin" />
+        <span className="text-[10px] uppercase tracking-[0.2em]">Loading</span>
+      </div>
+    </div>
+  );
 }
 
 function Router() {
   return (
     <>
-      <Suspense fallback={<PageFallback />}>
-        <Switch>
-          <Route path="/" component={Home} />
-          <Route path="/yachts">
-            {() => <Catalog category="yacht" />}
-          </Route>
-          <Route path="/cars">
-            {() => <Catalog category="car" />}
-          </Route>
-          <Route path="/vehicle/:id">
-            {(params) => <VehicleDetail id={params.id} />}
-          </Route>
-          <Route path="/about" component={About} />
-          <Route path="/privacy" component={PrivacyPolicy} />
-          <Route path="/legal" component={LegalNotice} />
-          <Route path="/admin" component={AdminLogin} />
-          <Route path="/admin/dashboard/:section?" component={AdminDashboard} />
-          <Route path="/admin/bookings/cars" component={AdminCarBookings} />
-          <Route path="/admin/bookings/yachts" component={AdminYachtBookings} />
-          <Route path="/admin/crm" component={AdminCrm} />
-          <Route path="/admin/agents" component={AdminAgents} />
-          <Route path="/admin/proposals" component={AdminProposals} />
-          <Route path="/admin/contracts" component={AdminContracts} />
-          <Route component={NotFound} />
-        </Switch>
-      </Suspense>
+      <a
+        href="#main-content"
+        className="fixed left-3 top-3 z-[200] -translate-y-20 rounded bg-gold px-4 py-2 text-xs font-medium text-black focus:translate-y-0"
+      >
+        Skip to content
+      </a>
+      <div id="main-content">
+        <Suspense fallback={<PageFallback />}>
+          <Switch>
+            <Route path="/" component={Home} />
+            <Route path="/yachts">{() => <Catalog category="yacht" />}</Route>
+            <Route path="/cars">{() => <Catalog category="car" />}</Route>
+            <Route path="/vehicle/:id">
+              {(params) => <VehicleDetail id={params.id} />}
+            </Route>
+            <Route path="/about" component={About} />
+            <Route path="/privacy" component={PrivacyPolicy} />
+            <Route path="/legal" component={LegalNotice} />
+            <Route path="/admin" component={AdminLogin} />
+            <Route
+              path="/admin/dashboard/:section?"
+              component={AdminDashboard}
+            />
+            <Route path="/admin/bookings/cars" component={AdminCarBookings} />
+            <Route
+              path="/admin/bookings/yachts"
+              component={AdminYachtBookings}
+            />
+            <Route path="/admin/crm" component={AdminCrm} />
+            <Route path="/admin/agents" component={AdminAgents} />
+            <Route path="/admin/proposals" component={AdminProposals} />
+            <Route path="/admin/contracts" component={AdminContracts} />
+            <Route component={NotFound} />
+          </Switch>
+        </Suspense>
+      </div>
 
       <FloatingContactWrapper />
       <CookieBanner />
@@ -83,16 +152,18 @@ function App() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
-        <TooltipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
-          <Toaster />
-        </TooltipProvider>
-      </LanguageProvider>
-    </QueryClientProvider>
+    <AppErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <LanguageProvider>
+          <TooltipProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <Router />
+            </WouterRouter>
+            <Toaster />
+          </TooltipProvider>
+        </LanguageProvider>
+      </QueryClientProvider>
+    </AppErrorBoundary>
   );
 }
 

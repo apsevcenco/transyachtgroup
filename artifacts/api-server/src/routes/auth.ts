@@ -1,14 +1,24 @@
 import { Router, type IRouter } from "express";
 import crypto from "crypto";
+import rateLimit from "express-rate-limit";
 import { db } from "@workspace/db";
 import { adminSessionsTable } from "@workspace/db/schema";
-import { eq, gt } from "drizzle-orm";
+import { eq, lt } from "drizzle-orm";
 
 const router: IRouter = Router();
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { error: "Too many login attempts. Try again later." },
+});
 
-router.post("/admin/login", async (req, res) => {
+router.post("/admin/login", loginLimiter, async (req, res) => {
   try {
-    const { password } = req.body;
+    res.setHeader("Cache-Control", "no-store");
+    const password =
+      typeof req.body?.password === "string" ? req.body.password : "";
     const adminPassword = process.env.ADMIN_PASSWORD;
 
     if (!adminPassword) {
@@ -16,7 +26,12 @@ router.post("/admin/login", async (req, res) => {
       return;
     }
 
-    if (password !== adminPassword) {
+    const suppliedHash = crypto.createHash("sha256").update(password).digest();
+    const expectedHash = crypto
+      .createHash("sha256")
+      .update(adminPassword)
+      .digest();
+    if (!crypto.timingSafeEqual(suppliedHash, expectedHash)) {
       res.status(401).json({ error: "Invalid password" });
       return;
     }
@@ -24,6 +39,9 @@ router.post("/admin/login", async (req, res) => {
     const token = crypto.randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
+    await db
+      .delete(adminSessionsTable)
+      .where(lt(adminSessionsTable.expiresAt, new Date()));
     await db.insert(adminSessionsTable).values({ token, expiresAt });
 
     res.json({ token, expiresAt: expiresAt.toISOString() });
@@ -35,9 +53,12 @@ router.post("/admin/login", async (req, res) => {
 
 router.post("/admin/logout", async (req, res) => {
   try {
+    res.setHeader("Cache-Control", "no-store");
     const token = req.headers.authorization?.replace("Bearer ", "");
     if (token) {
-      await db.delete(adminSessionsTable).where(eq(adminSessionsTable.token, token));
+      await db
+        .delete(adminSessionsTable)
+        .where(eq(adminSessionsTable.token, token));
     }
     res.json({ success: true });
   } catch (err) {
@@ -47,6 +68,7 @@ router.post("/admin/logout", async (req, res) => {
 
 router.get("/admin/check", async (req, res) => {
   try {
+    res.setHeader("Cache-Control", "no-store");
     const token = req.headers.authorization?.replace("Bearer ", "");
     if (!token) {
       res.status(401).json({ authenticated: false });
@@ -61,7 +83,9 @@ router.get("/admin/check", async (req, res) => {
 
     if (!session || new Date(session.expiresAt) < new Date()) {
       if (session) {
-        await db.delete(adminSessionsTable).where(eq(adminSessionsTable.token, token));
+        await db
+          .delete(adminSessionsTable)
+          .where(eq(adminSessionsTable.token, token));
       }
       res.status(401).json({ authenticated: false });
       return;

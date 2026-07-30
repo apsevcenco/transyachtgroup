@@ -1,8 +1,14 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { bookingsTable, vehiclesTable, rentalHistoryTable, insertBookingSchema } from "@workspace/db/schema";
+import {
+  bookingsTable,
+  vehiclesTable,
+  rentalHistoryTable,
+  insertBookingSchema,
+} from "@workspace/db/schema";
 import { eq, and, gte, lte, inArray, ne, sql } from "drizzle-orm";
 import { adminAuth } from "../middleware/auth";
+import { bookingDateTime, isValidTime } from "../lib/bookingIntervals";
 import ical from "node-ical";
 
 function totalDaysInclusive(startDate: string, endDate: string): number {
@@ -23,10 +29,6 @@ function stripHtmlTags(s: string): string {
 // informational (iCal imports, upkeep windows) and are allowed to stack.
 const BLOCKING_STATUSES = ["confirmed", "tentative"] as const;
 
-function validTime(value: unknown): value is string {
-  return typeof value === "string" && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
-}
-
 function startsBefore(endDateTime: string) {
   return sql`((${bookingsTable.startDate}::text || ' ' || COALESCE(${bookingsTable.startTime}, '00:00'))::timestamp < ${endDateTime}::timestamp)`;
 }
@@ -46,14 +48,27 @@ async function findBlockingConflicts(
   const conditions = [
     eq(bookingsTable.vehicleId, vehicleId),
     inArray(bookingsTable.status, BLOCKING_STATUSES),
-    startsBefore(`${end} ${endTime}`),
-    endsAfter(`${start} ${startTime}`),
+    startsBefore(bookingDateTime(end, endTime)),
+    endsAfter(bookingDateTime(start, startTime)),
   ];
   if (excludeId != null) conditions.push(ne(bookingsTable.id, excludeId));
-  return db.select().from(bookingsTable).where(and(...conditions)).orderBy(bookingsTable.startDate);
+  return db
+    .select()
+    .from(bookingsTable)
+    .where(and(...conditions))
+    .orderBy(bookingsTable.startDate);
 }
 
-function conflictMessage(conflicts: { clientName: string | null; startDate: string; endDate: string; startTime: string | null; endTime: string | null; status: string }[]) {
+function conflictMessage(
+  conflicts: {
+    clientName: string | null;
+    startDate: string;
+    endDate: string;
+    startTime: string | null;
+    endTime: string | null;
+    status: string;
+  }[],
+) {
   const parts = conflicts.map(
     (c) =>
       `${c.clientName?.trim() || "an unnamed client"} (${c.status}, ${c.startDate} ${c.startTime || "00:00"} → ${c.endDate} ${c.endTime || "23:59"})`,
@@ -91,7 +106,8 @@ router.use(async (_req, _res, next) => {
 function plainText(value: unknown): string | null {
   if (value == null) return null;
   if (typeof value === "string") return value;
-  if (typeof value === "object" && "val" in (value as any)) return String((value as any).val);
+  if (typeof value === "object" && "val" in (value as any))
+    return String((value as any).val);
   return String(value);
 }
 
@@ -102,18 +118,25 @@ function toISODate(d: Date): string {
 // GET /bookings — list all, optionally filtered by vehicleId and/or a date range
 router.get("/bookings", async (req, res) => {
   try {
-    const vehicleId = req.query.vehicleId ? parseInt(String(req.query.vehicleId), 10) : null;
+    const vehicleId = req.query.vehicleId
+      ? parseInt(String(req.query.vehicleId), 10)
+      : null;
     const rangeStart = req.query.start ? String(req.query.start) : null;
     const rangeEnd = req.query.end ? String(req.query.end) : null;
 
     const conditions = [];
-    if (vehicleId != null && !isNaN(vehicleId)) conditions.push(eq(bookingsTable.vehicleId, vehicleId));
+    if (vehicleId != null && !isNaN(vehicleId))
+      conditions.push(eq(bookingsTable.vehicleId, vehicleId));
     // overlap with [rangeStart, rangeEnd]: booking.start_date <= rangeEnd AND booking.end_date >= rangeStart
     if (rangeEnd) conditions.push(lte(bookingsTable.startDate, rangeEnd));
     if (rangeStart) conditions.push(gte(bookingsTable.endDate, rangeStart));
 
     const bookings = conditions.length
-      ? await db.select().from(bookingsTable).where(and(...conditions)).orderBy(bookingsTable.startDate)
+      ? await db
+          .select()
+          .from(bookingsTable)
+          .where(and(...conditions))
+          .orderBy(bookingsTable.startDate)
       : await db.select().from(bookingsTable).orderBy(bookingsTable.startDate);
 
     res.json(bookings);
@@ -132,8 +155,16 @@ router.get("/bookings/availability", async (req, res) => {
     const startTime = String(req.query.startTime || "00:00");
     const endTime = String(req.query.endTime || "23:59");
 
-    if (isNaN(vehicleId) || !start || !end || !validTime(startTime) || !validTime(endTime)) {
-      res.status(400).json({ error: "Valid vehicle, dates and times are required" });
+    if (
+      isNaN(vehicleId) ||
+      !start ||
+      !end ||
+      !isValidTime(startTime) ||
+      !isValidTime(endTime)
+    ) {
+      res
+        .status(400)
+        .json({ error: "Valid vehicle, dates and times are required" });
       return;
     }
 
@@ -143,8 +174,8 @@ router.get("/bookings/availability", async (req, res) => {
       .where(
         and(
           eq(bookingsTable.vehicleId, vehicleId),
-          startsBefore(`${end} ${endTime}`),
-          endsAfter(`${start} ${startTime}`),
+          startsBefore(bookingDateTime(end, endTime)),
+          endsAfter(bookingDateTime(start, startTime)),
         ),
       )
       .orderBy(bookingsTable.startDate);
@@ -164,7 +195,10 @@ router.get("/bookings/:id", async (req, res) => {
       res.status(400).json({ error: "Invalid ID" });
       return;
     }
-    const [booking] = await db.select().from(bookingsTable).where(eq(bookingsTable.id, id));
+    const [booking] = await db
+      .select()
+      .from(bookingsTable)
+      .where(eq(bookingsTable.id, id));
     if (!booking) {
       res.status(404).json({ error: "Booking not found" });
       return;
@@ -181,7 +215,9 @@ router.post("/bookings", async (req, res) => {
   try {
     const parsed = insertBookingSchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ error: "Invalid data", details: parsed.error.issues });
+      res
+        .status(400)
+        .json({ error: "Invalid data", details: parsed.error.issues });
       return;
     }
     if (parsed.data.endDate < parsed.data.startDate) {
@@ -190,16 +226,21 @@ router.post("/bookings", async (req, res) => {
     }
     const startTime = parsed.data.startTime || "00:00";
     const endTime = parsed.data.endTime || "23:59";
-    if (!validTime(startTime) || !validTime(endTime)) {
+    if (!isValidTime(startTime) || !isValidTime(endTime)) {
       res.status(400).json({ error: "startTime and endTime must use HH:MM" });
       return;
     }
-    if (`${parsed.data.endDate} ${endTime}` <= `${parsed.data.startDate} ${startTime}`) {
+    if (
+      `${parsed.data.endDate} ${endTime}` <=
+      `${parsed.data.startDate} ${startTime}`
+    ) {
       res.status(400).json({ error: "Rental end must be after rental start" });
       return;
     }
     if (parsed.data.startDate < toISODate(new Date())) {
-      res.status(400).json({ error: "Cannot create new bookings for past dates" });
+      res
+        .status(400)
+        .json({ error: "Cannot create new bookings for past dates" });
       return;
     }
 
@@ -215,7 +256,10 @@ router.post("/bookings", async (req, res) => {
       return;
     }
 
-    const [booking] = await db.insert(bookingsTable).values(parsed.data).returning();
+    const [booking] = await db
+      .insert(bookingsTable)
+      .values(parsed.data)
+      .returning();
     res.status(201).json(booking);
   } catch (err) {
     console.error("Booking create error:", err);
@@ -229,7 +273,9 @@ router.put("/bookings/:id", async (req, res) => {
     const id = parseInt(String(req.params.id), 10);
     const parsed = insertBookingSchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ error: "Invalid data", details: parsed.error.issues });
+      res
+        .status(400)
+        .json({ error: "Invalid data", details: parsed.error.issues });
       return;
     }
     if (parsed.data.endDate < parsed.data.startDate) {
@@ -238,16 +284,22 @@ router.put("/bookings/:id", async (req, res) => {
     }
     const startTime = parsed.data.startTime || "00:00";
     const endTime = parsed.data.endTime || "23:59";
-    if (!validTime(startTime) || !validTime(endTime)) {
+    if (!isValidTime(startTime) || !isValidTime(endTime)) {
       res.status(400).json({ error: "startTime and endTime must use HH:MM" });
       return;
     }
-    if (`${parsed.data.endDate} ${endTime}` <= `${parsed.data.startDate} ${startTime}`) {
+    if (
+      `${parsed.data.endDate} ${endTime}` <=
+      `${parsed.data.startDate} ${startTime}`
+    ) {
       res.status(400).json({ error: "Rental end must be after rental start" });
       return;
     }
 
-    const [existing] = await db.select().from(bookingsTable).where(eq(bookingsTable.id, id));
+    const [existing] = await db
+      .select()
+      .from(bookingsTable)
+      .where(eq(bookingsTable.id, id));
     if (!existing) {
       res.status(404).json({ error: "Booking not found" });
       return;
@@ -262,7 +314,9 @@ router.put("/bookings/:id", async (req, res) => {
     // (before this edit) can still be freely edited.
     const today = toISODate(new Date());
     if (existing.startDate >= today && parsed.data.startDate < today) {
-      res.status(400).json({ error: "Cannot create new bookings for past dates" });
+      res
+        .status(400)
+        .json({ error: "Cannot create new bookings for past dates" });
       return;
     }
 
@@ -287,7 +341,10 @@ router.put("/bookings/:id", async (req, res) => {
         .returning();
 
       if (updated.status === "completed") {
-        const [vehicle] = await tx.select().from(vehiclesTable).where(eq(vehiclesTable.id, updated.vehicleId));
+        const [vehicle] = await tx
+          .select()
+          .from(vehiclesTable)
+          .where(eq(vehiclesTable.id, updated.vehicleId));
         await tx.insert(rentalHistoryTable).values({
           bookingId: updated.id,
           clientName: updated.clientName,
@@ -349,7 +406,10 @@ router.put("/bookings/:id", async (req, res) => {
 router.delete("/bookings/:id", async (req, res) => {
   try {
     const id = parseInt(String(req.params.id), 10);
-    const [deleted] = await db.delete(bookingsTable).where(eq(bookingsTable.id, id)).returning();
+    const [deleted] = await db
+      .delete(bookingsTable)
+      .where(eq(bookingsTable.id, id))
+      .returning();
     if (!deleted) {
       res.status(404).json({ error: "Booking not found" });
       return;
@@ -379,13 +439,18 @@ router.post("/bookings/ical-sync", async (req, res) => {
     try {
       parsed = await ical.async.fromURL(icalUrl);
     } catch (err) {
-      res.status(400).json({ error: "Failed to fetch or parse iCal feed", details: (err as Error).message });
+      res
+        .status(400)
+        .json({
+          error: "Failed to fetch or parse iCal feed",
+          details: (err as Error).message,
+        });
       return;
     }
 
-    const events = (Object.values(parsed).filter((e) => e?.type === "VEVENT") as ical.VEvent[]).filter(
-      (e) => !!e.start,
-    );
+    const events = (
+      Object.values(parsed).filter((e) => e?.type === "VEVENT") as ical.VEvent[]
+    ).filter((e) => !!e.start);
 
     const newBookings = events.map((event) => {
       const start = new Date(event.start);

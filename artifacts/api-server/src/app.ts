@@ -11,16 +11,15 @@ import { logger } from "./lib/logger";
 dotenv.config();
 
 const app: Express = express();
-app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-  next();
-});
 
 app.set("trust proxy", 1);
 
 // Security
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  }),
+);
 
 // Rate limiting
 const limiter = rateLimit({
@@ -48,15 +47,39 @@ app.use(
         };
       },
     },
-  })
+  }),
 );
 
 // CORS
+const allowedOrigins = new Set(
+  (process.env.CORS_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+);
 app.use(
-  cors({
-    origin: true,
-    credentials: true,
-  })
+  cors((req, callback) => {
+    const origin = req.header("Origin");
+    const forwardedHost = req.header("X-Forwarded-Host");
+    const requestHost = forwardedHost || req.header("Host");
+    let sameOrigin = false;
+    if (origin && requestHost) {
+      try {
+        sameOrigin = new URL(origin).host === requestHost;
+      } catch {
+        sameOrigin = false;
+      }
+    }
+    const originAllowed =
+      !origin ||
+      process.env.NODE_ENV !== "production" ||
+      sameOrigin ||
+      allowedOrigins.has(origin);
+    callback(null, {
+      origin: originAllowed,
+      credentials: false,
+    });
+  }),
 );
 
 // Parsers
@@ -77,10 +100,13 @@ app.use((req, res) => {
 });
 
 // Error handler
-app.use((err: any, req: any, res: any, next: any) => {
-  logger.error(err);
+app.use((err: any, req: any, res: any, _next: any) => {
+  const requestId = req.id || req.headers?.["x-request-id"];
+  logger.error({ err, requestId }, "Unhandled API error");
   res.status(err.status || 500).json({
-    error: "Internal Server Error",
+    error:
+      err.status && err.status < 500 ? err.message : "Internal Server Error",
+    requestId,
   });
 });
 
