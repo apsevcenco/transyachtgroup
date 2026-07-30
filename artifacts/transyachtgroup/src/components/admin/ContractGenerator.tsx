@@ -26,7 +26,9 @@ export interface ContractPrefill {
 }
 
 /** Shared with CarBookingCalendar's "Generate Contract" button so both entry points fill the form identically. */
-export function buildContractPrefillFromBooking(booking: Booking): ContractPrefill {
+export function buildContractPrefillFromBooking(
+  booking: Booking,
+): ContractPrefill {
   return {
     bookingId: booking.id,
     vehicleId: booking.vehicleId,
@@ -52,18 +54,28 @@ function strToNum(s: string): number {
 
 const inputClass =
   "w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-gold/40";
-const labelClass = "block text-[10px] uppercase tracking-wide text-white/40 mb-1";
-const sectionLabelClass = "text-[10px] uppercase tracking-[0.2em] text-gold/60 font-medium mb-3";
+const labelClass =
+  "block text-[10px] uppercase tracking-wide text-white/40 mb-1";
+const sectionLabelClass =
+  "text-[10px] uppercase tracking-[0.2em] text-gold/60 font-medium mb-3";
 
-export function ContractGenerator({ prefill }: { prefill?: ContractPrefill | null }) {
+export function ContractGenerator({
+  prefill,
+}: {
+  prefill?: ContractPrefill | null;
+}) {
   const [vehicles, setVehicles] = useState<VehicleLite[]>([]);
   const [loadingVehicles, setLoadingVehicles] = useState(true);
 
-  const [bookingIdInput, setBookingIdInput] = useState(prefill?.bookingId ? String(prefill.bookingId) : "");
+  const [bookingIdInput, setBookingIdInput] = useState(
+    prefill?.bookingId ? String(prefill.bookingId) : "",
+  );
   const [bookingLookupError, setBookingLookupError] = useState("");
   const [bookingLoading, setBookingLoading] = useState(false);
 
-  const [vehicleId, setVehicleId] = useState<number | null>(prefill?.vehicleId ?? null);
+  const [vehicleId, setVehicleId] = useState<number | null>(
+    prefill?.vehicleId ?? null,
+  );
   const [vehicleSearch, setVehicleSearch] = useState("");
   const [vehiclePickerOpen, setVehiclePickerOpen] = useState(false);
   const vehiclePickerRef = useRef<HTMLDivElement>(null);
@@ -81,13 +93,23 @@ export function ContractGenerator({ prefill }: { prefill?: ContractPrefill | nul
 
   const [pickupDate, setPickupDate] = useState(prefill?.pickupDate || "");
   const [returnDate, setReturnDate] = useState(prefill?.returnDate || "");
-  const [pickupLocation, setPickupLocation] = useState(prefill?.pickupLocation || "");
-  const [returnLocation, setReturnLocation] = useState(prefill?.returnLocation || "");
+  const [pickupLocation, setPickupLocation] = useState(
+    prefill?.pickupLocation || "",
+  );
+  const [returnLocation, setReturnLocation] = useState(
+    prefill?.returnLocation || "",
+  );
 
-  const [totalAmount, setTotalAmount] = useState(numToStr(prefill?.totalAmount));
-  const [depositAmount, setDepositAmount] = useState(numToStr(prefill?.depositAmount));
+  const [totalAmount, setTotalAmount] = useState(
+    numToStr(prefill?.totalAmount),
+  );
+  const [depositAmount, setDepositAmount] = useState(
+    numToStr(prefill?.depositAmount),
+  );
   const [kmPerDay, setKmPerDay] = useState(numToStr(prefill?.kmPerDay));
-  const [extraKmPrice, setExtraKmPrice] = useState(numToStr(prefill?.extraKmPrice));
+  const [extraKmPrice, setExtraKmPrice] = useState(
+    numToStr(prefill?.extraKmPrice),
+  );
 
   const [contractNumber, setContractNumber] = useState("");
   const [representativeName, setRepresentativeName] = useState("");
@@ -95,6 +117,9 @@ export function ContractGenerator({ prefill }: { prefill?: ContractPrefill | nul
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const requestRef = useRef<{ fingerprint: string; requestId: string } | null>(
+    null,
+  );
 
   useEffect(() => {
     fetchVehicles(undefined, true, "car")
@@ -115,7 +140,10 @@ export function ContractGenerator({ prefill }: { prefill?: ContractPrefill | nul
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
-      if (vehiclePickerRef.current && !vehiclePickerRef.current.contains(e.target as Node)) {
+      if (
+        vehiclePickerRef.current &&
+        !vehiclePickerRef.current.contains(e.target as Node)
+      ) {
         setVehiclePickerOpen(false);
       }
     }
@@ -175,10 +203,23 @@ export function ContractGenerator({ prefill }: { prefill?: ContractPrefill | nul
   const canSubmit =
     !!vehicleId &&
     !!renterName.trim() &&
+    !!renterDob &&
+    !!renterPob.trim() &&
+    !!renterNationality.trim() &&
+    !!renterPassport.trim() &&
+    !!renterPassportExpiry &&
+    !!renterLicence.trim() &&
+    !!renterLicenceExpiry &&
+    !!renterLicenceIssuedBy.trim() &&
+    !!renterPhone.trim() &&
     !!pickupDate &&
     !!returnDate &&
     !!pickupLocation.trim() &&
     !!returnLocation.trim() &&
+    totalAmount.trim() !== "" &&
+    depositAmount.trim() !== "" &&
+    kmPerDay.trim() !== "" &&
+    extraKmPrice.trim() !== "" &&
     !!representativeName.trim() &&
     returnDate >= pickupDate;
 
@@ -188,8 +229,10 @@ export function ContractGenerator({ prefill }: { prefill?: ContractPrefill | nul
     setError("");
     setSuccess("");
     try {
-      const req: ContractGenerateRequest = {
-        bookingId: bookingIdInput.trim() ? parseInt(bookingIdInput.trim(), 10) : undefined,
+      const payload = {
+        bookingId: bookingIdInput.trim()
+          ? parseInt(bookingIdInput.trim(), 10)
+          : undefined,
         vehicleId,
         renterName: renterName.trim(),
         renterDob,
@@ -212,16 +255,35 @@ export function ContractGenerator({ prefill }: { prefill?: ContractPrefill | nul
         contractNumber: contractNumber.trim() || undefined,
         representativeName: representativeName.trim(),
       };
+      const fingerprint = JSON.stringify(payload);
+      if (
+        !requestRef.current ||
+        requestRef.current.fingerprint !== fingerprint
+      ) {
+        requestRef.current = {
+          fingerprint,
+          requestId: crypto.randomUUID(),
+        };
+      }
+      const req: ContractGenerateRequest = {
+        ...payload,
+        requestId: requestRef.current.requestId,
+      };
       const blob = await generateContract(req);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      const safeName = renterName.trim().replace(/\s+/g, "-").replace(/[^\w-]/g, "") || "renter";
+      const safeName =
+        renterName
+          .trim()
+          .replace(/\s+/g, "-")
+          .replace(/[^\w-]/g, "") || "renter";
       a.download = `contract-${safeName}-${pickupDate}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      requestRef.current = null;
       setSuccess("Contract generated and downloaded.");
     } catch (err: any) {
       setError(err.message || "Failed to generate contract");
@@ -233,7 +295,9 @@ export function ContractGenerator({ prefill }: { prefill?: ContractPrefill | nul
   return (
     <div className="max-w-3xl">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="font-serif text-xl text-white">Rental Agreement Generator</h2>
+        <h2 className="font-serif text-xl text-white">
+          Rental Agreement Generator
+        </h2>
       </div>
 
       {/* Pre-fill from booking */}
@@ -255,7 +319,9 @@ export function ContractGenerator({ prefill }: { prefill?: ContractPrefill | nul
             {bookingLoading ? "Loading…" : "Load"}
           </button>
         </div>
-        {bookingLookupError && <p className="text-red-400 text-xs mt-2">{bookingLookupError}</p>}
+        {bookingLookupError && (
+          <p className="text-red-400 text-xs mt-2">{bookingLookupError}</p>
+        )}
       </div>
 
       <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-6 space-y-5">
@@ -269,7 +335,10 @@ export function ContractGenerator({ prefill }: { prefill?: ContractPrefill | nul
               className={`${inputClass} flex items-center gap-2 min-h-[44px] text-left`}
             >
               <VehicleThumb image={selectedVehicle?.image ?? null} size={28} />
-              <span className="flex-1 truncate">{selectedVehicle?.name || (loadingVehicles ? "Loading vehicles…" : "Select vehicle")}</span>
+              <span className="flex-1 truncate">
+                {selectedVehicle?.name ||
+                  (loadingVehicles ? "Loading vehicles…" : "Select vehicle")}
+              </span>
               <ChevronDown size={16} className="text-white/40 shrink-0" />
             </button>
             {vehiclePickerOpen && (
@@ -295,11 +364,15 @@ export function ContractGenerator({ prefill }: { prefill?: ContractPrefill | nul
                       className="w-full flex items-center gap-2 px-3 py-2 min-h-[44px] hover:bg-white/[0.06] transition-colors text-left"
                     >
                       <VehicleThumb image={v.image} size={28} />
-                      <span className="text-sm text-white truncate">{v.name}</span>
+                      <span className="text-sm text-white truncate">
+                        {v.name}
+                      </span>
                     </button>
                   ))}
                   {filteredVehicles.length === 0 && (
-                    <div className="px-3 py-3 text-white/30 text-xs">No vehicles match.</div>
+                    <div className="px-3 py-3 text-white/30 text-xs">
+                      No vehicles match.
+                    </div>
                   )}
                 </div>
               </div>
@@ -313,51 +386,102 @@ export function ContractGenerator({ prefill }: { prefill?: ContractPrefill | nul
           <div className="space-y-3">
             <div>
               <label className={labelClass}>Full Name</label>
-              <input type="text" value={renterName} onChange={(e) => setRenterName(e.target.value)} className={inputClass} />
+              <input
+                type="text"
+                value={renterName}
+                onChange={(e) => setRenterName(e.target.value)}
+                className={inputClass}
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={labelClass}>Date of Birth</label>
-                <input type="date" value={renterDob} onChange={(e) => setRenterDob(e.target.value)} className={inputClass} />
+                <input
+                  type="date"
+                  value={renterDob}
+                  onChange={(e) => setRenterDob(e.target.value)}
+                  className={inputClass}
+                />
               </div>
               <div>
                 <label className={labelClass}>Place of Birth</label>
-                <input type="text" value={renterPob} onChange={(e) => setRenterPob(e.target.value)} className={inputClass} />
+                <input
+                  type="text"
+                  value={renterPob}
+                  onChange={(e) => setRenterPob(e.target.value)}
+                  className={inputClass}
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={labelClass}>Nationality</label>
-                <input type="text" value={renterNationality} onChange={(e) => setRenterNationality(e.target.value)} className={inputClass} />
+                <input
+                  type="text"
+                  value={renterNationality}
+                  onChange={(e) => setRenterNationality(e.target.value)}
+                  className={inputClass}
+                />
               </div>
               <div>
                 <label className={labelClass}>Phone</label>
-                <input type="text" value={renterPhone} onChange={(e) => setRenterPhone(e.target.value)} className={inputClass} />
+                <input
+                  type="text"
+                  value={renterPhone}
+                  onChange={(e) => setRenterPhone(e.target.value)}
+                  className={inputClass}
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={labelClass}>Passport No.</label>
-                <input type="text" value={renterPassport} onChange={(e) => setRenterPassport(e.target.value)} className={inputClass} />
+                <input
+                  type="text"
+                  value={renterPassport}
+                  onChange={(e) => setRenterPassport(e.target.value)}
+                  className={inputClass}
+                />
               </div>
               <div>
                 <label className={labelClass}>Passport Expiry</label>
-                <input type="date" value={renterPassportExpiry} onChange={(e) => setRenterPassportExpiry(e.target.value)} className={inputClass} />
+                <input
+                  type="date"
+                  value={renterPassportExpiry}
+                  onChange={(e) => setRenterPassportExpiry(e.target.value)}
+                  className={inputClass}
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={labelClass}>Driving Licence No.</label>
-                <input type="text" value={renterLicence} onChange={(e) => setRenterLicence(e.target.value)} className={inputClass} />
+                <input
+                  type="text"
+                  value={renterLicence}
+                  onChange={(e) => setRenterLicence(e.target.value)}
+                  className={inputClass}
+                />
               </div>
               <div>
                 <label className={labelClass}>Licence Expiry</label>
-                <input type="date" value={renterLicenceExpiry} onChange={(e) => setRenterLicenceExpiry(e.target.value)} className={inputClass} />
+                <input
+                  type="date"
+                  value={renterLicenceExpiry}
+                  onChange={(e) => setRenterLicenceExpiry(e.target.value)}
+                  className={inputClass}
+                />
               </div>
             </div>
             <div>
               <label className={labelClass}>Licence Issued By</label>
-              <input type="text" value={renterLicenceIssuedBy} onChange={(e) => setRenterLicenceIssuedBy(e.target.value)} className={inputClass} placeholder="e.g. Préfecture des Alpes-Maritimes" />
+              <input
+                type="text"
+                value={renterLicenceIssuedBy}
+                onChange={(e) => setRenterLicenceIssuedBy(e.target.value)}
+                className={inputClass}
+                placeholder="e.g. Préfecture des Alpes-Maritimes"
+              />
             </div>
           </div>
         </div>
@@ -369,21 +493,42 @@ export function ContractGenerator({ prefill }: { prefill?: ContractPrefill | nul
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={labelClass}>Pick-up Date</label>
-                <input type="date" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} className={inputClass} />
+                <input
+                  type="date"
+                  value={pickupDate}
+                  onChange={(e) => setPickupDate(e.target.value)}
+                  className={inputClass}
+                />
               </div>
               <div>
                 <label className={labelClass}>Return Date</label>
-                <input type="date" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} className={inputClass} />
+                <input
+                  type="date"
+                  value={returnDate}
+                  onChange={(e) => setReturnDate(e.target.value)}
+                  className={inputClass}
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={labelClass}>Pick-up Location</label>
-                <input type="text" value={pickupLocation} onChange={(e) => setPickupLocation(e.target.value)} className={inputClass} placeholder="e.g. Nice Côte d'Azur Airport" />
+                <input
+                  type="text"
+                  value={pickupLocation}
+                  onChange={(e) => setPickupLocation(e.target.value)}
+                  className={inputClass}
+                  placeholder="e.g. Nice Côte d'Azur Airport"
+                />
               </div>
               <div>
                 <label className={labelClass}>Return Location</label>
-                <input type="text" value={returnLocation} onChange={(e) => setReturnLocation(e.target.value)} className={inputClass} />
+                <input
+                  type="text"
+                  value={returnLocation}
+                  onChange={(e) => setReturnLocation(e.target.value)}
+                  className={inputClass}
+                />
               </div>
             </div>
           </div>
@@ -395,19 +540,39 @@ export function ContractGenerator({ prefill }: { prefill?: ContractPrefill | nul
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelClass}>Total Amount (€)</label>
-              <input type="number" value={totalAmount} onChange={(e) => setTotalAmount(e.target.value)} className={inputClass} />
+              <input
+                type="number"
+                value={totalAmount}
+                onChange={(e) => setTotalAmount(e.target.value)}
+                className={inputClass}
+              />
             </div>
             <div>
               <label className={labelClass}>Security Deposit (€)</label>
-              <input type="number" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} className={inputClass} />
+              <input
+                type="number"
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(e.target.value)}
+                className={inputClass}
+              />
             </div>
             <div>
               <label className={labelClass}>Km / Day Included</label>
-              <input type="number" value={kmPerDay} onChange={(e) => setKmPerDay(e.target.value)} className={inputClass} />
+              <input
+                type="number"
+                value={kmPerDay}
+                onChange={(e) => setKmPerDay(e.target.value)}
+                className={inputClass}
+              />
             </div>
             <div>
               <label className={labelClass}>Extra Km Price (€)</label>
-              <input type="number" value={extraKmPrice} onChange={(e) => setExtraKmPrice(e.target.value)} className={inputClass} />
+              <input
+                type="number"
+                value={extraKmPrice}
+                onChange={(e) => setExtraKmPrice(e.target.value)}
+                className={inputClass}
+              />
             </div>
           </div>
         </div>
@@ -426,8 +591,15 @@ export function ContractGenerator({ prefill }: { prefill?: ContractPrefill | nul
               />
             </div>
             <div>
-              <label className={labelClass}>Representative (signs for the company)</label>
-              <input type="text" value={representativeName} onChange={(e) => setRepresentativeName(e.target.value)} className={inputClass} />
+              <label className={labelClass}>
+                Representative (signs for the company)
+              </label>
+              <input
+                type="text"
+                value={representativeName}
+                onChange={(e) => setRepresentativeName(e.target.value)}
+                className={inputClass}
+              />
             </div>
           </div>
         </div>
@@ -441,7 +613,11 @@ export function ContractGenerator({ prefill }: { prefill?: ContractPrefill | nul
             disabled={!canSubmit || generating}
             className="flex items-center gap-2 bg-[hsl(43,67%,55%)] text-black text-xs uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-[hsl(43,67%,65%)] disabled:opacity-50 transition-colors"
           >
-            {generating ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
+            {generating ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <FileDown size={14} />
+            )}
             {generating ? "Generating…" : "Generate Contract"}
           </button>
         </div>

@@ -1,4 +1,16 @@
-import { pgTable, text, serial, timestamp, varchar, boolean, jsonb, integer, date, index } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  serial,
+  timestamp,
+  varchar,
+  boolean,
+  jsonb,
+  integer,
+  numeric,
+  date,
+  index,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -23,7 +35,9 @@ export const vehiclesTable = pgTable("vehicles", {
   specs: jsonb("specs").default({}),
   translations: jsonb("translations").default({}),
   ownership: varchar("ownership", { length: 10 }).notNull().default("own"),
-  agentId: integer("agent_id").references(() => agentsTable.id, { onDelete: "set null" }),
+  agentId: integer("agent_id").references(() => agentsTable.id, {
+    onDelete: "set null",
+  }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -71,120 +85,145 @@ export const analyticsEventsTable = pgTable("analytics_events", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const bookingsTable = pgTable("bookings", {
-  id: serial("id").primaryKey(),
-  vehicleId: integer("vehicle_id")
-    .notNull()
-    .references(() => vehiclesTable.id, { onDelete: "cascade" }),
-  startDate: date("start_date").notNull(),
-  endDate: date("end_date").notNull(),
-  status: varchar("status", { length: 20 }).notNull().default("confirmed"),
-  clientName: text("client_name"),
-  clientPhone: text("client_phone"),
-  notes: text("notes"),
-  source: varchar("source", { length: 10 }).notNull().default("manual"),
-  icalUrl: text("ical_url"),
-  rentalPeriodType: varchar("rental_period_type", { length: 10 }).notNull().default("daily"),
-  totalAmount: integer("total_amount"),
-  depositAmount: integer("deposit_amount"),
-  vatPercent: integer("vat_percent"),
-  agentCommissionPercent: integer("agent_commission_percent"),
-  agentName: text("agent_name"),
-  agentPhone: text("agent_phone"),
-  agentEmail: text("agent_email"),
-  contractStatus: varchar("contract_status", { length: 20 }).default("not_signed"),
-  kmIncluded: integer("km_included"),
-  pricePerExtraKm: integer("price_per_extra_km"),
-  // Car handover/return tracking — "own" vehicles only
-  odometerOut: integer("odometer_out"),
-  odometerIn: integer("odometer_in"),
-  depositStatus: varchar("deposit_status", { length: 20 }),
-  driverCost: integer("driver_cost"),
-  fuelCost: integer("fuel_cost"),
-  tollCost: integer("toll_cost"),
-  deliveryCost: integer("delivery_cost"),
-  bookingPhotos: jsonb("booking_photos").default([]),
-  // Yacht-only fields (null for category="car" bookings)
-  departurePort: text("departure_port"),
-  returnPort: text("return_port"),
-  charterRate: integer("charter_rate"),
-  charterRatePeriod: varchar("charter_rate_period", { length: 10 }),
-  captainName: text("captain_name"),
-  captainDayRate: integer("captain_day_rate"),
-  stewardessCount: integer("stewardess_count"),
-  stewardessDayRate: integer("stewardess_day_rate"),
-  deckhandCount: integer("deckhand_count"),
-  deckhandDayRate: integer("deckhand_day_rate"),
-  apaAmount: integer("apa_amount"),
-  depositPaid: boolean("deposit_paid").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  index("bookings_vehicle_dates_idx").on(table.vehicleId, table.startDate, table.endDate),
-]);
+export const bookingsTable = pgTable(
+  "bookings",
+  {
+    id: serial("id").primaryKey(),
+    vehicleId: integer("vehicle_id")
+      .notNull()
+      .references(() => vehiclesTable.id, { onDelete: "cascade" }),
+    startDate: date("start_date").notNull(),
+    endDate: date("end_date").notNull(),
+    status: varchar("status", { length: 20 }).notNull().default("confirmed"),
+    clientName: text("client_name"),
+    clientPhone: text("client_phone"),
+    notes: text("notes"),
+    source: varchar("source", { length: 10 }).notNull().default("manual"),
+    icalUrl: text("ical_url"),
+    rentalPeriodType: varchar("rental_period_type", { length: 10 })
+      .notNull()
+      .default("daily"),
+    totalAmount: integer("total_amount"),
+    depositAmount: integer("deposit_amount"),
+    vatPercent: integer("vat_percent"),
+    agentCommissionPercent: integer("agent_commission_percent"),
+    agentName: text("agent_name"),
+    agentPhone: text("agent_phone"),
+    agentEmail: text("agent_email"),
+    contractStatus: varchar("contract_status", { length: 20 }).default(
+      "not_signed",
+    ),
+    kmIncluded: integer("km_included"),
+    pricePerExtraKm: integer("price_per_extra_km"),
+    // Car handover/return tracking — "own" vehicles only
+    odometerOut: integer("odometer_out"),
+    odometerIn: integer("odometer_in"),
+    depositStatus: varchar("deposit_status", { length: 20 }),
+    driverCost: integer("driver_cost"),
+    fuelCost: integer("fuel_cost"),
+    tollCost: integer("toll_cost"),
+    deliveryCost: integer("delivery_cost"),
+    bookingPhotos: jsonb("booking_photos").default([]),
+    // Yacht-only fields (null for category="car" bookings)
+    departurePort: text("departure_port"),
+    returnPort: text("return_port"),
+    charterRate: integer("charter_rate"),
+    charterRatePeriod: varchar("charter_rate_period", { length: 10 }),
+    captainName: text("captain_name"),
+    captainDayRate: integer("captain_day_rate"),
+    stewardessCount: integer("stewardess_count"),
+    stewardessDayRate: integer("stewardess_day_rate"),
+    deckhandCount: integer("deckhand_count"),
+    deckhandDayRate: integer("deckhand_day_rate"),
+    apaAmount: integer("apa_amount"),
+    depositPaid: boolean("deposit_paid").default(false),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("bookings_vehicle_dates_idx").on(
+      table.vehicleId,
+      table.startDate,
+      table.endDate,
+    ),
+  ],
+);
 
 // One row per booking that has ever transitioned to status="completed" — a
 // permanent snapshot (vehicle name/category/image copied at completion time)
 // so history survives the source booking or vehicle being edited/deleted later.
-export const rentalHistoryTable = pgTable("rental_history", {
-  id: serial("id").primaryKey(),
-  bookingId: integer("booking_id").references(() => bookingsTable.id, { onDelete: "set null" }),
-  completedAt: timestamp("completed_at").defaultNow(),
+export const rentalHistoryTable = pgTable(
+  "rental_history",
+  {
+    id: serial("id").primaryKey(),
+    bookingId: integer("booking_id").references(() => bookingsTable.id, {
+      onDelete: "set null",
+    }),
+    completedAt: timestamp("completed_at").defaultNow(),
 
-  clientName: text("client_name"),
-  clientPhone: text("client_phone"),
-  clientNotes: text("client_notes"),
+    clientName: text("client_name"),
+    clientPhone: text("client_phone"),
+    clientNotes: text("client_notes"),
 
-  vehicleId: integer("vehicle_id").references(() => vehiclesTable.id, { onDelete: "set null" }),
-  vehicleName: text("vehicle_name").notNull(),
-  vehicleCategory: varchar("vehicle_category", { length: 10 }).notNull(),
-  vehicleImage: text("vehicle_image"),
+    vehicleId: integer("vehicle_id").references(() => vehiclesTable.id, {
+      onDelete: "set null",
+    }),
+    vehicleName: text("vehicle_name").notNull(),
+    vehicleCategory: varchar("vehicle_category", { length: 10 }).notNull(),
+    vehicleImage: text("vehicle_image"),
 
-  startDate: date("start_date").notNull(),
-  endDate: date("end_date").notNull(),
-  totalDays: integer("total_days").notNull(),
+    startDate: date("start_date").notNull(),
+    endDate: date("end_date").notNull(),
+    totalDays: integer("total_days").notNull(),
 
-  rentalPeriodType: varchar("rental_period_type", { length: 10 }).notNull().default("daily"),
-  totalAmount: integer("total_amount"),
-  depositAmount: integer("deposit_amount"),
-  vatPercent: integer("vat_percent"),
-  agentCommissionPercent: integer("agent_commission_percent"),
-  agentName: text("agent_name"),
-  agentPhone: text("agent_phone"),
-  agentEmail: text("agent_email"),
-  charterRate: integer("charter_rate"),
-  charterRatePeriod: varchar("charter_rate_period", { length: 10 }),
-  apaAmount: integer("apa_amount"),
+    rentalPeriodType: varchar("rental_period_type", { length: 10 })
+      .notNull()
+      .default("daily"),
+    totalAmount: integer("total_amount"),
+    depositAmount: integer("deposit_amount"),
+    vatPercent: integer("vat_percent"),
+    agentCommissionPercent: integer("agent_commission_percent"),
+    agentName: text("agent_name"),
+    agentPhone: text("agent_phone"),
+    agentEmail: text("agent_email"),
+    charterRate: integer("charter_rate"),
+    charterRatePeriod: varchar("charter_rate_period", { length: 10 }),
+    apaAmount: integer("apa_amount"),
 
-  captainName: text("captain_name"),
-  captainDayRate: integer("captain_day_rate"),
-  stewardessCount: integer("stewardess_count"),
-  stewardessDayRate: integer("stewardess_day_rate"),
-  deckhandCount: integer("deckhand_count"),
-  deckhandDayRate: integer("deckhand_day_rate"),
+    captainName: text("captain_name"),
+    captainDayRate: integer("captain_day_rate"),
+    stewardessCount: integer("stewardess_count"),
+    stewardessDayRate: integer("stewardess_day_rate"),
+    deckhandCount: integer("deckhand_count"),
+    deckhandDayRate: integer("deckhand_day_rate"),
 
-  kmIncluded: integer("km_included"),
-  pricePerExtraKm: integer("price_per_extra_km"),
-  odometerOut: integer("odometer_out"),
-  odometerIn: integer("odometer_in"),
-  depositStatus: varchar("deposit_status", { length: 20 }),
-  driverCost: integer("driver_cost"),
-  fuelCost: integer("fuel_cost"),
-  tollCost: integer("toll_cost"),
-  deliveryCost: integer("delivery_cost"),
-  bookingPhotos: jsonb("booking_photos").default([]),
-  departurePort: text("departure_port"),
-  returnPort: text("return_port"),
+    kmIncluded: integer("km_included"),
+    pricePerExtraKm: integer("price_per_extra_km"),
+    odometerOut: integer("odometer_out"),
+    odometerIn: integer("odometer_in"),
+    depositStatus: varchar("deposit_status", { length: 20 }),
+    driverCost: integer("driver_cost"),
+    fuelCost: integer("fuel_cost"),
+    tollCost: integer("toll_cost"),
+    deliveryCost: integer("delivery_cost"),
+    bookingPhotos: jsonb("booking_photos").default([]),
+    departurePort: text("departure_port"),
+    returnPort: text("return_port"),
 
-  source: varchar("source", { length: 10 }),
-  icalUrl: text("ical_url"),
-  contractStatus: varchar("contract_status", { length: 20 }),
-}, (table) => [
-  index("rental_history_vehicle_idx").on(table.vehicleId),
-  index("rental_history_dates_idx").on(table.startDate, table.endDate),
-]);
+    source: varchar("source", { length: 10 }),
+    icalUrl: text("ical_url"),
+    contractStatus: varchar("contract_status", { length: 20 }),
+  },
+  (table) => [
+    index("rental_history_vehicle_idx").on(table.vehicleId),
+    index("rental_history_dates_idx").on(table.startDate, table.endDate),
+  ],
+);
 
-export const insertAgentSchema = createInsertSchema(agentsTable).omit({ id: true, createdAt: true });
+export const insertAgentSchema = createInsertSchema(agentsTable).omit({
+  id: true,
+  createdAt: true,
+});
 export type InsertAgent = z.infer<typeof insertAgentSchema>;
 export type Agent = typeof agentsTable.$inferSelect;
 
@@ -203,6 +242,7 @@ export type Agent = typeof agentsTable.$inferSelect;
 export const contractsTable = pgTable("contracts", {
   id: serial("id").primaryKey(),
   contractNumber: varchar("contract_number", { length: 50 }).notNull().unique(),
+  requestId: varchar("request_id", { length: 64 }).unique(),
   bookingId: integer("booking_id"),
   vehicleId: integer("vehicle_id"),
 
@@ -223,12 +263,29 @@ export const contractsTable = pgTable("contracts", {
   pickupLocation: text("pickup_location"),
   returnLocation: text("return_location"),
 
-  totalAmount: integer("total_amount"),
-  depositAmount: integer("deposit_amount"),
+  totalAmount: numeric("total_amount", {
+    precision: 12,
+    scale: 2,
+    mode: "number",
+  }),
+  depositAmount: numeric("deposit_amount", {
+    precision: 12,
+    scale: 2,
+    mode: "number",
+  }),
   kmPerDay: integer("km_per_day"),
-  extraKmPrice: integer("extra_km_price"),
+  extraKmPrice: numeric("extra_km_price", {
+    precision: 12,
+    scale: 2,
+    mode: "number",
+  }),
 
   representativeName: text("representative_name"),
+  snapshot: jsonb("snapshot"),
+  pdfSha256: varchar("pdf_sha256", { length: 64 }),
+  pdfBase64: text("pdf_base64"),
+  templateVersion: varchar("template_version", { length: 30 }),
+  issuedAt: timestamp("issued_at"),
 
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -238,7 +295,10 @@ export const contractsTable = pgTable("contracts", {
 // Passing a plain-schema refine (rather than a `(schema) => ...` function)
 // short-circuits drizzle-zod's own optional/nullable inference — see the
 // insertVehicleSchema.ownership fix — so this table avoids refine entirely.
-export const insertContractSchema = createInsertSchema(contractsTable).omit({ id: true, createdAt: true });
+export const insertContractSchema = createInsertSchema(contractsTable).omit({
+  id: true,
+  createdAt: true,
+});
 export type InsertContract = z.infer<typeof insertContractSchema>;
 export type Contract = typeof contractsTable.$inferSelect;
 
@@ -251,7 +311,13 @@ export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
 export type Vehicle = typeof vehiclesTable.$inferSelect;
 
 export const insertBookingSchema = createInsertSchema(bookingsTable, {
-  status: z.enum(["confirmed", "tentative", "blocked", "maintenance", "completed"]),
+  status: z.enum([
+    "confirmed",
+    "tentative",
+    "blocked",
+    "maintenance",
+    "completed",
+  ]),
   source: z.enum(["manual", "ical"]),
   contractStatus: z.enum(["not_signed", "sent", "signed"]).nullish(),
   charterRatePeriod: z.enum(["fixed", "per_day", "per_week"]).nullish(),
@@ -260,15 +326,20 @@ export const insertBookingSchema = createInsertSchema(bookingsTable, {
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type Booking = typeof bookingsTable.$inferSelect;
 
-export const insertRentalHistorySchema = createInsertSchema(rentalHistoryTable, {
-  charterRatePeriod: z.enum(["fixed", "per_day", "per_week"]).nullish(),
-  contractStatus: z.enum(["not_signed", "sent", "signed"]).nullish(),
-  source: z.enum(["manual", "ical"]).nullish(),
-  depositStatus: z.enum(["received", "returned", "partial"]).nullish(),
-}).omit({ id: true, completedAt: true });
+export const insertRentalHistorySchema = createInsertSchema(
+  rentalHistoryTable,
+  {
+    charterRatePeriod: z.enum(["fixed", "per_day", "per_week"]).nullish(),
+    contractStatus: z.enum(["not_signed", "sent", "signed"]).nullish(),
+    source: z.enum(["manual", "ical"]).nullish(),
+    depositStatus: z.enum(["received", "returned", "partial"]).nullish(),
+  },
+).omit({ id: true, completedAt: true });
 export type InsertRentalHistory = z.infer<typeof insertRentalHistorySchema>;
 export type RentalHistory = typeof rentalHistoryTable.$inferSelect;
 
-export const insertSiteContentSchema = createInsertSchema(siteContentTable).omit({ id: true, updatedAt: true });
+export const insertSiteContentSchema = createInsertSchema(
+  siteContentTable,
+).omit({ id: true, updatedAt: true });
 export type InsertSiteContent = z.infer<typeof insertSiteContentSchema>;
 export type SiteContent = typeof siteContentTable.$inferSelect;

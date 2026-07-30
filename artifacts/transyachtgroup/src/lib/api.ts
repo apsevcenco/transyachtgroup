@@ -642,6 +642,8 @@ export async function generateFleetOfferPdf(
 }
 
 export interface ContractGenerateRequest {
+  /** Idempotency key: retries return the exact same issued PDF. */
+  requestId: string;
   /** Optional — links the contract to a booking for audit purposes. */
   bookingId?: number | null;
   vehicleId: number;

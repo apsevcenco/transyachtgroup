@@ -7,7 +7,16 @@
  * fleetOffer.ts — manual `<section>`s, not the adaptive block engine, which
  * is built for content that reflows).
  */
-import { GOLD, GOLD_INK, NEAR_BLACK, WHITE, LIGHT_GREY, DARK_GREY, MUTED_GREY, HAIRLINE } from "../core/theme";
+import {
+  GOLD,
+  GOLD_INK,
+  NEAR_BLACK,
+  WHITE,
+  LIGHT_GREY,
+  DARK_GREY,
+  MUTED_GREY,
+  HAIRLINE,
+} from "../core/theme";
 import { FONT_FACE_CSS } from "../core/fonts.generated";
 import { esc } from "../core/util";
 import { stripHtml } from "./proposal";
@@ -52,7 +61,7 @@ export interface ContractInput {
   representativeName: string;
 }
 
-const COMPANY_NAME = "Trans Yacht Groupe SARRL";
+const COMPANY_NAME = "TRANS YACHT GROUPE SARL";
 const COMPANY_ADDRESS = "49 Bd d'Alsace, 06400 Cannes";
 const COMPANY_PHONE = "+33 7 68 88 38 88";
 const COMPANY_EMAIL = "info@transyachtgroup.com";
@@ -63,9 +72,18 @@ const KEY_CONDITIONS: { title: string; body: string }[] = [
     title: "TERRITORY",
     body: "The Vehicle may be used ONLY within France. Any use outside France constitutes a material breach and results in immediate termination of the agreement.",
   },
-  { title: "AUTHORISED DRIVER", body: "Only the named Renter may operate the Vehicle." },
-  { title: "PROHIBITED USE", body: "No sub-rental, racing, off-road, towing or commercial passenger service." },
-  { title: "FUEL", body: "Full-to-Full. Shortfall charged at market rate + EUR 50 service fee." },
+  {
+    title: "AUTHORISED DRIVER",
+    body: "Only the named Renter may operate the Vehicle.",
+  },
+  {
+    title: "PROHIBITED USE",
+    body: "No sub-rental, racing, off-road, towing or commercial passenger service.",
+  },
+  {
+    title: "FUEL",
+    body: "Full-to-Full. Shortfall charged at market rate + EUR 50 service fee.",
+  },
   {
     title: "LATE RETURN",
     body: "After 29-minute grace period, one additional day's rate is charged per commenced day of delay + EUR 100 fee.",
@@ -76,8 +94,14 @@ const KEY_CONDITIONS: { title: string; body: string }[] = [
   },
   { title: "SMOKING", body: "Strictly prohibited. EUR 100 cleaning penalty." },
   { title: "LOST KEYS", body: "EUR 500 per set." },
-  { title: "WRONG FUEL", body: "Full cost of draining and towing borne by Renter." },
-  { title: "GOVERNING LAW", body: "French law. Disputes: Tribunal de Commerce de Nice." },
+  {
+    title: "WRONG FUEL",
+    body: "Full cost of draining and towing borne by Renter.",
+  },
+  {
+    title: "GOVERNING LAW",
+    body: "French law. Disputes: Tribunal de Commerce de Nice.",
+  },
 ];
 
 const RENTER_LIABILITY_TEXT =
@@ -91,7 +115,11 @@ function formatDate(iso: string | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso + "T00:00:00");
   if (Number.isNaN(d.getTime())) return esc(iso);
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  return d.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 /** "23 Jul 2026" — compact form for the charges table's Period column. */
@@ -99,7 +127,11 @@ function formatDateShort(iso: string | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso + "T00:00:00");
   if (Number.isNaN(d.getTime())) return esc(iso);
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 /** Inclusive day count — matches totalDaysInclusive() in routes/bookings.ts. */
@@ -119,7 +151,8 @@ function kv(label: string, value: string): string {
 }
 
 export function renderContractHtml(input: ContractInput): string {
-  const dateOfIssue = input.dateOfIssue || new Date().toISOString().slice(0, 10);
+  const dateOfIssue =
+    input.dateOfIssue || new Date().toISOString().slice(0, 10);
   const days = daysInclusive(input.pickupDate, input.returnDate);
   const agreedMileage = input.kmPerDay * days;
   const totalDue = input.totalAmount + input.depositAmount;
@@ -142,7 +175,7 @@ export function renderContractHtml(input: ContractInput): string {
       font-size: 9.5px;
       line-height: 1.4;
     }
-    .ctr-page { page-break-after: always; position: relative; min-height: 267mm; padding-bottom: 12mm; }
+    .ctr-page { page-break-after: always; position: relative; width: 180mm; height: 267mm; overflow: hidden; padding-bottom: 12mm; }
     .ctr-page:last-child { page-break-after: auto; }
 
     .ctr-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 3.5mm; border-bottom: 2px solid ${GOLD}; margin-bottom: 5mm; }
@@ -161,7 +194,7 @@ export function renderContractHtml(input: ContractInput): string {
     .ctr-pickup { border-left: 3px solid ${GOLD}; background: ${LIGHT_GREY}; border-radius: 2px; padding: 2.5mm 3.5mm; margin-bottom: 5mm; font-size: 9.5px; }
     .ctr-pickup .l { font-family: ${HEAD}; color: ${GOLD_INK}; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; font-size: 7.5px; margin-right: 5px; }
 
-    .ctr-sec { break-inside: avoid; page-break-inside: avoid; margin-bottom: 4.5mm; }
+    .ctr-sec { break-inside: avoid; page-break-inside: avoid; margin-bottom: 3.5mm; }
     .ctr-sec-h { background: ${NEAR_BLACK}; color: ${WHITE}; font-family: ${HEAD}; font-size: 9.5px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; padding: 2mm 3.5mm; }
 
     table.ctr-kv { width: 100%; border-collapse: collapse; border: 1px solid ${HAIRLINE}; border-top: 0; }
@@ -202,6 +235,19 @@ export function renderContractHtml(input: ContractInput): string {
     .ctr-payment-blank { border-bottom: 1px solid ${HAIRLINE}; min-height: 5mm; }
 
     .ctr-footer { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; align-items: center; font-family: ${HEAD}; font-size: 7.5px; letter-spacing: 0.6px; text-transform: uppercase; color: ${MUTED_GREY}; border-top: 1px solid ${HAIRLINE}; padding-top: 2.5mm; }
+    .ctr-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; align-items: start; }
+    .ctr-two-col .ctr-kv-l { width: 42%; }
+    .ctr-two-col table.ctr-kv td { padding: 1.45mm 2.5mm; font-size: 8.4px; }
+    .ctr-two-col .ctr-sec-h { padding: 1.7mm 2.5mm; }
+    .ctr-page-2 .ctr-header { margin-bottom: 3.5mm; }
+    .ctr-page-2 .ctr-cond-body { padding-top: 2.4mm; }
+    .ctr-page-2 .ctr-cond-item { font-size: 8.1px; line-height: 1.42; margin-bottom: 1.25mm; }
+    .ctr-page-2 .ctr-liability-body { font-size: 8.8px; line-height: 1.5; }
+    .ctr-page-2 .ctr-sig-row { margin-top: 6mm; }
+    .ctr-page-2 .ctr-sig-body { padding-top: 4mm; }
+    .ctr-page-2 .ctr-sig-line { margin-top: 10mm; }
+    .ctr-page-2 .ctr-payment { margin-top: 5mm; }
+    .ctr-page-2 .ctr-payment-body { padding-top: 2.5mm; padding-bottom: 3mm; }
   `;
 
   function footer(pageNum: 1 | 2): string {
@@ -238,7 +284,10 @@ export function renderContractHtml(input: ContractInput): string {
     kv("Date of Birth", esc(formatDate(input.renter.dob))) +
     kv("Place of Birth", esc(input.renter.pob)) +
     kv("Nationality", esc(input.renter.nationality)) +
-    kv("Passport No. & Expiry", `${esc(input.renter.passport)} — Expires ${esc(formatDate(input.renter.passportExpiry))}`) +
+    kv(
+      "Passport No. & Expiry",
+      `${esc(input.renter.passport)} — Expires ${esc(formatDate(input.renter.passportExpiry))}`,
+    ) +
     kv(
       "Driving Licence",
       `${esc(input.renter.licence)} — Expires ${esc(formatDate(input.renter.licenceExpiry))} — Issued by ${esc(input.renter.licenceIssuedBy)}`,
@@ -265,10 +314,19 @@ export function renderContractHtml(input: ContractInput): string {
     `<div class="ctr-sec">` +
     `<div class="ctr-sec-h">C. Rental Period</div>` +
     `<table class="ctr-kv"><tbody>` +
-    kv("Pick-up", `${esc(formatDate(input.pickupDate))} — ${esc(input.pickupLocation)}`) +
-    kv("Return", `${esc(formatDate(input.returnDate))} — ${esc(input.returnLocation)}`) +
+    kv(
+      "Pick-up",
+      `${esc(formatDate(input.pickupDate))} — ${esc(input.pickupLocation)}`,
+    ) +
+    kv(
+      "Return",
+      `${esc(formatDate(input.returnDate))} — ${esc(input.returnLocation)}`,
+    ) +
     kv("Total Days", `${days} day${days === 1 ? "" : "s"}`) +
-    kv("Agreed Mileage", `${agreedMileage.toLocaleString("en-GB")} km (${input.kmPerDay} km/day × ${days} day${days === 1 ? "" : "s"})`) +
+    kv(
+      "Agreed Mileage",
+      `${agreedMileage.toLocaleString("en-GB")} km (${input.kmPerDay} km/day × ${days} day${days === 1 ? "" : "s"})`,
+    ) +
     kv("Excess Mileage Rate", `${fmtEur(input.extraKmPrice)} / km`) +
     `</tbody></table>` +
     `</div>`;
@@ -292,7 +350,8 @@ export function renderContractHtml(input: ContractInput): string {
     `<div class="ctr-sec-h">Key Conditions of Hire</div>` +
     `<div class="ctr-cond-body">` +
     KEY_CONDITIONS.map(
-      (c, i) => `<div class="ctr-cond-item"><b>${i + 1}. ${esc(c.title)}:</b> ${esc(c.body)}</div>`,
+      (c, i) =>
+        `<div class="ctr-cond-item"><b>${i + 1}. ${esc(c.title)}:</b> ${esc(c.body)}</div>`,
     ).join("") +
     `</div>` +
     `</div>`;
@@ -303,11 +362,9 @@ export function renderContractHtml(input: ContractInput): string {
     `<div class="ctr-doc-title">Vehicle Rental Agreement</div>` +
     metaHtml +
     pickupHtml +
-    renterSection +
-    vehicleSection +
+    `<div class="ctr-two-col">${renterSection}${vehicleSection}</div>` +
     rentalSection +
     chargesSection +
-    conditionsSection +
     footer(1) +
     `</section>`;
 
@@ -352,8 +409,9 @@ export function renderContractHtml(input: ContractInput): string {
     `</div>`;
 
   const page2 =
-    `<section class="ctr-page">` +
+    `<section class="ctr-page ctr-page-2">` +
     headerHtml +
+    conditionsSection +
     liabilitySection +
     signatureRow +
     paymentSection +

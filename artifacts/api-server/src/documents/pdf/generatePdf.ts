@@ -75,6 +75,11 @@ resolveExecutablePath().catch(() => undefined);
 export interface RenderPdfOptions {
   /** Keep the historical 95% scale by default; Fleet Offer uses exact A4 geometry. */
   scale?: number;
+  /** Optional fixed-page layout guard used by legally constrained documents. */
+  layoutGuard?: {
+    selector: string;
+    expectedElements: number;
+  };
 }
 
 /** Render an HTML string to an A4 PDF Buffer via headless Chromium. */
@@ -112,6 +117,50 @@ export async function renderPdf(
         })`,
       )
       .catch(() => undefined);
+    if (options.layoutGuard) {
+      const result = await page.evaluate(
+        ({
+          selector,
+          expectedElements,
+        }: {
+          selector: string;
+          expectedElements: number;
+        }) => {
+          const browserGlobal = globalThis as unknown as {
+            document: {
+              querySelectorAll: (selector: string) => ArrayLike<{
+                scrollHeight: number;
+                clientHeight: number;
+              }>;
+            };
+          };
+          const elements = Array.from(
+            browserGlobal.document.querySelectorAll(selector),
+          );
+          return {
+            count: elements.length,
+            expectedElements,
+            overflowing: elements
+              .map((element, index) => ({
+                index,
+                scrollHeight: element.scrollHeight,
+                clientHeight: element.clientHeight,
+              }))
+              .filter((item) => item.scrollHeight > item.clientHeight + 1),
+          };
+        },
+        options.layoutGuard,
+      );
+      if (
+        result.count !== result.expectedElements ||
+        result.overflowing.length
+      ) {
+        throw new Error(
+          `PDF layout validation failed: expected ${result.expectedElements} ${options.layoutGuard.selector} elements, ` +
+            `found ${result.count}; overflowing=${JSON.stringify(result.overflowing)}`,
+        );
+      }
+    }
     const pdf = await page.pdf({
       format: "A4",
       printBackground: true,
