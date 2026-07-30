@@ -273,6 +273,12 @@ function CarBookingFormModal({
   const [endDate, setEndDate] = useState(
     editingBooking?.endDate || target.date || "",
   );
+  const [startTime, setStartTime] = useState(
+    editingBooking ? editingBooking.startTime || "00:00" : "10:00",
+  );
+  const [endTime, setEndTime] = useState(
+    editingBooking ? editingBooking.endTime || "23:59" : "18:00",
+  );
   const [status, setStatus] = useState<Booking["status"]>(
     editingBooking?.status || "confirmed",
   );
@@ -426,7 +432,7 @@ function CarBookingFormModal({
       return;
     }
     let cancelled = false;
-    checkAvailability(vehicleId, startDate, endDate)
+    checkAvailability(vehicleId, startDate, endDate, startTime, endTime)
       .then((res) => {
         if (cancelled) return;
         setConflicts(res.conflicts.filter((c) => c.id !== editingBooking?.id));
@@ -437,7 +443,15 @@ function CarBookingFormModal({
     return () => {
       cancelled = true;
     };
-  }, [vehicleId, startDate, endDate, editingBooking?.id, isReadOnly]);
+  }, [
+    vehicleId,
+    startDate,
+    endDate,
+    startTime,
+    endTime,
+    editingBooking?.id,
+    isReadOnly,
+  ]);
 
   const blockingConflicts = conflicts.filter((c) =>
     BLOCKING_STATUSES.includes(c.status),
@@ -538,7 +552,10 @@ function CarBookingFormModal({
     // Full 24-hour periods only — e.g. June 8 to June 12 is 4 days, not 5.
     const days =
       start && end && end >= start
-        ? Math.floor((end.getTime() - start.getTime()) / 86400000)
+        ? Math.max(
+            1,
+            Math.floor((end.getTime() - start.getTime()) / 86400000),
+          )
         : 0;
     // 30-day months, rounded up — matches how monthly car rental rates are
     // quoted in practice (no calendar-month edge cases to reason about).
@@ -635,6 +652,10 @@ function CarBookingFormModal({
       setError("End date must not be before start date");
       return;
     }
+    if (`${endDate} ${endTime}` <= `${startDate} ${startTime}`) {
+      setError("Rental end must be after rental start");
+      return;
+    }
     if (blockingConflicts.length > 0) {
       setError("Resolve the booking conflict before saving.");
       return;
@@ -646,6 +667,8 @@ function CarBookingFormModal({
         vehicleId,
         startDate,
         endDate,
+        startTime,
+        endTime,
         status,
         clientName: clientName.trim() || null,
         clientPhone: clientPhone.trim() || null,
@@ -834,7 +857,9 @@ function CarBookingFormModal({
               {blockingConflicts.map((c) => (
                 <p key={c.id} className="text-red-300/80 text-[11px]">
                   {stripTags(c.clientName) || "Unnamed client"} —{" "}
-                  {STATUS_LABELS[c.status]} ({c.startDate} → {c.endDate})
+                  {STATUS_LABELS[c.status]} ({c.startDate}{" "}
+                  {c.startTime || "00:00"} → {c.endDate}{" "}
+                  {c.endTime || "23:59"})
                 </p>
               ))}
             </div>
@@ -857,6 +882,29 @@ function CarBookingFormModal({
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
+                disabled={isReadOnly}
+                className={`${inputClass} disabled:opacity-50`}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelClass}>Pick-up time</label>
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                disabled={isReadOnly}
+                className={`${inputClass} disabled:opacity-50`}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Return time</label>
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
                 disabled={isReadOnly}
                 className={`${inputClass} disabled:opacity-50`}
               />

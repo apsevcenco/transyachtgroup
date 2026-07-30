@@ -322,6 +322,8 @@ export interface Booking {
   vehicleId: number;
   startDate: string;
   endDate: string;
+  startTime?: string | null;
+  endTime?: string | null;
   status: "confirmed" | "tentative" | "blocked" | "maintenance" | "completed";
   clientName?: string | null;
   clientPhone?: string | null;
@@ -396,8 +398,12 @@ export async function checkAvailability(
   vehicleId: number,
   start: string,
   end: string,
+  startTime?: string,
+  endTime?: string,
 ) {
   const qs = new URLSearchParams({ vehicleId: String(vehicleId), start, end });
+  if (startTime) qs.set("startTime", startTime);
+  if (endTime) qs.set("endTime", endTime);
   const res = await fetch(`${API_BASE}/bookings/availability?${qs}`, {
     headers: authHeaders(),
   });

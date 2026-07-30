@@ -94,6 +94,8 @@ export const bookingsTable = pgTable(
       .references(() => vehiclesTable.id, { onDelete: "cascade" }),
     startDate: date("start_date").notNull(),
     endDate: date("end_date").notNull(),
+    startTime: varchar("start_time", { length: 5 }),
+    endTime: varchar("end_time", { length: 5 }),
     status: varchar("status", { length: 20 }).notNull().default("confirmed"),
     clientName: text("client_name"),
     clientPhone: text("client_phone"),
