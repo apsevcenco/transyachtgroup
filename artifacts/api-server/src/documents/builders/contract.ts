@@ -32,6 +32,7 @@ export interface ContractRenter {
   licenceExpiry: string; // ISO date
   licenceIssuedBy: string;
   phone: string;
+  email: string;
 }
 
 export interface ContractVehicle {
@@ -40,7 +41,6 @@ export interface ContractVehicle {
   plate?: string;
   vin?: string;
   fuelType?: string;
-  transmission?: string;
   colour?: string;
 }
 
@@ -293,6 +293,7 @@ export function renderContractHtml(input: ContractInput): string {
       `${esc(input.renter.licence)} — Expires ${esc(formatDate(input.renter.licenceExpiry))} — Issued by ${esc(input.renter.licenceIssuedBy)}`,
     ) +
     kv("Phone", esc(input.renter.phone)) +
+    kv("Email", esc(input.renter.email)) +
     `</tbody></table>` +
     `</div>`;
 
@@ -305,7 +306,6 @@ export function renderContractHtml(input: ContractInput): string {
     kv("Registration Plate", esc(input.vehicle.plate || "—")) +
     kv("VIN", esc(input.vehicle.vin || "—")) +
     kv("Fuel Type", esc(input.vehicle.fuelType || "—")) +
-    kv("Transmission", esc(input.vehicle.transmission || "—")) +
     kv("Colour", esc(input.vehicle.colour || "—")) +
     `</tbody></table>` +
     `</div>`;

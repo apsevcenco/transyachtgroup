@@ -52,6 +52,7 @@ interface ParsedContractRequest {
   renterLicenceExpiry: string;
   renterLicenceIssuedBy: string;
   renterPhone: string;
+  renterEmail: string;
   pickupDate: string;
   returnDate: string;
   pickupLocation: string;
@@ -113,6 +114,7 @@ function parseContractRequest(
     "renterLicence",
     "renterLicenceIssuedBy",
     "renterPhone",
+    "renterEmail",
     "pickupLocation",
     "returnLocation",
     "representativeName",
@@ -178,6 +180,8 @@ function parseContractRequest(
   const requestId = str(b.requestId);
   if (!/^[0-9a-f-]{36}$/i.test(requestId))
     return { error: "requestId must be a UUID" };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(requiredText.renterEmail))
+    return { error: "renterEmail must be a valid email address" };
   const contractNumber = str(b.contractNumber).toUpperCase();
   if (contractNumber && !CONTRACT_NUMBER.test(contractNumber)) {
     return {
@@ -201,6 +205,7 @@ function parseContractRequest(
       renterLicenceExpiry,
       renterLicenceIssuedBy: requiredText.renterLicenceIssuedBy,
       renterPhone: requiredText.renterPhone,
+      renterEmail: requiredText.renterEmail,
       pickupDate,
       returnDate,
       pickupLocation: requiredText.pickupLocation,
@@ -363,6 +368,7 @@ router.post(
             licenceExpiry: data.renterLicenceExpiry,
             licenceIssuedBy: data.renterLicenceIssuedBy,
             phone: data.renterPhone,
+            email: data.renterEmail,
           },
           vehicle: {
             name: vehicleName,
@@ -370,7 +376,6 @@ router.post(
             plate,
             vin,
             fuelType: stripHtml(specs.fuelType),
-            transmission: stripHtml(specs.transmission),
             colour: stripHtml(specs.colour),
           },
           pickupDate: data.pickupDate,
@@ -408,6 +413,7 @@ router.post(
               renterLicenceExpiry: data.renterLicenceExpiry || null,
               renterLicenceIssuedBy: data.renterLicenceIssuedBy || null,
               renterPhone: data.renterPhone || null,
+              renterEmail: data.renterEmail || null,
               pickupDate: data.pickupDate,
               returnDate: data.returnDate,
               pickupLocation: data.pickupLocation,
@@ -439,11 +445,9 @@ router.post(
               break;
             }
             if (explicitNumber) {
-              res
-                .status(409)
-                .json({
-                  error: `Contract number ${explicitNumber} already exists`,
-                });
+              res.status(409).json({
+                error: `Contract number ${explicitNumber} already exists`,
+              });
               return;
             }
             continue; // regenerate a fresh sequence number and retry

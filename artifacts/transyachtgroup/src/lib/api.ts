@@ -657,6 +657,7 @@ export interface ContractGenerateRequest {
   renterLicenceExpiry: string;
   renterLicenceIssuedBy: string;
   renterPhone: string;
+  renterEmail: string;
   pickupDate: string;
   returnDate: string;
   pickupLocation: string;

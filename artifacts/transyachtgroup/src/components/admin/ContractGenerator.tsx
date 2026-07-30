@@ -90,6 +90,7 @@ export function ContractGenerator({
   const [renterLicenceExpiry, setRenterLicenceExpiry] = useState("");
   const [renterLicenceIssuedBy, setRenterLicenceIssuedBy] = useState("");
   const [renterPhone, setRenterPhone] = useState(prefill?.renterPhone || "");
+  const [renterEmail, setRenterEmail] = useState("");
 
   const [pickupDate, setPickupDate] = useState(prefill?.pickupDate || "");
   const [returnDate, setReturnDate] = useState(prefill?.returnDate || "");
@@ -212,6 +213,7 @@ export function ContractGenerator({
     !!renterLicenceExpiry &&
     !!renterLicenceIssuedBy.trim() &&
     !!renterPhone.trim() &&
+    !!renterEmail.trim() &&
     !!pickupDate &&
     !!returnDate &&
     !!pickupLocation.trim() &&
@@ -244,6 +246,7 @@ export function ContractGenerator({
         renterLicenceExpiry,
         renterLicenceIssuedBy: renterLicenceIssuedBy.trim(),
         renterPhone: renterPhone.trim(),
+        renterEmail: renterEmail.trim(),
         pickupDate,
         returnDate,
         pickupLocation: pickupLocation.trim(),
@@ -432,6 +435,15 @@ export function ContractGenerator({
                   className={inputClass}
                 />
               </div>
+            </div>
+            <div>
+              <label className={labelClass}>Email</label>
+              <input
+                type="email"
+                value={renterEmail}
+                onChange={(e) => setRenterEmail(e.target.value)}
+                className={inputClass}
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
