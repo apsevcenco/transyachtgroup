@@ -282,6 +282,9 @@ function CarBookingFormModal({
   const [clientPhone, setClientPhone] = useState(
     editingBooking?.clientPhone || "",
   );
+  const [clientEmail, setClientEmail] = useState(
+    editingBooking?.clientEmail || "",
+  );
   const [notes, setNotes] = useState(editingBooking?.notes || "");
   const [totalAmount, setTotalAmount] = useState(
     numToStr(editingBooking?.totalAmount),
@@ -646,6 +649,7 @@ function CarBookingFormModal({
         status,
         clientName: clientName.trim() || null,
         clientPhone: clientPhone.trim() || null,
+        clientEmail: clientEmail.trim() || null,
         notes: notes.trim() || null,
         source: editingBooking?.source || "manual",
         icalUrl: editingBooking?.icalUrl || null,
@@ -892,6 +896,17 @@ function CarBookingFormModal({
               type="text"
               value={clientPhone}
               onChange={(e) => setClientPhone(e.target.value)}
+              disabled={isReadOnly}
+              className={`${inputClass} disabled:opacity-50`}
+            />
+          </div>
+
+          <div>
+            <label className={labelClass}>Client email</label>
+            <input
+              type="email"
+              value={clientEmail}
+              onChange={(e) => setClientEmail(e.target.value)}
               disabled={isReadOnly}
               className={`${inputClass} disabled:opacity-50`}
             />

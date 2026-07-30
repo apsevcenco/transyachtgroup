@@ -45,6 +45,7 @@ export function buildContractPrefillFromBooking(
     vehicleId: booking.vehicleId,
     renterName: stripTags(booking.clientName) || "",
     renterPhone: booking.clientPhone || "",
+    renterEmail: booking.clientEmail || "",
     pickupDate: booking.startDate,
     returnDate: booking.endDate,
     totalAmount: booking.totalAmount ?? null,

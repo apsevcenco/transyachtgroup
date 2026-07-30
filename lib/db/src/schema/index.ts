@@ -97,6 +97,7 @@ export const bookingsTable = pgTable(
     status: varchar("status", { length: 20 }).notNull().default("confirmed"),
     clientName: text("client_name"),
     clientPhone: text("client_phone"),
+    clientEmail: text("client_email"),
     notes: text("notes"),
     source: varchar("source", { length: 10 }).notNull().default("manual"),
     icalUrl: text("ical_url"),

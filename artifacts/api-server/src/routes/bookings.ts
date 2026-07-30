@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { bookingsTable, vehiclesTable, rentalHistoryTable, insertBookingSchema } from "@workspace/db/schema";
-import { eq, and, gte, lte, inArray, ne } from "drizzle-orm";
+import { eq, and, gte, lte, inArray, ne, sql } from "drizzle-orm";
 import { adminAuth } from "../middleware/auth";
 import ical from "node-ical";
 
@@ -44,6 +44,26 @@ function conflictMessage(conflicts: { clientName: string | null; startDate: stri
 const router: IRouter = Router();
 
 router.use(adminAuth);
+let bookingEmailSchemaReady: Promise<void> | null = null;
+router.use(async (_req, _res, next) => {
+  try {
+    if (!bookingEmailSchemaReady) {
+      bookingEmailSchemaReady = db
+        .execute(
+          sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS client_email TEXT`,
+        )
+        .then(() => undefined)
+        .catch((error) => {
+          bookingEmailSchemaReady = null;
+          throw error;
+        });
+    }
+    await bookingEmailSchemaReady;
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 function plainText(value: unknown): string | null {
   if (value == null) return null;
@@ -325,6 +345,7 @@ router.post("/bookings/ical-sync", async (req, res) => {
         status: "blocked" as const,
         clientName: plainText(event.summary),
         clientPhone: null,
+        clientEmail: null,
         notes: plainText(event.description),
         source: "ical" as const,
         icalUrl,

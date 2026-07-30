@@ -325,6 +325,7 @@ export interface Booking {
   status: "confirmed" | "tentative" | "blocked" | "maintenance" | "completed";
   clientName?: string | null;
   clientPhone?: string | null;
+  clientEmail?: string | null;
   notes?: string | null;
   source?: "manual" | "ical";
   icalUrl?: string | null;
