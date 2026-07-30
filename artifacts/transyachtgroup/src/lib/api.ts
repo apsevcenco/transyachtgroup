@@ -666,8 +666,6 @@ export interface ContractGenerateRequest {
   depositAmount: number;
   kmPerDay: number;
   extraKmPrice: number;
-  /** Leave blank to auto-generate TYG-DDMMYY-XXX. */
-  contractNumber?: string;
   representativeName: string;
 }
 
@@ -681,9 +679,8 @@ export async function generateContract(
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(
-      data.error || `Failed to generate contract (${res.status})`,
-    );
+    const message = data.error || `Failed to generate contract (${res.status})`;
+    throw new Error(data.detail ? `${message}: ${data.detail}` : message);
   }
   return res.blob();
 }

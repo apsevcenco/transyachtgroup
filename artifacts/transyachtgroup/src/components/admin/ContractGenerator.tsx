@@ -112,7 +112,6 @@ export function ContractGenerator({
     numToStr(prefill?.extraKmPrice),
   );
 
-  const [contractNumber, setContractNumber] = useState("");
   const [representativeName, setRepresentativeName] = useState("");
 
   const [generating, setGenerating] = useState(false);
@@ -255,7 +254,6 @@ export function ContractGenerator({
         depositAmount: strToNum(depositAmount),
         kmPerDay: strToNum(kmPerDay),
         extraKmPrice: strToNum(extraKmPrice),
-        contractNumber: contractNumber.trim() || undefined,
         representativeName: representativeName.trim(),
       };
       const fingerprint = JSON.stringify(payload);
@@ -589,30 +587,18 @@ export function ContractGenerator({
           </div>
         </div>
 
-        {/* Contract number + representative */}
+        {/* Contract number is generated server-side; only the signer is entered here. */}
         <div className="border-t border-white/[0.06] pt-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelClass}>Contract Number</label>
-              <input
-                type="text"
-                value={contractNumber}
-                onChange={(e) => setContractNumber(e.target.value)}
-                placeholder="Auto-generated (TYG-DDMMYY-XXX)"
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>
-                Representative (signs for the company)
-              </label>
-              <input
-                type="text"
-                value={representativeName}
-                onChange={(e) => setRepresentativeName(e.target.value)}
-                className={inputClass}
-              />
-            </div>
+          <div>
+            <label className={labelClass}>
+              Representative (signs for the company)
+            </label>
+            <input
+              type="text"
+              value={representativeName}
+              onChange={(e) => setRepresentativeName(e.target.value)}
+              className={inputClass}
+            />
           </div>
         </div>
 

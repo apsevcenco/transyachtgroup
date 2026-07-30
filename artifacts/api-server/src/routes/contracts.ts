@@ -6,7 +6,7 @@ import {
   vehiclesTable,
   bookingsTable,
 } from "@workspace/db/schema";
-import { eq, like } from "drizzle-orm";
+import { eq, like, sql } from "drizzle-orm";
 import { adminAuth } from "../middleware/auth";
 import {
   renderContractHtml,
@@ -61,12 +61,41 @@ interface ParsedContractRequest {
   depositAmount: number;
   kmPerDay: number;
   extraKmPrice: number;
-  contractNumber: string;
   representativeName: string;
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const CONTRACT_NUMBER = /^[A-Z0-9][A-Z0-9-]{0,49}$/;
+let contractSchemaReady: Promise<void> | null = null;
+
+function ensureContractSchema(): Promise<void> {
+  if (!contractSchemaReady) {
+    contractSchemaReady = db
+      .execute(
+        sql`
+        ALTER TABLE contracts
+          ADD COLUMN IF NOT EXISTS request_id VARCHAR(64) UNIQUE,
+          ADD COLUMN IF NOT EXISTS renter_email TEXT,
+          ADD COLUMN IF NOT EXISTS snapshot JSONB,
+          ADD COLUMN IF NOT EXISTS pdf_sha256 VARCHAR(64),
+          ADD COLUMN IF NOT EXISTS pdf_base64 TEXT,
+          ADD COLUMN IF NOT EXISTS template_version VARCHAR(30),
+          ADD COLUMN IF NOT EXISTS issued_at TIMESTAMP;
+
+        ALTER TABLE contracts
+          ALTER COLUMN total_amount TYPE NUMERIC(12,2) USING total_amount::NUMERIC,
+          ALTER COLUMN deposit_amount TYPE NUMERIC(12,2) USING deposit_amount::NUMERIC,
+          ALTER COLUMN extra_km_price TYPE NUMERIC(12,2) USING extra_km_price::NUMERIC;
+      `,
+      )
+      .then(() => undefined)
+      .catch((error) => {
+        contractSchemaReady = null;
+        throw error;
+      });
+  }
+  return contractSchemaReady;
+}
 
 function isRealIsoDate(value: string): boolean {
   if (!ISO_DATE.test(value)) return false;
@@ -182,14 +211,6 @@ function parseContractRequest(
     return { error: "requestId must be a UUID" };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(requiredText.renterEmail))
     return { error: "renterEmail must be a valid email address" };
-  const contractNumber = str(b.contractNumber).toUpperCase();
-  if (contractNumber && !CONTRACT_NUMBER.test(contractNumber)) {
-    return {
-      error:
-        "contractNumber may contain only A-Z, 0-9 and hyphens (maximum 50 characters)",
-    };
-  }
-
   return {
     data: {
       requestId,
@@ -214,7 +235,6 @@ function parseContractRequest(
       depositAmount,
       kmPerDay,
       extraKmPrice,
-      contractNumber,
       representativeName: requiredText.representativeName,
     },
   };
@@ -272,6 +292,7 @@ router.post(
         return;
       }
       const data = parsed.data;
+      await ensureContractSchema();
 
       const [existingRequest] = await db
         .select()
@@ -345,15 +366,13 @@ router.post(
         return;
       }
 
-      const explicitNumber = data.contractNumber || null;
       const issueDate = todayInParis();
 
       let inserted: typeof contractsTable.$inferSelect | null = null;
       let buffer: Buffer | null = null;
       let lastErr: unknown = null;
       for (let attempt = 0; attempt < 5 && !inserted; attempt++) {
-        const contractNumber =
-          explicitNumber ?? (await nextContractNumber(issueDate.key));
+        const contractNumber = await nextContractNumber(issueDate.key);
         const contractInput: ContractInput = {
           contractNumber,
           dateOfIssue: issueDate.iso,
@@ -444,12 +463,6 @@ router.post(
               buffer = Buffer.from(sameRequest.pdfBase64, "base64");
               break;
             }
-            if (explicitNumber) {
-              res.status(409).json({
-                error: `Contract number ${explicitNumber} already exists`,
-              });
-              return;
-            }
             continue; // regenerate a fresh sequence number and retry
           }
           throw err;
@@ -476,10 +489,14 @@ router.post(
       const msg = err instanceof Error ? err.message : String(err);
       logger.error({ err: msg }, "contract PDF error");
       const layoutError = msg.startsWith("PDF layout validation failed");
+      const schemaError =
+        /column .* does not exist|permission denied|must be owner/i.test(msg);
       res.status(layoutError ? 422 : 500).json({
         error: layoutError
           ? "Contract data does not fit the fixed two-page layout. Shorten unusually long fields."
-          : "Failed to generate contract PDF",
+          : schemaError
+            ? "Contract database schema is not ready"
+            : "Failed to generate contract PDF",
         detail: msg,
       });
     }
