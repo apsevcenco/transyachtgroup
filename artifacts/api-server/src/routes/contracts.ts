@@ -6,7 +6,7 @@ import {
   vehiclesTable,
   bookingsTable,
 } from "@workspace/db/schema";
-import { eq, like, sql } from "drizzle-orm";
+import { desc, eq, like, sql } from "drizzle-orm";
 import { adminAuth } from "../middleware/auth";
 import {
   renderContractHtml,
@@ -500,6 +500,30 @@ router.post(
         detail: msg,
       });
     }
+  },
+);
+
+router.get(
+  "/admin/contracts/booking/:bookingId",
+  adminAuth,
+  async (req, res) => {
+    const bookingId = Number(req.params.bookingId);
+    if (!Number.isInteger(bookingId) || bookingId <= 0) {
+      res.status(400).json({ error: "Invalid booking ID" });
+      return;
+    }
+    await ensureContractSchema();
+    const contracts = await db
+      .select({
+        contractNumber: contractsTable.contractNumber,
+        issuedAt: contractsTable.issuedAt,
+        createdAt: contractsTable.createdAt,
+        pdfSha256: contractsTable.pdfSha256,
+      })
+      .from(contractsTable)
+      .where(eq(contractsTable.bookingId, bookingId))
+      .orderBy(desc(contractsTable.createdAt));
+    res.json(contracts);
   },
 );
 

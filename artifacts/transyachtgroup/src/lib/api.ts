@@ -684,3 +684,31 @@ export async function generateContract(
   }
   return res.blob();
 }
+
+export interface StoredContract {
+  contractNumber: string;
+  issuedAt: string | null;
+  createdAt: string | null;
+  pdfSha256: string | null;
+}
+
+export async function fetchBookingContracts(
+  bookingId: number,
+): Promise<StoredContract[]> {
+  const res = await fetch(`${API_BASE}/admin/contracts/booking/${bookingId}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to load saved contracts");
+  return res.json();
+}
+
+export async function downloadStoredContract(
+  contractNumber: string,
+): Promise<Blob> {
+  const res = await fetch(
+    `${API_BASE}/admin/contracts/${encodeURIComponent(contractNumber)}/pdf`,
+    { headers: authHeaders() },
+  );
+  if (!res.ok) throw new Error("Failed to download saved contract");
+  return res.blob();
+}
