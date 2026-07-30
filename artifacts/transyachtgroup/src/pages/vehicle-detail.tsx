@@ -1,22 +1,40 @@
 import { useState, useEffect, useCallback } from "react";
 import type { Variants } from "framer-motion";
 import { motion, AnimatePresence } from "@/lib/motion-shim";
-import { ArrowLeft, ChevronLeft, ChevronRight, X, Maximize2, Ship, Car as CarIcon, Phone, MessageCircle, FileDown, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Maximize2,
+  Ship,
+  Car as CarIcon,
+  Phone,
+  MessageCircle,
+  FileDown,
+  Loader2,
+} from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { useLocation } from "wouter";
 import { fetchVehicle, fetchContent, downloadVehicleProposal } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePageView, trackVehicleView } from "@/hooks/useAnalytics";
 import { CmsContent } from "@/components/CmsContent";
+import { SeoHead, SITE_URL } from "@/components/SeoHead";
 
-function getCarSpecLabels(units: "metric" | "imperial", t: (key: string) => string): Record<string, string> {
+function getCarSpecLabels(
+  units: "metric" | "imperial",
+  t: (key: string) => string,
+): Record<string, string> {
   const m = units === "metric";
   return {
     engine: t("spec_engine"),
     horsepower: t("spec_power"),
     torque: m ? `${t("spec_torque")} (Nm)` : `${t("spec_torque")} (lb·ft)`,
     acceleration: m ? t("spec_acceleration") : "0–60 mph",
-    topSpeed: m ? `${t("spec_top_speed")} (km/h)` : `${t("spec_top_speed")} (mph)`,
+    topSpeed: m
+      ? `${t("spec_top_speed")} (km/h)`
+      : `${t("spec_top_speed")} (mph)`,
     transmission: t("spec_transmission"),
     drivetrain: t("spec_drivetrain"),
     seats: t("spec_seats"),
@@ -28,7 +46,10 @@ function getCarSpecLabels(units: "metric" | "imperial", t: (key: string) => stri
   };
 }
 
-function getYachtSpecLabels(units: "metric" | "imperial", t: (key: string) => string): Record<string, string> {
+function getYachtSpecLabels(
+  units: "metric" | "imperial",
+  t: (key: string) => string,
+): Record<string, string> {
   const m = units === "metric";
   return {
     length: m ? `${t("spec_length")} (m)` : `${t("spec_length")} (ft)`,
@@ -39,8 +60,12 @@ function getYachtSpecLabels(units: "metric" | "imperial", t: (key: string) => st
     crew: t("spec_crew"),
     cruisingSpeed: `${t("spec_cruising_speed")} (knots)`,
     maxSpeed: `${t("spec_max_speed")} (knots)`,
-    fuelCapacity: m ? `${t("spec_fuel_capacity")} (L)` : `${t("spec_fuel_capacity")} (gal)`,
-    waterCapacity: m ? `${t("spec_water_capacity")} (L)` : `${t("spec_water_capacity")} (gal)`,
+    fuelCapacity: m
+      ? `${t("spec_fuel_capacity")} (L)`
+      : `${t("spec_fuel_capacity")} (gal)`,
+    waterCapacity: m
+      ? `${t("spec_water_capacity")} (L)`
+      : `${t("spec_water_capacity")} (gal)`,
     yearBuilt: t("spec_year_built"),
     builder: t("spec_builder"),
     type: t("spec_type"),
@@ -58,7 +83,7 @@ const ALL_CURRENCIES: { code: string; symbol: string }[] = [
 type Rates = Record<string, number>;
 
 function formatPrice(amount: number, currency: string): string {
-  const curr = ALL_CURRENCIES.find(c => c.code === currency);
+  const curr = ALL_CURRENCIES.find((c) => c.code === currency);
   const symbol = curr?.symbol || currency;
   const formatted = Math.round(amount).toLocaleString("en-US");
   return `${symbol} ${formatted}`;
@@ -66,10 +91,17 @@ function formatPrice(amount: number, currency: string): string {
 
 const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 30 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] } },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] },
+  },
 };
 
-const METRIC_TO_IMPERIAL: Record<string, { factor: number; fromUnit: string; toUnit: string }> = {
+const METRIC_TO_IMPERIAL: Record<
+  string,
+  { factor: number; fromUnit: string; toUnit: string }
+> = {
   length: { factor: 3.28084, fromUnit: "m", toUnit: "ft" },
   beam: { factor: 3.28084, fromUnit: "m", toUnit: "ft" },
   draft: { factor: 3.28084, fromUnit: "m", toUnit: "ft" },
@@ -84,16 +116,19 @@ const METRIC_TO_IMPERIAL: Record<string, { factor: number; fromUnit: string; toU
 
 const stripHtmlTags = (s: unknown) =>
   String(s ?? "")
-   .replace(/<[^>]*>/g, "")
-   .replace(/&nbsp;/g, " ")
-   .replace(/&amp;/g, "&")
-   .replace(/&lt;/g, "<")
-   .replace(/&gt;/g, ">")
-   .replace(/&quot;/g, '"')
-   .replace(/&#?\w+;/g, "")
-   .trim();
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#?\w+;/g, "")
+    .trim();
 
-const wrapWithOriginalStyle = (originalHtml: unknown, newText: string): string => {
+const wrapWithOriginalStyle = (
+  originalHtml: unknown,
+  newText: string,
+): string => {
   const html = String(originalHtml ?? "");
   const styleMatch = html.match(/<span[^>]*style="([^"]*)"[^>]*>/);
   if (styleMatch) {
@@ -107,7 +142,12 @@ const extractNumber = (s: unknown): number => {
   return parseFloat(plain) || 0;
 };
 
-function convertSpecValue(key: string, value: string, from: "metric" | "imperial", to: "metric" | "imperial"): string {
+function convertSpecValue(
+  key: string,
+  value: string,
+  from: "metric" | "imperial",
+  to: "metric" | "imperial",
+): string {
   if (from === to) return value;
   const conv = METRIC_TO_IMPERIAL[key];
   if (!conv || conv.factor === 1) return value;
@@ -120,12 +160,18 @@ function convertSpecValue(key: string, value: string, from: "metric" | "imperial
 
   if (from === "metric" && to === "imperial") {
     const converted = num * conv.factor;
-    const formatted = converted % 1 === 0 ? converted.toString() : converted.toFixed(1);
-    return value.replace(numMatch[1], formatted).replace(conv.fromUnit, conv.toUnit);
+    const formatted =
+      converted % 1 === 0 ? converted.toString() : converted.toFixed(1);
+    return value
+      .replace(numMatch[1], formatted)
+      .replace(conv.fromUnit, conv.toUnit);
   } else {
     const converted = num / conv.factor;
-    const formatted = converted % 1 === 0 ? converted.toString() : converted.toFixed(1);
-    return value.replace(numMatch[1], formatted).replace(conv.toUnit, conv.fromUnit);
+    const formatted =
+      converted % 1 === 0 ? converted.toString() : converted.toFixed(1);
+    return value
+      .replace(numMatch[1], formatted)
+      .replace(conv.toUnit, conv.fromUnit);
   }
 }
 
@@ -151,21 +197,32 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
 
   useEffect(() => {
     const vid = parseInt(id);
-    if (isNaN(vid)) { setError(true); setLoading(false); return; }
+    if (isNaN(vid)) {
+      setError(true);
+      setLoading(false);
+      return;
+    }
     trackVehicleView(vid);
     fetchVehicle(vid, lang)
-      .then(v => {
+      .then((v) => {
         setVehicle(v);
         if (v?.specs?.unitSystem) setViewUnits(v.specs.unitSystem);
         setLoading(false);
       })
-      .catch(() => { setError(true); setLoading(false); });
+      .catch(() => {
+        setError(true);
+        setLoading(false);
+      });
 
-    fetchContent(lang).then(setSiteContent).catch(() => {});
+    fetchContent(lang)
+      .then(setSiteContent)
+      .catch(() => {});
 
     fetch("https://api.frankfurter.dev/v1/latest?base=EUR")
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data?.rates) setRates({ EUR: 1, ...data.rates }); })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.rates) setRates({ EUR: 1, ...data.rates });
+      })
       .catch(() => {});
   }, [id, lang]);
 
@@ -176,22 +233,38 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
   const cleanWhatsapp = stripHtml(whatsappNumber).replace(/[\s+]/g, "");
 
   const allImages: string[] = vehicle
-    ? (vehicle.images && Array.isArray(vehicle.images) && vehicle.images.length > 0
-        ? vehicle.images
-        : vehicle.image ? [vehicle.image] : [])
+    ? vehicle.images &&
+      Array.isArray(vehicle.images) &&
+      vehicle.images.length > 0
+      ? vehicle.images
+      : vehicle.image
+        ? [vehicle.image]
+        : []
     : [];
 
   const specs = vehicle?.specs || {};
   const fullDescription = specs.fullDescription || "";
-  const savedUnitSystem = (specs.unitSystem === "metric" || specs.unitSystem === "imperial") ? specs.unitSystem : "metric";
-  const specLabels = vehicle?.category === "car" ? getCarSpecLabels(viewUnits, t) : getYachtSpecLabels(viewUnits, t);
+  const savedUnitSystem =
+    specs.unitSystem === "metric" || specs.unitSystem === "imperial"
+      ? specs.unitSystem
+      : "metric";
+  const specLabels =
+    vehicle?.category === "car"
+      ? getCarSpecLabels(viewUnits, t)
+      : getYachtSpecLabels(viewUnits, t);
   const priceEur = specs.pricePerDay ? extractNumber(specs.pricePerDay) : 0;
-  const priceThreeDaysEur = specs.pricePerThreeDays ? extractNumber(specs.pricePerThreeDays) : 0;
-  const priceMonthEur = specs.pricePerMonth ? extractNumber(specs.pricePerMonth) : 0;
+  const priceThreeDaysEur = specs.pricePerThreeDays
+    ? extractNumber(specs.pricePerThreeDays)
+    : 0;
+  const priceMonthEur = specs.pricePerMonth
+    ? extractNumber(specs.pricePerMonth)
+    : 0;
   const rate = rates[currency] || 1;
   const convertedPrice = priceEur * rate;
 
-  const availableCurrencies = ALL_CURRENCIES.filter(c => c.code === "EUR" || rates[c.code]);
+  const availableCurrencies = ALL_CURRENCIES.filter(
+    (c) => c.code === "EUR" || rates[c.code],
+  );
 
   const openLightbox = useCallback((idx: number) => {
     setLightboxIdx(idx);
@@ -208,11 +281,12 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      const safeName = (vehicle.name || "proposal")
-        .replace(/<[^>]*>/g, "")
-        .replace(/[^\w\s-]/g, "")
-        .trim()
-        .replace(/\s+/g, "-") || "proposal";
+      const safeName =
+        (vehicle.name || "proposal")
+          .replace(/<[^>]*>/g, "")
+          .replace(/[^\w\s-]/g, "")
+          .trim()
+          .replace(/\s+/g, "-") || "proposal";
       a.download = `${safeName}-proposal.pdf`;
       document.body.appendChild(a);
       a.click();
@@ -226,11 +300,11 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
   }, [vehicle, id, lang, t]);
 
   const lightboxPrev = useCallback(() => {
-    setLightboxIdx(prev => (prev - 1 + allImages.length) % allImages.length);
+    setLightboxIdx((prev) => (prev - 1 + allImages.length) % allImages.length);
   }, [allImages.length]);
 
   const lightboxNext = useCallback(() => {
-    setLightboxIdx(prev => (prev + 1) % allImages.length);
+    setLightboxIdx((prev) => (prev + 1) % allImages.length);
   }, [allImages.length]);
 
   useEffect(() => {
@@ -255,11 +329,23 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
   if (error || !vehicle) {
     return (
       <div className="min-h-screen bg-card">
+        <SeoHead
+          title={t("not_found")}
+          description={t("listing_not_found")}
+          path={`/vehicle/${id}`}
+          lang={lang}
+          robots="noindex,follow"
+        />
         <Navbar />
         <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
-          <h1 className="font-serif text-3xl text-white mb-4">{t("not_found")}</h1>
+          <h1 className="font-serif text-3xl text-white mb-4">
+            {t("not_found")}
+          </h1>
           <p className="text-white/40 mb-8">{t("listing_not_found")}</p>
-          <button onClick={() => setLocation("/")} className="font-porter text-[hsl(43,67%,55%)] hover:text-[hsl(43,67%,65%)] text-sm flex items-center gap-2">
+          <button
+            onClick={() => setLocation("/")}
+            className="font-porter text-[hsl(43,67%,55%)] hover:text-[hsl(43,67%,65%)] text-sm flex items-center gap-2"
+          >
             <ArrowLeft size={16} /> {t("back_to_home")}
           </button>
         </div>
@@ -282,7 +368,12 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
         return wrapWithOriginalStyle(raw, formatted);
       }
     }
-    const converted = convertSpecValue(key, plain, savedUnitSystem as "metric" | "imperial", viewUnits);
+    const converted = convertSpecValue(
+      key,
+      plain,
+      savedUnitSystem as "metric" | "imperial",
+      viewUnits,
+    );
     if (converted !== plain) return wrapWithOriginalStyle(raw, converted);
     return plain;
   };
@@ -294,9 +385,75 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
       label,
       value: formatSpecDisplay(key, specs[key]),
     }));
+  const seoName = stripHtmlTags(vehicle.name);
+  const seoDescription =
+    stripHtmlTags(fullDescription || vehicle.description).slice(0, 300) ||
+    `${seoName} available from Trans Yacht Group on the French Riviera.`;
+  const seoImage = allImages[0] || vehicle.image || "/opengraph.jpg";
+  const vehicleUrl = `${SITE_URL}/vehicle/${id}?lang=${lang}`;
+  const productJsonLd: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "@id": `${vehicleUrl}#product`,
+    name: seoName,
+    description: seoDescription,
+    image: allImages.length ? allImages : [seoImage],
+    category: isCar ? "Luxury car rental" : "Luxury yacht charter",
+    url: vehicleUrl,
+    ...(specs.builder
+      ? {
+          brand: {
+            "@type": "Brand",
+            name: stripHtmlTags(specs.builder),
+          },
+        }
+      : {}),
+    ...(priceEur > 0
+      ? {
+          offers: {
+            "@type": "Offer",
+            url: vehicleUrl,
+            priceCurrency: "EUR",
+            price: priceEur,
+            availability: "https://schema.org/InStock",
+            seller: { "@id": `${SITE_URL}/#organization` },
+          },
+        }
+      : {}),
+  };
 
   return (
     <div className="min-h-screen bg-card text-white">
+      <SeoHead
+        title={`${seoName} ${isCar ? "Luxury Car Rental" : "Yacht Charter"}`}
+        description={seoDescription}
+        path={`/vehicle/${id}`}
+        lang={lang}
+        image={seoImage}
+        type="product"
+        jsonLd={[
+          productJsonLd,
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              {
+                "@type": "ListItem",
+                position: 1,
+                name: "Home",
+                item: `${SITE_URL}/?lang=${lang}`,
+              },
+              {
+                "@type": "ListItem",
+                position: 2,
+                name: isCar ? t("cars") : t("yachts"),
+                item: `${SITE_URL}${backPath}?lang=${lang}`,
+              },
+              { "@type": "ListItem", position: 3, name: seoName },
+            ],
+          },
+        ]}
+      />
       <Navbar />
 
       <div className="pt-36 pb-4 px-4">
@@ -306,90 +463,97 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
             className="font-porter flex items-center gap-2 text-white/40 hover:text-[hsl(43,67%,55%)] transition-colors text-sm mb-6"
           >
             <ArrowLeft size={16} />
-            <span className="text-[10px] uppercase tracking-[0.2em]">{t("back_to_catalog")} {categoryLabel}s</span>
+            <span className="text-[10px] uppercase tracking-[0.2em]">
+              {t("back_to_catalog")} {categoryLabel}s
+            </span>
           </button>
         </div>
       </div>
 
-     <section className="px-4 pb-12">
-  <div className="max-w-7xl mx-auto">
-    {allImages.length > 0 && (
-      <motion.div initial="hidden" animate="visible" variants={fadeInUp}>
-        <div
-          className="relative h-[520px] max-h-[75vh] rounded-2xl overflow-hidden mb-4 cursor-pointer group bg-black flex items-center justify-center"
-          onClick={() => openLightbox(currentImage)}
-        >
-          <img
-            src={allImages[currentImage]}
-            alt={stripHtmlTags(vehicle.name || "")}
-            className="max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-700 group-hover:scale-[1.02]"
-            decoding="async"
-          />
-
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10 pointer-events-none" />
-
-          <div className="absolute bottom-6 right-6 z-10 w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white/60 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Maximize2 size={18} />
-          </div>
-
-          {allImages.length > 1 && (
-            <>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setCurrentImage((prev) => (prev - 1 + allImages.length) % allImages.length);
-                }}
-                className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-black/70 transition-all"
-              >
-                <ChevronLeft size={20} />
-              </button>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setCurrentImage((prev) => (prev + 1) % allImages.length);
-                }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-black/70 transition-all"
-              >
-                <ChevronRight size={20} />
-              </button>
-
-              <div className="absolute bottom-6 left-6 z-10">
-                <span className="px-3 py-1.5 bg-black/60 backdrop-blur-sm border border-white/10 rounded-full text-xs text-white/60">
-                  {currentImage + 1} / {allImages.length}
-                </span>
-              </div>
-            </>
-          )}
-        </div>
-
-        {allImages.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            {allImages.map((img, idx) => (
-              <button
-                key={idx}
-                onClick={() => setCurrentImage(idx)}
-                className={`flex-shrink-0 w-20 h-14 md:w-28 md:h-20 rounded-lg overflow-hidden border-2 transition-all ${
-                  idx === currentImage
-                    ? "border-[hsl(43,67%,55%)] opacity-100"
-                    : "border-transparent opacity-50 hover:opacity-80"
-                }`}
+      <section className="px-4 pb-12">
+        <div className="max-w-7xl mx-auto">
+          {allImages.length > 0 && (
+            <motion.div initial="hidden" animate="visible" variants={fadeInUp}>
+              <div
+                className="relative h-[520px] max-h-[75vh] rounded-2xl overflow-hidden mb-4 cursor-pointer group bg-black flex items-center justify-center"
+                onClick={() => openLightbox(currentImage)}
               >
                 <img
-                  src={img}
-                  alt={`${stripHtmlTags(vehicle.name || "")} ${idx + 1}`}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
+                  src={allImages[currentImage]}
+                  alt={stripHtmlTags(vehicle.name || "")}
+                  className="max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-700 group-hover:scale-[1.02]"
                   decoding="async"
                 />
-              </button>
-            ))}
-          </div>
-        )}
-      </motion.div>
-    )}
-  </div>
-</section>
+
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10 pointer-events-none" />
+
+                <div className="absolute bottom-6 right-6 z-10 w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white/60 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Maximize2 size={18} />
+                </div>
+
+                {allImages.length > 1 && (
+                  <>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCurrentImage(
+                          (prev) =>
+                            (prev - 1 + allImages.length) % allImages.length,
+                        );
+                      }}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-black/70 transition-all"
+                    >
+                      <ChevronLeft size={20} />
+                    </button>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCurrentImage(
+                          (prev) => (prev + 1) % allImages.length,
+                        );
+                      }}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-black/70 transition-all"
+                    >
+                      <ChevronRight size={20} />
+                    </button>
+
+                    <div className="absolute bottom-6 left-6 z-10">
+                      <span className="px-3 py-1.5 bg-black/60 backdrop-blur-sm border border-white/10 rounded-full text-xs text-white/60">
+                        {currentImage + 1} / {allImages.length}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {allImages.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                  {allImages.map((img, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentImage(idx)}
+                      className={`flex-shrink-0 w-20 h-14 md:w-28 md:h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                        idx === currentImage
+                          ? "border-[hsl(43,67%,55%)] opacity-100"
+                          : "border-transparent opacity-50 hover:opacity-80"
+                      }`}
+                    >
+                      <img
+                        src={img}
+                        alt={`${stripHtmlTags(vehicle.name || "")} ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </div>
+      </section>
 
       <section className="px-4 pb-20">
         <div className="max-w-7xl mx-auto">
@@ -407,37 +571,45 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
                 </span>
               </div>
 
-           <CmsContent
-  as="h1"
-  className="text-white mb-3 tracking-tight leading-[1.1]"
-  style={{
-    fontSize: "56px",
-  }}
-  html={vehicle.name}
-/>
+              <CmsContent
+                as="h1"
+                className="text-white mb-3 tracking-tight leading-[1.1]"
+                style={{
+                  fontSize: "56px",
+                }}
+                html={vehicle.name}
+              />
 
-{vehicle.description && (
-  <CmsContent
-    as="div"
-    className="text-[hsl(43,67%,55%)]/70 font-light mb-8 tracking-wide leading-relaxed vehicle-description font-porter"
-    style={{
-      fontSize: "18px",
-    }}
-    html={vehicle.description}
-  />
-)}
+              {vehicle.description && (
+                <CmsContent
+                  as="div"
+                  className="text-[hsl(43,67%,55%)]/70 font-light mb-8 tracking-wide leading-relaxed vehicle-description font-porter"
+                  style={{
+                    fontSize: "18px",
+                  }}
+                  html={vehicle.description}
+                />
+              )}
 
               {fullDescription && (
                 <div className="mb-10">
-                  <h2 className="text-[10px] uppercase tracking-[0.4em] text-white/30 font-light mb-4">Description</h2>
-                  <CmsContent as="div" className="text-white/70 text-[15px] leading-relaxed font-light font-wix whitespace-pre-line vehicle-description" html={fullDescription} />
+                  <h2 className="text-[10px] uppercase tracking-[0.4em] text-white/30 font-light mb-4">
+                    Description
+                  </h2>
+                  <CmsContent
+                    as="div"
+                    className="text-white/70 text-[15px] leading-relaxed font-light font-wix whitespace-pre-line vehicle-description"
+                    html={fullDescription}
+                  />
                 </div>
               )}
 
               {displaySpecs.length > 0 && (
                 <div className="mb-8">
                   <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-[10px] uppercase tracking-[0.4em] text-white/30 font-light">Specifications</h2>
+                    <h2 className="text-[10px] uppercase tracking-[0.4em] text-white/30 font-light">
+                      Specifications
+                    </h2>
                     <div className="flex bg-white/[0.04] rounded-lg overflow-hidden border border-white/[0.06]">
                       <button
                         onClick={() => setViewUnits("metric")}
@@ -465,7 +637,11 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
                     {displaySpecs.map(({ key, label, value }) => (
                       <div key={key} className="bg-card p-5">
                         <p className="spec-label mb-2">{label}</p>
-<CmsContent as="p" className="spec-value" html={value} />
+                        <CmsContent
+                          as="p"
+                          className="spec-value"
+                          html={value}
+                        />
                       </div>
                     ))}
                   </div>
@@ -476,22 +652,28 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
             <motion.div
               initial={{ opacity: 0, x: 40 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+              transition={{
+                duration: 0.8,
+                delay: 0.2,
+                ease: [0.25, 0.46, 0.45, 0.94],
+              }}
               className="lg:col-span-1"
             >
               <div className="sticky top-8 bg-white/[0.02] border border-white/[0.06] rounded-2xl p-8">
                 {priceEur > 0 ? (
                   <div className="mb-6">
-                    <p className="text-[9px] uppercase tracking-[0.3em] text-white/30 font-light mb-2">Charter Rate</p>
+                    <p className="text-[9px] uppercase tracking-[0.3em] text-white/30 font-light mb-2">
+                      Charter Rate
+                    </p>
                     <div className="flex items-baseline gap-2">
                       <CmsContent
-  as="span"
-  className="text-[hsl(43,67%,55%)] vehicle-price"
-  html={wrapWithOriginalStyle(
-    specs.pricePerDay,
-    formatPrice(convertedPrice, currency)
-  )}
-/>
+                        as="span"
+                        className="text-[hsl(43,67%,55%)] vehicle-price"
+                        html={wrapWithOriginalStyle(
+                          specs.pricePerDay,
+                          formatPrice(convertedPrice, currency),
+                        )}
+                      />
                       <span className="text-white/25 text-sm">/ day</span>
                     </div>
 
@@ -502,7 +684,7 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
                           className="text-[hsl(43,67%,55%)] vehicle-price"
                           html={wrapWithOriginalStyle(
                             specs.pricePerThreeDays,
-                            formatPrice(priceThreeDaysEur * rate, currency)
+                            formatPrice(priceThreeDaysEur * rate, currency),
                           )}
                         />
                         <span className="text-white/25 text-sm">/ 3 days</span>
@@ -515,7 +697,7 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
                           className="text-[hsl(43,67%,55%)] vehicle-price"
                           html={wrapWithOriginalStyle(
                             specs.pricePerMonth,
-                            formatPrice(priceMonthEur * rate, currency)
+                            formatPrice(priceMonthEur * rate, currency),
                           )}
                         />
                         <span className="text-white/25 text-sm">/ month</span>
@@ -525,31 +707,38 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
                     {vehicle?.category === "yacht" && priceEur > 0 && (
                       <div className="flex items-baseline gap-2 mt-2">
                         <CmsContent
-  as="span"
-  className="text-[hsl(43,67%,55%)] vehicle-price"
-  html={wrapWithOriginalStyle(
-    specs.pricePerDay,
-    formatPrice(Math.round(priceEur * 6) * rate, currency)
-  )}
-/>
+                          as="span"
+                          className="text-[hsl(43,67%,55%)] vehicle-price"
+                          html={wrapWithOriginalStyle(
+                            specs.pricePerDay,
+                            formatPrice(
+                              Math.round(priceEur * 6) * rate,
+                              currency,
+                            ),
+                          )}
+                        />
                         <span className="text-white/25 text-sm">/ week</span>
                       </div>
                     )}
 
                     {vehicle?.category === "yacht" && specs.pricingType && (
                       <div className="mt-3">
-                        <span className={`inline-block px-3 py-1 rounded-full text-[10px] uppercase tracking-[0.15em] font-medium border ${
-                          specs.pricingType === "plus APA"
-                            ? "bg-amber-500/10 text-amber-400/80 border-amber-500/20"
-                            : "bg-emerald-500/10 text-emerald-400/80 border-emerald-500/20"
-                        }`}>
-                          {specs.pricingType === "plus APA" ? "+ APA" : "All Included"}
+                        <span
+                          className={`inline-block px-3 py-1 rounded-full text-[10px] uppercase tracking-[0.15em] font-medium border ${
+                            specs.pricingType === "plus APA"
+                              ? "bg-amber-500/10 text-amber-400/80 border-amber-500/20"
+                              : "bg-emerald-500/10 text-emerald-400/80 border-emerald-500/20"
+                          }`}
+                        >
+                          {specs.pricingType === "plus APA"
+                            ? "+ APA"
+                            : "All Included"}
                         </span>
                       </div>
                     )}
 
                     <div className="flex flex-wrap gap-1.5 mt-4">
-                      {availableCurrencies.map(c => (
+                      {availableCurrencies.map((c) => (
                         <button
                           key={c.code}
                           onClick={() => setCurrency(c.code)}
@@ -566,8 +755,12 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
                   </div>
                 ) : (
                   <div className="mb-6">
-                    <p className="text-[9px] uppercase tracking-[0.3em] text-white/30 font-light mb-2">{t("charter_rate")}</p>
-                    <p className="text-[hsl(43,67%,55%)]/70 text-xl font-serif">{t("on_request")}</p>
+                    <p className="text-[9px] uppercase tracking-[0.3em] text-white/30 font-light mb-2">
+                      {t("charter_rate")}
+                    </p>
+                    <p className="text-[hsl(43,67%,55%)]/70 text-xl font-serif">
+                      {t("on_request")}
+                    </p>
                   </div>
                 )}
 
@@ -577,7 +770,11 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
                       setLocation("/");
                       setTimeout(() => {
                         const el = document.getElementById("request");
-                        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                        if (el)
+                          el.scrollIntoView({
+                            behavior: "smooth",
+                            block: "start",
+                          });
                       }, 400);
                     }}
                     className="w-full bg-[hsl(43,67%,55%)] text-black py-3.5 rounded-lg text-[11px] uppercase tracking-[0.2em] font-medium hover:bg-[hsl(43,67%,65%)] transition-colors"
@@ -609,10 +806,16 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
                     disabled={pdfLoading}
                     className="w-full flex items-center justify-center gap-2 py-3 rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/50 hover:text-white/80 hover:border-white/20 hover:bg-white/[0.06] disabled:opacity-50 disabled:cursor-not-allowed transition-all text-[10px] uppercase tracking-[0.15em] font-light"
                   >
-                    {pdfLoading
-                      ? <><Loader2 size={14} className="animate-spin" /> {t("generating")}</>
-                      : <><FileDown size={14} /> {t("download_proposal")}</>
-                    }
+                    {pdfLoading ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />{" "}
+                        {t("generating")}
+                      </>
+                    ) : (
+                      <>
+                        <FileDown size={14} /> {t("download_proposal")}
+                      </>
+                    )}
                   </button>
 
                   <p className="text-white/20 text-[10px] text-center mt-1 font-light">
@@ -631,7 +834,8 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
           <div className="max-w-7xl mx-auto">
             <div className="border-t border-white/[0.05] pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
               <p className="text-white/20 text-[10px] tracking-[0.3em] uppercase font-light">
-                &copy; {new Date().getFullYear()} TRANSYACHTGROUP. {t("rights_reserved")}
+                &copy; {new Date().getFullYear()} TRANSYACHTGROUP.{" "}
+                {t("rights_reserved")}
               </p>
             </div>
           </div>
@@ -660,7 +864,7 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
 
             <img
               src={allImages[lightboxIdx]}
-              alt={vehicle.name}
+              alt={seoName}
               className="max-w-[90vw] max-h-[85vh] object-contain"
               onClick={(e) => e.stopPropagation()}
             />
@@ -668,13 +872,19 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
             {allImages.length > 1 && (
               <>
                 <button
-                  onClick={(e) => { e.stopPropagation(); lightboxPrev(); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    lightboxPrev();
+                  }}
                   className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-all"
                 >
                   <ChevronLeft size={24} />
                 </button>
                 <button
-                  onClick={(e) => { e.stopPropagation(); lightboxNext(); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    lightboxNext();
+                  }}
                   className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-all"
                 >
                   <ChevronRight size={24} />

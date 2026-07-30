@@ -1,4 +1,10 @@
-﻿import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+﻿import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  type ReactNode,
+} from "react";
 
 export const LANGUAGES = [
   { code: "en", label: "English", flag: "🇬🇧", dir: "ltr" },
@@ -37,8 +43,10 @@ const UI_TRANSLATIONS: Record<LangCode, Record<string, string>> = {
     submit_request: "Submit Private Request",
     processing: "Processing...",
     request_received: "Request Received",
-    request_success: "Your form has been submitted. Our team will contact you as soon as possible.",
-    request_error: "Failed to submit request. Please try again or contact us directly.",
+    request_success:
+      "Your form has been submitted. Our team will contact you as soon as possible.",
+    request_error:
+      "Failed to submit request. Please try again or contact us directly.",
     error: "Error",
     rights_reserved: "All rights reserved.",
     contact_us: "Contact Us",
@@ -133,8 +141,10 @@ const UI_TRANSLATIONS: Record<LangCode, Record<string, string>> = {
     submit_request: "Envoyer la Demande Privée",
     processing: "Traitement...",
     request_received: "Demande Reçue",
-    request_success: "Un concierge vous contactera sous peu pour finaliser votre expérience sur mesure.",
-    request_error: "Échec de l'envoi de la demande. Veuillez réessayer ou nous contacter directement.",
+    request_success:
+      "Un concierge vous contactera sous peu pour finaliser votre expérience sur mesure.",
+    request_error:
+      "Échec de l'envoi de la demande. Veuillez réessayer ou nous contacter directement.",
     error: "Erreur",
     rights_reserved: "Tous droits réservés.",
     contact_us: "Contactez-Nous",
@@ -229,8 +239,10 @@ const UI_TRANSLATIONS: Record<LangCode, Record<string, string>> = {
     submit_request: "Отправить Частный Запрос",
     processing: "Обработка...",
     request_received: "Запрос Получен",
-    request_success: "Консьерж свяжется с вами в ближайшее время для оформления вашего эксклюзивного опыта.",
-    request_error: "Не удалось отправить запрос. Пожалуйста, попробуйте снова или свяжитесь с нами напрямую.",
+    request_success:
+      "Консьерж свяжется с вами в ближайшее время для оформления вашего эксклюзивного опыта.",
+    request_error:
+      "Не удалось отправить запрос. Пожалуйста, попробуйте снова или свяжитесь с нами напрямую.",
     error: "Ошибка",
     rights_reserved: "Все права защищены.",
     contact_us: "Свяжитесь с Нами",
@@ -325,8 +337,10 @@ const UI_TRANSLATIONS: Record<LangCode, Record<string, string>> = {
     submit_request: "Trimiteți Cererea Privată",
     processing: "Se procesează...",
     request_received: "Cerere Primită",
-    request_success: "Un concierge vă va contacta în curând pentru a finaliza experiența dvs. personalizată.",
-    request_error: "Nu s-a putut trimite cererea. Încercați din nou sau contactați-ne direct.",
+    request_success:
+      "Un concierge vă va contacta în curând pentru a finaliza experiența dvs. personalizată.",
+    request_error:
+      "Nu s-a putut trimite cererea. Încercați din nou sau contactați-ne direct.",
     error: "Eroare",
     rights_reserved: "Toate drepturile rezervate.",
     contact_us: "Contactați-ne",
@@ -422,7 +436,8 @@ const UI_TRANSLATIONS: Record<LangCode, Record<string, string>> = {
     processing: "جاري المعالجة...",
     request_received: "تم استلام الطلب",
     request_success: "سيتواصل معك مسؤول الخدمة قريباً لإتمام تجربتك المميزة.",
-    request_error: "فشل إرسال الطلب. يرجى المحاولة مرة أخرى أو الاتصال بنا مباشرة.",
+    request_error:
+      "فشل إرسال الطلب. يرجى المحاولة مرة أخرى أو الاتصال بنا مباشرة.",
     error: "خطأ",
     rights_reserved: "جميع الحقوق محفوظة.",
     contact_us: "اتصل بنا",
@@ -509,16 +524,25 @@ const LanguageContext = createContext<LanguageContextType>({
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<LangCode>(() => {
+    const queryLang = new URLSearchParams(window.location.search).get("lang");
+    if (queryLang && LANGUAGES.some((item) => item.code === queryLang)) {
+      return queryLang as LangCode;
+    }
     const saved = localStorage.getItem("tyg_lang");
-    return (saved && LANGUAGES.some(l => l.code === saved)) ? (saved as LangCode) : "en";
+    return saved && LANGUAGES.some((l) => l.code === saved)
+      ? (saved as LangCode)
+      : "en";
   });
 
   const setLang = (newLang: LangCode) => {
     setLangState(newLang);
     localStorage.setItem("tyg_lang", newLang);
+    const url = new URL(window.location.href);
+    url.searchParams.set("lang", newLang);
+    window.history.replaceState(window.history.state, "", url);
   };
 
-  const langInfo = LANGUAGES.find(l => l.code === lang)!;
+  const langInfo = LANGUAGES.find((l) => l.code === lang)!;
   const dir = langInfo.dir as "ltr" | "rtl";
 
   useEffect(() => {

@@ -96,7 +96,7 @@ export default function Catalog({ category }: CatalogProps) {
   }, [lang, loadRates]);
 
   const availableCurrencies = ALL_CURRENCIES.filter(
-    (c) => c.code === "EUR" || rates[c.code] !== undefined
+    (c) => c.code === "EUR" || rates[c.code] !== undefined,
   );
 
   const convertPrice = useCallback(
@@ -106,14 +106,14 @@ export default function Catalog({ category }: CatalogProps) {
       if (!rate) return eurPrice;
       return eurPrice * rate;
     },
-    [currency, rates]
+    [currency, rates],
   );
 
   const displayCurrency = rates[currency] !== undefined ? currency : "EUR";
   const items = allCollection.filter((item) => item.category === category);
   const [visibleCount, setVisibleCount] = useState(12);
-const visibleItems = items.slice(0, visibleCount);
-const hasMoreItems = visibleCount < items.length;
+  const visibleItems = items.slice(0, visibleCount);
+  const hasMoreItems = visibleCount < items.length;
 
   const isYacht = category === "yacht";
 
@@ -178,7 +178,7 @@ const hasMoreItems = visibleCount < items.length;
       <section className="relative pt-24 md:pt-32 pb-20 px-4 overflow-hidden">
         <div className="absolute inset-0 z-0">
           <div className="hidden md:block absolute top-0 left-1/3 w-[600px] h-[400px] bg-gold/[0.04] rounded-full blur-[180px]" />
-<div className="hidden md:block absolute bottom-0 right-1/4 w-[500px] h-[300px] bg-gold-dark/[0.03] rounded-full blur-[150px]" />
+          <div className="hidden md:block absolute bottom-0 right-1/4 w-[500px] h-[300px] bg-gold-dark/[0.03] rounded-full blur-[150px]" />
         </div>
 
         <div className="max-w-7xl mx-auto relative z-10">
@@ -196,7 +196,7 @@ const hasMoreItems = visibleCount < items.length;
               {t("back_to_home")}
             </button>
           </motion.div>
-          
+
           <motion.div
             initial="hidden"
             animate="visible"
@@ -298,15 +298,15 @@ const hasMoreItems = visibleCount < items.length;
             </div>
           )}
           {hasMoreItems && (
-  <div className="flex justify-center mt-12">
-    <button
-      onClick={() => setVisibleCount((prev) => prev + 12)}
-      className="px-6 py-3 rounded-full border border-white/[0.08] bg-white/[0.03] text-white/50 hover:text-white hover:border-[hsl(43,67%,55%)]/30 hover:bg-[hsl(43,67%,55%)]/10 transition-all text-[10px] uppercase tracking-[0.25em] font-light"
-    >
-      Load More
-    </button>
-  </div>
-)}
+            <div className="flex justify-center mt-12">
+              <button
+                onClick={() => setVisibleCount((prev) => prev + 12)}
+                className="px-6 py-3 rounded-full border border-white/[0.08] bg-white/[0.03] text-white/50 hover:text-white hover:border-[hsl(43,67%,55%)]/30 hover:bg-[hsl(43,67%,55%)]/10 transition-all text-[10px] uppercase tracking-[0.25em] font-light"
+              >
+                Load More
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -355,18 +355,18 @@ function CatalogCard({
   siteContent: Record<string, string>;
 }) {
   const [, setLocation] = useLocation();
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const specs = item.specs || {};
   const getInlineStyle = (value: unknown) => {
-  const html = String(value || "");
-  const match = html.match(/<span[^>]*style="([^"]*)"[^>]*>/i);
-  return match?.[1] || "";
-};
+    const html = String(value || "");
+    const match = html.match(/<span[^>]*style="([^"]*)"[^>]*>/i);
+    return match?.[1] || "";
+  };
 
-const withOriginalStyle = (text: string, originalValue: unknown) => {
-  const style = getInlineStyle(originalValue);
-  return style ? `<span style="${style}">${text}</span>` : text;
-};
+  const withOriginalStyle = (text: string, originalValue: unknown) => {
+    const style = getInlineStyle(originalValue);
+    return style ? `<span style="${style}">${text}</span>` : text;
+  };
 
   const stripHtml = (s: string) =>
     s
@@ -389,8 +389,8 @@ const withOriginalStyle = (text: string, originalValue: unknown) => {
     item.images && Array.isArray(item.images) && item.images.length > 0
       ? item.images
       : item.image
-      ? [item.image]
-      : [];
+        ? [item.image]
+        : [];
 
   const hasMultiple = allImages.length > 1;
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -415,16 +415,25 @@ const withOriginalStyle = (text: string, originalValue: unknown) => {
   return (
     <motion.div
       variants={fadeInUp}
-      className="group bg-card/50 rounded-xl overflow-hidden border border-white/[0.04] hover-glow-gold flex flex-col h-full cursor-pointer"
+      className="relative group bg-card/50 rounded-xl overflow-hidden border border-white/[0.04] hover-glow-gold flex flex-col h-full cursor-pointer"
       onClick={goToDetail}
     >
+      <a
+        href={`/vehicle/${item.id}?lang=${lang}`}
+        aria-label={`${t("view_details")}: ${stripHtml(item.name || "")}`}
+        onClick={(event) => {
+          event.preventDefault();
+          goToDetail();
+        }}
+        className="absolute inset-0 z-[11]"
+      />
       <div className="aspect-[4/3] w-full overflow-hidden relative">
         <div className="absolute inset-0 bg-gradient-to-t from-card via-card/20 to-transparent z-10 opacity-80 pointer-events-none" />
 
         <img
           src={allImages[currentIdx] || item.image}
           alt={stripHtml(item.name || "")}
-         className="w-full h-full object-cover transition-transform duration-500 md:group-hover:scale-105"
+          className="w-full h-full object-cover transition-transform duration-500 md:group-hover:scale-105"
           loading="lazy"
           decoding="async"
         />
@@ -496,59 +505,72 @@ const withOriginalStyle = (text: string, originalValue: unknown) => {
           {priceEur > 0 ? (
             <div>
               <div>
-               <CmsContent
-  as="span"
-  className="text-[hsl(43,67%,55%)] font-medium tracking-wide vehicle-price"
-  html={withOriginalStyle(
-    formatPrice(convertedPrice, displayCurrency),
-    specs.pricePerDay
-  )}
-/>
+                <CmsContent
+                  as="span"
+                  className="text-[hsl(43,67%,55%)] font-medium tracking-wide vehicle-price"
+                  html={withOriginalStyle(
+                    formatPrice(convertedPrice, displayCurrency),
+                    specs.pricePerDay,
+                  )}
+                />
                 <span className="text-white/25 text-[10px] ml-1">
                   {t("per_day")}
                 </span>
               </div>
 
-              {item.category === "car" && extractNum(specs.pricePerThreeDays) > 0 && (
-                <div className="mt-0.5">
-                  <CmsContent
-                    as="span"
-                    className="text-[hsl(43,67%,55%)] font-medium tracking-wide vehicle-price"
-                    html={withOriginalStyle(
-                      formatPrice(convertPrice(extractNum(specs.pricePerThreeDays)), displayCurrency),
-                      specs.pricePerThreeDays
-                    )}
-                  />
-                  <span className="text-white/25 text-[10px] ml-1">/ 3 days</span>
-                </div>
-              )}
-              {item.category === "car" && extractNum(specs.pricePerMonth) > 0 && (
-                <div className="mt-0.5">
-                  <CmsContent
-                    as="span"
-                    className="text-[hsl(43,67%,55%)] font-medium tracking-wide vehicle-price"
-                    html={withOriginalStyle(
-                      formatPrice(convertPrice(extractNum(specs.pricePerMonth)), displayCurrency),
-                      specs.pricePerMonth
-                    )}
-                  />
-                  <span className="text-white/25 text-[10px] ml-1">/ month</span>
-                </div>
-              )}
+              {item.category === "car" &&
+                extractNum(specs.pricePerThreeDays) > 0 && (
+                  <div className="mt-0.5">
+                    <CmsContent
+                      as="span"
+                      className="text-[hsl(43,67%,55%)] font-medium tracking-wide vehicle-price"
+                      html={withOriginalStyle(
+                        formatPrice(
+                          convertPrice(extractNum(specs.pricePerThreeDays)),
+                          displayCurrency,
+                        ),
+                        specs.pricePerThreeDays,
+                      )}
+                    />
+                    <span className="text-white/25 text-[10px] ml-1">
+                      / 3 days
+                    </span>
+                  </div>
+                )}
+              {item.category === "car" &&
+                extractNum(specs.pricePerMonth) > 0 && (
+                  <div className="mt-0.5">
+                    <CmsContent
+                      as="span"
+                      className="text-[hsl(43,67%,55%)] font-medium tracking-wide vehicle-price"
+                      html={withOriginalStyle(
+                        formatPrice(
+                          convertPrice(extractNum(specs.pricePerMonth)),
+                          displayCurrency,
+                        ),
+                        specs.pricePerMonth,
+                      )}
+                    />
+                    <span className="text-white/25 text-[10px] ml-1">
+                      / month
+                    </span>
+                  </div>
+                )}
 
               {item.category === "yacht" && priceEur > 0 && (
                 <div className="mt-0.5">
                   <CmsContent
-  as="span"
-  className="text-[hsl(43,67%,55%)] font-medium tracking-wide vehicle-price"
-  html={withOriginalStyle(
-    formatPrice(convertPrice(Math.round(priceEur * 6)), displayCurrency),
-    specs.pricePerDay
-  )}
-/>
-                  <span className="text-white/25 text-[10px] ml-1">
-                    / week
-                  </span>
+                    as="span"
+                    className="text-[hsl(43,67%,55%)] font-medium tracking-wide vehicle-price"
+                    html={withOriginalStyle(
+                      formatPrice(
+                        convertPrice(Math.round(priceEur * 6)),
+                        displayCurrency,
+                      ),
+                      specs.pricePerDay,
+                    )}
+                  />
+                  <span className="text-white/25 text-[10px] ml-1">/ week</span>
 
                   {specs.pricingType && (
                     <span
@@ -558,9 +580,7 @@ const withOriginalStyle = (text: string, originalValue: unknown) => {
                           : "text-emerald-400/70 border-emerald-500/15 bg-emerald-500/5"
                       }`}
                     >
-                      {specs.pricingType === "plus APA"
-                        ? "+ APA"
-                        : "All incl."}
+                      {specs.pricingType === "plus APA" ? "+ APA" : "All incl."}
                     </span>
                   )}
                 </div>
@@ -601,7 +621,7 @@ const withOriginalStyle = (text: string, originalValue: unknown) => {
             {cleanWhatsapp ? (
               <a
                 href={`https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent(
-                  `${t("interested_in")} ${stripHtml(item.name || "")}`
+                  `${t("interested_in")} ${stripHtml(item.name || "")}`,
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"

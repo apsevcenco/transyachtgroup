@@ -1,42 +1,184 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" style="height: 100%">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <title>TRANSYACHTGROUP — Art of Unlimited Mobility</title>
-
-  <meta name="description" content="Luxury yacht and car rentals. Private access. Exclusive mobility experience.">
-  <meta name="theme-color" content="#0a0a0a">
-
-  <!-- Open Graph -->
-  <meta property="og:title" content="TRANSYACHTGROUP">
-  <meta property="og:description" content="Art of Unlimited Mobility">
-  <meta property="og:type" content="website">
-  <meta property="og:image" content="/opengraph.jpg">
-
-  <!-- Critical font preload (only the fonts used above the fold) -->
-  <link rel="preload" as="font" type="font/woff2" href="/fonts/AntroVectraBolder.woff2" crossorigin>
-  <link rel="preload" as="font" type="font/woff2" href="/fonts/PorterFT-Regular_1774708404403.woff2" crossorigin>
-  <link rel="preload" as="font" type="font/woff2" href="/fonts/WixMadeforDisplay-Regular_1774708404406.woff2" crossorigin>
-
-  <!-- Hero image preload (mobile + desktop via media query) -->
-  <link rel="preload" as="image" href="/images/hero-bg-mobile.webp" type="image/webp" media="(max-width: 767px)" fetchpriority="high">
-  <link rel="preload" as="image" href="/images/hero-bg.webp" type="image/webp" media="(min-width: 768px)" fetchpriority="high">
-
-  <!-- Logo + favicon -->
-  <link rel="preload" as="image" href="/images/logo-transparent.png">
-  <link rel="icon" href="/images/logo-transparent.png">
-</head>
-
-<body style="height:100%; margin:0; background:#0a0a0a; color:white;">
-  <div id="root" style="height: 100%">
-    <div id="initial-loader" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#0a0a0a;color:#d4a843;font-family:Georgia,serif;letter-spacing:0.3em;font-size:13px;text-align:center;padding:24px;">
-      <div>TRANSYACHT GROUP</div>
-      <div style="width:40px;height:1px;background:#d4a843;opacity:0.5;"></div>
-      <div style="font-size:10px;opacity:0.4;letter-spacing:0.2em;">LOADING</div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Luxury Car Rental &amp; Yacht Charter | Trans Yacht Group</title>
+    <meta
+      name="description"
+      content="Private luxury car rental and yacht charter in Cannes, Monaco, Nice and Saint-Tropez. Curated fleet and dedicated concierge service."
+    />
+    <meta
+      name="robots"
+      content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"
+    />
+    <meta name="theme-color" content="#0a0a0a" />
+    <link rel="canonical" href="https://transyachtgroup.com/?lang=en" />
+    <meta
+      property="og:title"
+      content="Luxury Car Rental &amp; Yacht Charter | Trans Yacht Group"
+    />
+    <meta
+      property="og:description"
+      content="Private luxury mobility and yacht charter on the French Riviera."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://transyachtgroup.com/?lang=en" />
+    <meta
+      property="og:image"
+      content="https://transyachtgroup.com/opengraph.jpg"
+    />
+    <meta property="og:site_name" content="Trans Yacht Group" />
+    <meta property="og:locale" content="en" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="Luxury Car Rental &amp; Yacht Charter | Trans Yacht Group"
+    />
+    <meta
+      name="twitter:description"
+      content="Private luxury mobility and yacht charter on the French Riviera."
+    />
+    <meta
+      name="twitter:image"
+      content="https://transyachtgroup.com/opengraph.jpg"
+    />
+    <link
+      rel="alternate"
+      hreflang="en"
+      href="https://transyachtgroup.com/?lang=en"
+    />
+    <link
+      rel="alternate"
+      hreflang="fr"
+      href="https://transyachtgroup.com/?lang=fr"
+    />
+    <link
+      rel="alternate"
+      hreflang="ru"
+      href="https://transyachtgroup.com/?lang=ru"
+    />
+    <link
+      rel="alternate"
+      hreflang="ro"
+      href="https://transyachtgroup.com/?lang=ro"
+    />
+    <link
+      rel="alternate"
+      hreflang="ar"
+      href="https://transyachtgroup.com/?lang=ar"
+    />
+    <link
+      rel="alternate"
+      hreflang="x-default"
+      href="https://transyachtgroup.com/?lang=en"
+    />
+    <script type="application/ld+json" data-seo="true">
+      {
+        "@context": "https://schema.org",
+        "@type": ["Organization", "LocalBusiness"],
+        "@id": "https://transyachtgroup.com/#organization",
+        "name": "Trans Yacht Group",
+        "legalName": "TRANS YACHT GROUPE SARL",
+        "url": "https://transyachtgroup.com",
+        "logo": "https://transyachtgroup.com/images/logo-transparent.png",
+        "image": "https://transyachtgroup.com/opengraph.jpg",
+        "email": "info@transyachtgroup.com",
+        "telephone": "+33768883888",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "49 Boulevard d’Alsace",
+          "postalCode": "06400",
+          "addressLocality": "Cannes",
+          "addressCountry": "FR"
+        },
+        "areaServed": ["Cannes", "Monaco", "Nice", "Antibes", "Saint-Tropez"]
+      }
+    </script>
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="/fonts/AntroVectraBolder.woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="/fonts/PorterFT-Regular_1774708404403.woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="/fonts/WixMadeforDisplay-Regular_1774708404406.woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      as="image"
+      href="/images/hero-bg-mobile.webp"
+      type="image/webp"
+      media="(max-width: 767px)"
+      fetchpriority="high"
+    />
+    <link
+      rel="preload"
+      as="image"
+      href="/images/hero-bg.webp"
+      type="image/webp"
+      media="(min-width: 768px)"
+      fetchpriority="high"
+    />
+    <link rel="preload" as="image" href="/images/logo-transparent.png" />
+    <link rel="icon" href="/images/logo-transparent.png" />
+  </head>
+  <body style="height: 100%; margin: 0; background: #0a0a0a; color: white">
+    <div id="root" style="height: 100%">
+      <div
+        id="initial-loader"
+        style="
+          position: fixed;
+          inset: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 18px;
+          background: #0a0a0a;
+          color: #d4a843;
+          font-family: Georgia, serif;
+          letter-spacing: 0.3em;
+          font-size: 13px;
+          text-align: center;
+          padding: 24px;
+        "
+      >
+        <div>TRANSYACHT GROUP</div>
+        <div
+          style="width: 40px; height: 1px; background: #d4a843; opacity: 0.5"
+        ></div>
+        <div style="font-size: 10px; opacity: 0.4; letter-spacing: 0.2em">
+          LOADING
+        </div>
+      </div>
     </div>
-  </div>
-  <script type="module" src="/src/main.tsx"></script>
-</body>
+    <script type="module" src="/src/main.tsx"></script>
+    <noscript>
+      <main>
+        <h1>Luxury Car Rental and Yacht Charter on the French Riviera</h1>
+        <p>
+          Trans Yacht Group provides private luxury car rental and yacht charter
+          services in Cannes, Monaco, Nice, Antibes and Saint-Tropez.
+        </p>
+        <nav>
+          <a href="/cars?lang=en">Luxury cars</a>
+          <a href="/yachts?lang=en">Yacht charter</a>
+          <a href="/about?lang=en">About Trans Yacht Group</a>
+        </nav>
+      </main>
+    </noscript>
+  </body>
 </html>

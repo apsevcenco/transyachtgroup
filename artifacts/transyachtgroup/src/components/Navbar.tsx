@@ -55,27 +55,36 @@ export function Navbar() {
     }
   }, []);
 
-  const handleNavClick = useCallback((e: React.MouseEvent, link: { href: string; hash?: string }) => {
-    e.preventDefault();
-    if (link.hash) {
-      const currentPath = window.location.pathname.replace(/\/$/, "");
-      if (currentPath === "" || currentPath === "/") {
-        scrollToHash(link.hash);
+  const handleNavClick = useCallback(
+    (e: React.MouseEvent, link: { href: string; hash?: string }) => {
+      e.preventDefault();
+      if (link.hash) {
+        const currentPath = window.location.pathname.replace(/\/$/, "");
+        if (currentPath === "" || currentPath === "/") {
+          scrollToHash(link.hash);
+        } else {
+          setLocation("/");
+          setTimeout(() => scrollToHash(link.hash!), 400);
+        }
       } else {
-        setLocation("/");
-        setTimeout(() => scrollToHash(link.hash!), 400);
+        setLocation(link.href);
+        window.scrollTo(0, 0);
       }
-    } else {
-      setLocation(link.href);
-      window.scrollTo(0, 0);
-    }
-  }, [setLocation, scrollToHash]);
+    },
+    [setLocation, scrollToHash],
+  );
 
-  const currentLang = LANGUAGES.find(l => l.code === lang)!;
+  const currentLang = LANGUAGES.find((l) => l.code === lang)!;
 
   const handleLangSelect = (code: typeof lang) => {
     setLang(code);
     setLangMenuOpen(false);
+  };
+
+  const languageHref = (code: typeof lang) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("lang", code);
+    return `${url.pathname}${url.search}${url.hash}`;
   };
 
   const langDropdown = (
@@ -85,9 +94,15 @@ export function Navbar() {
       className="absolute top-full right-0 mt-2 bg-[#111]/95 backdrop-blur-xl border border-white/[0.08] rounded-lg overflow-hidden min-w-[160px] shadow-2xl z-[60]"
     >
       {LANGUAGES.map((l) => (
-        <button
+        <a
           key={l.code}
-          onClick={() => handleLangSelect(l.code)}
+          href={languageHref(l.code)}
+          hrefLang={l.code}
+          lang={l.code}
+          onClick={(event) => {
+            event.preventDefault();
+            handleLangSelect(l.code);
+          }}
           className={`w-full flex items-center gap-3 px-4 py-2.5 text-[11px] tracking-wide transition-all font-porter ${
             lang === l.code
               ? "bg-[hsl(43,67%,55%)]/10 text-[hsl(43,67%,55%)]"
@@ -96,7 +111,7 @@ export function Navbar() {
         >
           <span className="text-base">{l.flag}</span>
           <span>{l.label}</span>
-        </button>
+        </a>
       ))}
     </motion.div>
   );
@@ -107,11 +122,21 @@ export function Navbar() {
       animate={{ y: 0 }}
       transition={{ duration: 0.8, ease: "easeOut" }}
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-700 overflow-visible ${
-        isScrolled ? "bg-[#0a0a0a]/95 md:bg-background/80 md:backdrop-blur-2xl border-b border-white/[0.04]" : "bg-transparent"
+        isScrolled
+          ? "bg-[#0a0a0a]/95 md:bg-background/80 md:backdrop-blur-2xl border-b border-white/[0.04]"
+          : "bg-transparent"
       }`}
     >
       <div className="w-full px-4 sm:px-6 py-8 flex justify-between items-center">
-        <a href="/" onClick={(e) => { e.preventDefault(); setLocation("/"); window.scrollTo(0, 0); }} className="flex items-center group ml-4 overflow-visible">
+        <a
+          href="/"
+          onClick={(e) => {
+            e.preventDefault();
+            setLocation("/");
+            window.scrollTo(0, 0);
+          }}
+          className="flex items-center group ml-4 overflow-visible"
+        >
           <img
             src={`${import.meta.env.BASE_URL}images/logo-transparent.png`}
             alt="TRANSYACHTGROUP"

@@ -14,6 +14,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { FloatingContact } from "@/components/FloatingContact";
 import { CookieBanner } from "@/components/CookieBanner";
+import { RouteSeo } from "@/components/RouteSeo";
 
 const Home = lazy(() => import("@/pages/home"));
 const Catalog = lazy(() => import("@/pages/catalog"));
@@ -21,6 +22,7 @@ const VehicleDetail = lazy(() => import("@/pages/vehicle-detail"));
 const About = lazy(() => import("@/pages/about"));
 const PrivacyPolicy = lazy(() => import("@/pages/privacy-policy"));
 const LegalNotice = lazy(() => import("@/pages/legal-notice"));
+const LocationPage = lazy(() => import("@/pages/location"));
 const AdminLogin = lazy(() => import("@/pages/admin/login"));
 const AdminDashboard = lazy(() => import("@/pages/admin/dashboard"));
 const AdminCarBookings = lazy(() => import("@/pages/admin/car-bookings"));
@@ -120,6 +122,9 @@ function Router() {
             <Route path="/about" component={About} />
             <Route path="/privacy" component={PrivacyPolicy} />
             <Route path="/legal" component={LegalNotice} />
+            <Route path="/locations/:city">
+              {(params) => <LocationPage city={params.city} />}
+            </Route>
             <Route path="/admin" component={AdminLogin} />
             <Route
               path="/admin/dashboard/:section?"
@@ -157,6 +162,7 @@ function App() {
         <LanguageProvider>
           <TooltipProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <RouteSeo />
               <Router />
             </WouterRouter>
             <Toaster />
