@@ -18,7 +18,12 @@ import {
   type Agent,
 } from "@/lib/api";
 import { useLocation, useParams } from "wouter";
-import { ArrowLeft, ChevronRight } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronRight,
+  ChevronDown,
+  SlidersHorizontal,
+} from "lucide-react";
 import RichTextEditor, {
   SharedToolbarGroup,
 } from "@/components/RichTextEditor";
@@ -725,6 +730,20 @@ export default function AdminDashboard() {
     },
   ];
 
+  const DESKTOP_NAV_ITEMS: { key: Tab; label: string; icon: string }[] = [
+    { key: "cars", label: `Cars (${cars.length})`, icon: "🚗" },
+    { key: "yachts", label: `Yachts (${yachts.length})`, icon: "🛥" },
+    { key: "car-bookings", label: "Car Bookings", icon: "📅" },
+    { key: "yacht-bookings", label: "Yacht Bookings", icon: "⚓" },
+    { key: "crm", label: "CRM", icon: "💼" },
+    { key: "agents", label: "Agents", icon: "🤝" },
+    { key: "proposals", label: "Proposals", icon: "📄" },
+    { key: "contracts", label: "Contracts", icon: "📝" },
+    { key: "content", label: "Site Content", icon: "✎" },
+    { key: "requests", label: "Requests", icon: "📩" },
+    { key: "analytics", label: "Analytics", icon: "📊" },
+  ];
+
   return (
     <div className="min-h-screen bg-[hsl(0,0%,3%)] text-white">
       <header className="border-b border-white/[0.06] bg-black/50">
@@ -757,7 +776,7 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-8">
         {message && (
           <div className="bg-[hsl(43,67%,55%)]/10 border border-[hsl(43,67%,55%)]/20 rounded-lg px-4 py-3 text-[hsl(43,67%,55%)] text-sm mb-6 flex justify-between items-center">
             <span>{message}</span>
@@ -845,54 +864,39 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        {/* Desktop: classic tab bar + inline content, unchanged */}
-        <div className="hidden lg:block">
-          <div className="flex gap-1 mb-8 border-b border-white/[0.06]">
-            {[
-              {
-                key: "cars" as Tab,
-                label: `Cars (${cars.length})`,
-                icon: "🚗",
-              },
-              {
-                key: "yachts" as Tab,
-                label: `Yachts (${yachts.length})`,
-                icon: "🛥",
-              },
-              { key: "content" as Tab, label: "Site Text", icon: "✎" },
-              { key: "requests" as Tab, label: "Requests", icon: "📩" },
-              { key: "car-bookings" as Tab, label: "Car Bookings", icon: "📅" },
-              {
-                key: "yacht-bookings" as Tab,
-                label: "Yacht Bookings",
-                icon: "⚓",
-              },
-              { key: "crm" as Tab, label: "CRM", icon: "💼" },
-              { key: "agents" as Tab, label: "Agents", icon: "🤝" },
-              { key: "proposals" as Tab, label: "Proposals", icon: "📄" },
-              { key: "contracts" as Tab, label: "Contracts", icon: "📝" },
-              { key: "analytics" as Tab, label: "Analytics", icon: "📊" },
-            ].map((t) => (
-              <button
-                key={t.key}
-                onClick={() => {
-                  setTab(t.key);
-                  setEditingVehicle(null);
-                  setShowNewForm(false);
-                }}
-                className={`px-6 py-3 text-xs uppercase tracking-[0.2em] font-light border-b-2 transition-colors flex items-center gap-2 ${
-                  tab === t.key
-                    ? "border-[hsl(43,67%,55%)] text-[hsl(43,67%,55%)]"
-                    : "border-transparent text-white/30 hover:text-white/60"
-                }`}
-              >
-                <span>{t.icon}</span>
-                {t.label}
-              </button>
-            ))}
-          </div>
+        {/* Desktop: persistent section navigation on the left. */}
+        <div className="hidden lg:grid lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)] gap-8 xl:gap-10 items-start">
+          <aside className="sticky top-6 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+            <p className="px-3 pt-2 pb-3 text-[9px] uppercase tracking-[0.28em] text-white/25">
+              Sections
+            </p>
+            <nav className="space-y-1">
+              {DESKTOP_NAV_ITEMS.map((item) => (
+                <button
+                  key={item.key}
+                  onClick={() => {
+                    setTab(item.key);
+                    setEditingVehicle(null);
+                    setShowNewForm(false);
+                  }}
+                  className={`w-full min-h-[44px] flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-left transition-colors ${
+                    tab === item.key
+                      ? "bg-[hsl(43,67%,55%)]/12 text-gold border border-gold/20"
+                      : "text-white/45 hover:text-white/75 hover:bg-white/[0.04] border border-transparent"
+                  }`}
+                >
+                  <span className="w-6 text-center text-base">
+                    {item.icon}
+                  </span>
+                  <span className="text-[11px] uppercase tracking-[0.12em]">
+                    {item.label}
+                  </span>
+                </button>
+              ))}
+            </nav>
+          </aside>
 
-          {tabContent}
+          <main className="min-w-0">{tabContent}</main>
         </div>
       </div>
     </div>
@@ -942,6 +946,7 @@ function CatalogSection({
     "all" | "own" | "agent"
   >("all");
   const [brandFilter, setBrandFilter] = useState<string>("all");
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const vehicleBrand = (v: Vehicle): string =>
     stripTags(v.name).trim().split(/\s+/)[0] || "";
@@ -980,18 +985,45 @@ function CatalogSection({
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center gap-3 mb-6">
         <h2 className="font-serif text-xl text-white">{label} Catalog</h2>
-        <button
-          onClick={onNew}
-          className="bg-[hsl(43,67%,55%)] text-black px-4 py-2 rounded-md text-[10px] uppercase tracking-[0.2em] font-medium hover:bg-[hsl(43,67%,60%)] transition-colors"
-        >
-          + Add {label}
-        </button>
+        <div className="flex items-center gap-2">
+          {isCar && (
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((open) => !open)}
+              className={`min-h-[38px] hidden lg:flex items-center gap-2 px-3.5 rounded-md border text-[10px] uppercase tracking-[0.15em] transition-colors ${
+                filtersOpen || filtersActive
+                  ? "border-gold/35 bg-gold/10 text-gold"
+                  : "border-white/10 text-white/45 hover:text-white/75 hover:border-white/20"
+              }`}
+            >
+              <SlidersHorizontal size={14} />
+              Filters
+              {filtersActive && (
+                <span className="w-1.5 h-1.5 rounded-full bg-gold" />
+              )}
+              <ChevronDown
+                size={13}
+                className={`transition-transform ${filtersOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+          )}
+          <button
+            onClick={onNew}
+            className="bg-[hsl(43,67%,55%)] text-black px-4 py-2 rounded-md text-[10px] uppercase tracking-[0.2em] font-medium hover:bg-[hsl(43,67%,60%)] transition-colors"
+          >
+            + Add {label}
+          </button>
+        </div>
       </div>
 
       {isCar && (
-        <div className="mb-6 space-y-3">
+        <div
+          className={`mb-6 space-y-3 rounded-xl border border-white/[0.07] bg-white/[0.025] p-4 animate-in slide-in-from-top-2 fade-in duration-200 ${
+            filtersOpen ? "lg:block" : "lg:hidden"
+          }`}
+        >
           <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3 sm:gap-6">
             <div>
               <span className="block text-[10px] uppercase tracking-wide text-white/40 mb-1">
