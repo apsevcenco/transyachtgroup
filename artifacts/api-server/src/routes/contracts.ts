@@ -61,6 +61,7 @@ interface ParsedContractRequest {
   depositAmount: number;
   kmPerDay: number;
   extraKmPrice: number;
+  editContractNumber: string | null;
   representativeName: string;
 }
 
@@ -211,6 +212,9 @@ function parseContractRequest(
     return { error: "requestId must be a UUID" };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(requiredText.renterEmail))
     return { error: "renterEmail must be a valid email address" };
+  const editContractNumber = str(b.editContractNumber).toUpperCase() || null;
+  if (editContractNumber && !CONTRACT_NUMBER.test(editContractNumber))
+    return { error: "editContractNumber is invalid" };
   return {
     data: {
       requestId,
@@ -235,6 +239,7 @@ function parseContractRequest(
       depositAmount,
       kmPerDay,
       extraKmPrice,
+      editContractNumber,
       representativeName: requiredText.representativeName,
     },
   };
@@ -367,15 +372,42 @@ router.post(
       }
 
       const issueDate = todayInParis();
+      let contractDateOfIssue = issueDate.iso;
+      if (data.editContractNumber) {
+        const [existingContract] = await db
+          .select()
+          .from(contractsTable)
+          .where(eq(contractsTable.contractNumber, data.editContractNumber))
+          .limit(1);
+        if (!existingContract) {
+          res.status(404).json({ error: "Contract to edit was not found" });
+          return;
+        }
+        if (
+          existingContract.bookingId != null &&
+          existingContract.bookingId !== data.bookingId
+        ) {
+          res.status(409).json({
+            error: "Contract belongs to a different booking",
+          });
+          return;
+        }
+        const existingSnapshot = existingContract.snapshot as {
+          dateOfIssue?: string;
+        } | null;
+        contractDateOfIssue =
+          existingSnapshot?.dateOfIssue || contractDateOfIssue;
+      }
 
       let inserted: typeof contractsTable.$inferSelect | null = null;
       let buffer: Buffer | null = null;
       let lastErr: unknown = null;
       for (let attempt = 0; attempt < 5 && !inserted; attempt++) {
-        const contractNumber = await nextContractNumber(issueDate.key);
+        const contractNumber =
+          data.editContractNumber ?? (await nextContractNumber(issueDate.key));
         const contractInput: ContractInput = {
           contractNumber,
-          dateOfIssue: issueDate.iso,
+          dateOfIssue: contractDateOfIssue,
           renter: {
             name: data.renterName,
             dob: data.renterDob,
@@ -415,40 +447,48 @@ router.post(
             layoutGuard: { selector: ".ctr-page", expectedElements: 2 },
           });
           const pdfSha256 = createHash("sha256").update(buffer).digest("hex");
-          const [row] = await db
-            .insert(contractsTable)
-            .values({
-              requestId: data.requestId,
-              contractNumber,
-              bookingId: data.bookingId,
-              vehicleId: data.vehicleId,
-              renterName: data.renterName,
-              renterDob: data.renterDob || null,
-              renterPob: data.renterPob || null,
-              renterNationality: data.renterNationality || null,
-              renterPassport: data.renterPassport || null,
-              renterPassportExpiry: data.renterPassportExpiry || null,
-              renterLicence: data.renterLicence || null,
-              renterLicenceExpiry: data.renterLicenceExpiry || null,
-              renterLicenceIssuedBy: data.renterLicenceIssuedBy || null,
-              renterPhone: data.renterPhone || null,
-              renterEmail: data.renterEmail || null,
-              pickupDate: data.pickupDate,
-              returnDate: data.returnDate,
-              pickupLocation: data.pickupLocation,
-              returnLocation: data.returnLocation,
-              totalAmount: data.totalAmount,
-              depositAmount: data.depositAmount,
-              kmPerDay: data.kmPerDay,
-              extraKmPrice: data.extraKmPrice,
-              representativeName: data.representativeName,
-              snapshot: contractInput,
-              pdfSha256,
-              pdfBase64: buffer.toString("base64"),
-              templateVersion: "contract-v2-two-page",
-              issuedAt: new Date(),
-            })
-            .returning();
+          const contractRecord = {
+            requestId: data.requestId,
+            bookingId: data.bookingId,
+            vehicleId: data.vehicleId,
+            renterName: data.renterName,
+            renterDob: data.renterDob || null,
+            renterPob: data.renterPob || null,
+            renterNationality: data.renterNationality || null,
+            renterPassport: data.renterPassport || null,
+            renterPassportExpiry: data.renterPassportExpiry || null,
+            renterLicence: data.renterLicence || null,
+            renterLicenceExpiry: data.renterLicenceExpiry || null,
+            renterLicenceIssuedBy: data.renterLicenceIssuedBy || null,
+            renterPhone: data.renterPhone || null,
+            renterEmail: data.renterEmail || null,
+            pickupDate: data.pickupDate,
+            returnDate: data.returnDate,
+            pickupLocation: data.pickupLocation,
+            returnLocation: data.returnLocation,
+            totalAmount: data.totalAmount,
+            depositAmount: data.depositAmount,
+            kmPerDay: data.kmPerDay,
+            extraKmPrice: data.extraKmPrice,
+            representativeName: data.representativeName,
+            snapshot: contractInput,
+            pdfSha256,
+            pdfBase64: buffer.toString("base64"),
+            templateVersion: "contract-v2-two-page",
+            issuedAt: new Date(),
+          };
+          const [row] = data.editContractNumber
+            ? await db
+                .update(contractsTable)
+                .set(contractRecord)
+                .where(
+                  eq(contractsTable.contractNumber, data.editContractNumber),
+                )
+                .returning()
+            : await db
+                .insert(contractsTable)
+                .values({ ...contractRecord, contractNumber })
+                .returning();
           inserted = row;
         } catch (err) {
           lastErr = err;
@@ -462,6 +502,12 @@ router.post(
               inserted = sameRequest;
               buffer = Buffer.from(sameRequest.pdfBase64, "base64");
               break;
+            }
+            if (data.editContractNumber) {
+              res.status(409).json({
+                error: "Contract update conflicted with another request",
+              });
+              return;
             }
             continue; // regenerate a fresh sequence number and retry
           }
@@ -519,6 +565,7 @@ router.get(
         issuedAt: contractsTable.issuedAt,
         createdAt: contractsTable.createdAt,
         pdfSha256: contractsTable.pdfSha256,
+        snapshot: contractsTable.snapshot,
       })
       .from(contractsTable)
       .where(eq(contractsTable.bookingId, bookingId))

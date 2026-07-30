@@ -666,6 +666,8 @@ export interface ContractGenerateRequest {
   depositAmount: number;
   kmPerDay: number;
   extraKmPrice: number;
+  /** Present only when replacing an existing saved contract. */
+  editContractNumber?: string;
   representativeName: string;
 }
 
@@ -690,6 +692,31 @@ export interface StoredContract {
   issuedAt: string | null;
   createdAt: string | null;
   pdfSha256: string | null;
+  snapshot: {
+    renter?: {
+      name?: string;
+      dob?: string;
+      pob?: string;
+      nationality?: string;
+      passport?: string;
+      passportExpiry?: string;
+      licence?: string;
+      licenceExpiry?: string;
+      licenceIssuedBy?: string;
+      phone?: string;
+      email?: string;
+    };
+    vehicle?: { name?: string };
+    pickupDate?: string;
+    returnDate?: string;
+    pickupLocation?: string;
+    returnLocation?: string;
+    totalAmount?: number;
+    depositAmount?: number;
+    kmPerDay?: number;
+    extraKmPrice?: number;
+    representativeName?: string;
+  } | null;
 }
 
 export async function fetchBookingContracts(

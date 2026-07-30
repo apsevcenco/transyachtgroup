@@ -19,7 +19,9 @@ import {
 } from "@/lib/api";
 import { useLocation, useParams } from "wouter";
 import { ArrowLeft, ChevronRight } from "lucide-react";
-import RichTextEditor, { SharedToolbarGroup } from "@/components/RichTextEditor";
+import RichTextEditor, {
+  SharedToolbarGroup,
+} from "@/components/RichTextEditor";
 import { supabase } from "@/lib/supabaseClient";
 import { compressImage } from "@/lib/imageCompress";
 import { CarBookingCalendar } from "@/components/admin/CarBookingCalendar";
@@ -27,10 +29,15 @@ import { YachtBookingCalendar } from "@/components/admin/YachtBookingCalendar";
 import { CrmDashboard } from "@/components/admin/CrmDashboard";
 import { AgentsDashboard } from "@/components/admin/AgentsDashboard";
 import { ProposalsDashboard } from "@/components/admin/ProposalsDashboard";
-import { ContractGenerator, buildContractPrefillFromBooking, type ContractPrefill } from "@/components/admin/ContractGenerator";
-import type { Booking } from "@/lib/api";
+import {
+  ContractGenerator,
+  buildContractPrefillFromBooking,
+  type ContractPrefill,
+} from "@/components/admin/ContractGenerator";
+import type { Booking, StoredContract } from "@/lib/api";
 
-const API_ORIGIN = (import.meta.env.VITE_API_ORIGIN as string | undefined) ?? "";
+const API_ORIGIN =
+  (import.meta.env.VITE_API_ORIGIN as string | undefined) ?? "";
 
 type Vehicle = {
   id: number;
@@ -66,7 +73,18 @@ type ContactRequest = {
   createdAt: string;
 };
 
-type Tab = "cars" | "yachts" | "content" | "requests" | "analytics" | "car-bookings" | "yacht-bookings" | "crm" | "agents" | "proposals" | "contracts";
+type Tab =
+  | "cars"
+  | "yachts"
+  | "content"
+  | "requests"
+  | "analytics"
+  | "car-bookings"
+  | "yacht-bookings"
+  | "crm"
+  | "agents"
+  | "proposals"
+  | "contracts";
 
 type AnalyticsStats = {
   overview: {
@@ -111,33 +129,90 @@ const ADMIN_LANGS = [
   { code: "ar", label: "العربية", flag: "🇸🇦" },
 ] as const;
 
-const NON_TRANSLATABLE = new Set(["phone_number", "whatsapp_number", "admin_email", "office_photos"]);
+const NON_TRANSLATABLE = new Set([
+  "phone_number",
+  "whatsapp_number",
+  "admin_email",
+  "office_photos",
+]);
 
 function getCarSpecFields(units: "metric" | "imperial") {
   const m = units === "metric";
   return [
-    { key: "pricePerDay", label: "Price / Day (EUR)", placeholder: "e.g. 2500" },
-    { key: "pricePerThreeDays", label: "Price / 3 Days (EUR)", placeholder: "e.g. 6500" },
-    { key: "pricePerMonth", label: "Price / Month (EUR)", placeholder: "e.g. 45000" },
+    {
+      key: "pricePerDay",
+      label: "Price / Day (EUR)",
+      placeholder: "e.g. 2500",
+    },
+    {
+      key: "pricePerThreeDays",
+      label: "Price / 3 Days (EUR)",
+      placeholder: "e.g. 6500",
+    },
+    {
+      key: "pricePerMonth",
+      label: "Price / Month (EUR)",
+      placeholder: "e.g. 45000",
+    },
     { key: "engine", label: "Engine", placeholder: "e.g. 4.0L V8 Twin-Turbo" },
     { key: "horsepower", label: "Power (HP)", placeholder: "e.g. 650" },
-    { key: "torque", label: m ? "Torque (Nm)" : "Torque (lb·ft)", placeholder: m ? "e.g. 850" : "e.g. 627" },
-    { key: "acceleration", label: m ? "0–100 km/h (s)" : "0–60 mph (s)", placeholder: "e.g. 3.6" },
-    { key: "topSpeed", label: m ? "Top Speed (km/h)" : "Top Speed (mph)", placeholder: m ? "e.g. 305" : "e.g. 190" },
-    { key: "transmission", label: "Transmission", placeholder: "e.g. 8-Speed Automatic" },
+    {
+      key: "torque",
+      label: m ? "Torque (Nm)" : "Torque (lb·ft)",
+      placeholder: m ? "e.g. 850" : "e.g. 627",
+    },
+    {
+      key: "acceleration",
+      label: m ? "0–100 km/h (s)" : "0–60 mph (s)",
+      placeholder: "e.g. 3.6",
+    },
+    {
+      key: "topSpeed",
+      label: m ? "Top Speed (km/h)" : "Top Speed (mph)",
+      placeholder: m ? "e.g. 305" : "e.g. 190",
+    },
+    {
+      key: "transmission",
+      label: "Transmission",
+      placeholder: "e.g. 8-Speed Automatic",
+    },
     { key: "drivetrain", label: "Drivetrain", placeholder: "e.g. AWD / RWD" },
     { key: "seats", label: "Seats", placeholder: "e.g. 4" },
-    { key: "fuelType", label: "Fuel Type", placeholder: "e.g. Petrol / Hybrid" },
+    {
+      key: "fuelType",
+      label: "Fuel Type",
+      placeholder: "e.g. Petrol / Hybrid",
+    },
     { key: "year", label: "Year", placeholder: "e.g. 2024" },
-    { key: "kmIncluded", label: "Kilometers Included", placeholder: "e.g. 300" },
-    { key: "extraPricePerKm", label: "Extra Price per km (EUR)", placeholder: "e.g. 3.50" },
+    {
+      key: "kmIncluded",
+      label: "Kilometers Included",
+      placeholder: "e.g. 300",
+    },
+    {
+      key: "extraPricePerKm",
+      label: "Extra Price per km (EUR)",
+      placeholder: "e.g. 3.50",
+    },
     { key: "deposit", label: "Deposit (EUR)", placeholder: "e.g. 5000" },
     // Rental Agreement fields — read by the Contract Generator's Section B
     // (Vehicle Details). Not shown on the public site, only in the admin
     // vehicle form and the generated PDF.
-    { key: "bodyType", label: "Body Type / Category", placeholder: "e.g. Sedan, SUV, Convertible" },
-    { key: "registrationPlate", label: "Registration Plate", placeholder: "e.g. AB-123-CD" },
-    { key: "vin", label: "VIN / Chassis No.", placeholder: "e.g. WBA1234567890ABCD" },
+    {
+      key: "bodyType",
+      label: "Body Type / Category",
+      placeholder: "e.g. Sedan, SUV, Convertible",
+    },
+    {
+      key: "registrationPlate",
+      label: "Registration Plate",
+      placeholder: "e.g. AB-123-CD",
+    },
+    {
+      key: "vin",
+      label: "VIN / Chassis No.",
+      placeholder: "e.g. WBA1234567890ABCD",
+    },
     { key: "colour", label: "Colour", placeholder: "e.g. Black" },
   ];
 }
@@ -145,21 +220,61 @@ function getCarSpecFields(units: "metric" | "imperial") {
 function getYachtSpecFields(units: "metric" | "imperial") {
   const m = units === "metric";
   return [
-    { key: "pricePerDay", label: "Price / Day (EUR)", placeholder: "e.g. 15000" },
-    { key: "pricePerWeek", label: "Price / Week (EUR) — auto: day × 6", placeholder: "auto-calculated" },
-    { key: "pricingType", label: "Pricing Type", placeholder: "plus APA / All included" },
-    { key: "length", label: m ? "Length (m)" : "Length (ft)", placeholder: m ? "e.g. 28" : "e.g. 92" },
-    { key: "beam", label: m ? "Beam (m)" : "Beam (ft)", placeholder: m ? "e.g. 6.5" : "e.g. 21.3" },
-    { key: "draft", label: m ? "Draft (m)" : "Draft (ft)", placeholder: m ? "e.g. 1.8" : "e.g. 5.9" },
+    {
+      key: "pricePerDay",
+      label: "Price / Day (EUR)",
+      placeholder: "e.g. 15000",
+    },
+    {
+      key: "pricePerWeek",
+      label: "Price / Week (EUR) — auto: day × 6",
+      placeholder: "auto-calculated",
+    },
+    {
+      key: "pricingType",
+      label: "Pricing Type",
+      placeholder: "plus APA / All included",
+    },
+    {
+      key: "length",
+      label: m ? "Length (m)" : "Length (ft)",
+      placeholder: m ? "e.g. 28" : "e.g. 92",
+    },
+    {
+      key: "beam",
+      label: m ? "Beam (m)" : "Beam (ft)",
+      placeholder: m ? "e.g. 6.5" : "e.g. 21.3",
+    },
+    {
+      key: "draft",
+      label: m ? "Draft (m)" : "Draft (ft)",
+      placeholder: m ? "e.g. 1.8" : "e.g. 5.9",
+    },
     { key: "cabins", label: "Cabins", placeholder: "e.g. 4" },
     { key: "guests", label: "Max Guests", placeholder: "e.g. 10" },
     { key: "crew", label: "Crew", placeholder: "e.g. 4" },
-    { key: "cruisingSpeed", label: "Cruising Speed (knots)", placeholder: "e.g. 24" },
+    {
+      key: "cruisingSpeed",
+      label: "Cruising Speed (knots)",
+      placeholder: "e.g. 24",
+    },
     { key: "maxSpeed", label: "Max Speed (knots)", placeholder: "e.g. 30" },
-    { key: "fuelCapacity", label: m ? "Fuel Capacity (L)" : "Fuel Capacity (gal)", placeholder: m ? "e.g. 6000" : "e.g. 1585" },
-    { key: "waterCapacity", label: m ? "Water Capacity (L)" : "Water Capacity (gal)", placeholder: m ? "e.g. 1200" : "e.g. 317" },
+    {
+      key: "fuelCapacity",
+      label: m ? "Fuel Capacity (L)" : "Fuel Capacity (gal)",
+      placeholder: m ? "e.g. 6000" : "e.g. 1585",
+    },
+    {
+      key: "waterCapacity",
+      label: m ? "Water Capacity (L)" : "Water Capacity (gal)",
+      placeholder: m ? "e.g. 1200" : "e.g. 317",
+    },
     { key: "yearBuilt", label: "Year Built", placeholder: "e.g. 2023" },
-    { key: "builder", label: "Builder / Shipyard", placeholder: "e.g. Sunseeker" },
+    {
+      key: "builder",
+      label: "Builder / Shipyard",
+      placeholder: "e.g. Sunseeker",
+    },
   ];
 }
 
@@ -239,17 +354,52 @@ export default function AdminDashboard() {
   const [content, setContent] = useState<ContentItem[]>([]);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
-  const [editingContent, setEditingContent] = useState<ContentItem | null>(null);
+  const [editingContent, setEditingContent] = useState<ContentItem | null>(
+    null,
+  );
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [requests, setRequests] = useState<ContactRequest[]>([]);
   // Set by CarBookingCalendar's "Generate Contract" button — switches to the
   // Contracts tab and hands the booking's data to ContractGenerator as a
   // starting point, rather than a blank form.
-  const [contractPrefill, setContractPrefill] = useState<ContractPrefill | null>(null);
+  const [contractPrefill, setContractPrefill] =
+    useState<ContractPrefill | null>(null);
 
-  const handleGenerateContractFromBooking = (booking: Booking) => {
-    setContractPrefill(buildContractPrefillFromBooking(booking));
+  const handleGenerateContractFromBooking = (
+    booking: Booking,
+    contract?: StoredContract,
+  ) => {
+    const base = buildContractPrefillFromBooking(booking);
+    const snapshot = contract?.snapshot;
+    setContractPrefill(
+      contract && snapshot
+        ? {
+            ...base,
+            editContractNumber: contract.contractNumber,
+            renterName: snapshot.renter?.name,
+            renterDob: snapshot.renter?.dob,
+            renterPob: snapshot.renter?.pob,
+            renterNationality: snapshot.renter?.nationality,
+            renterPassport: snapshot.renter?.passport,
+            renterPassportExpiry: snapshot.renter?.passportExpiry,
+            renterLicence: snapshot.renter?.licence,
+            renterLicenceExpiry: snapshot.renter?.licenceExpiry,
+            renterLicenceIssuedBy: snapshot.renter?.licenceIssuedBy,
+            renterPhone: snapshot.renter?.phone,
+            renterEmail: snapshot.renter?.email,
+            pickupDate: snapshot.pickupDate,
+            returnDate: snapshot.returnDate,
+            pickupLocation: snapshot.pickupLocation,
+            returnLocation: snapshot.returnLocation,
+            totalAmount: snapshot.totalAmount,
+            depositAmount: snapshot.depositAmount,
+            kmPerDay: snapshot.kmPerDay,
+            extraKmPrice: snapshot.extraKmPrice,
+            representativeName: snapshot.representativeName,
+          }
+        : base,
+    );
     setTab("contracts");
   };
 
@@ -261,59 +411,67 @@ export default function AdminDashboard() {
     if (!mobileSection) return;
     if (mobileSection === "vehicles") {
       setTab((prev) => (prev === "cars" || prev === "yachts" ? prev : "cars"));
-    } else if (mobileSection === "content" || mobileSection === "requests" || mobileSection === "analytics") {
+    } else if (
+      mobileSection === "content" ||
+      mobileSection === "requests" ||
+      mobileSection === "analytics"
+    ) {
       setTab(mobileSection as Tab);
     }
   }, [mobileSection]);
 
   const loadData = useCallback(async () => {
     try {
-  const [vehiclesRes, contentRes, requestsRes] = await Promise.allSettled([
-    fetchVehicles(undefined, true),
-    fetchContentAll(),
-    fetchRequests(),
-  ]);
+      const [vehiclesRes, contentRes, requestsRes] = await Promise.allSettled([
+        fetchVehicles(undefined, true),
+        fetchContentAll(),
+        fetchRequests(),
+      ]);
 
-  if (vehiclesRes.status === "fulfilled") {
-    const v = vehiclesRes.value;
-    setVehicles(
-      Array.isArray(v)
-        ? v.map((vehicle) => ({
-            ...vehicle,
-            image: cleanImageUrl(vehicle.image) || cleanImageUrl(vehicle.images?.[0] || ""),
-            images: Array.isArray(vehicle.images)
-              ? vehicle.images.map((img: string) => cleanImageUrl(img)).filter(Boolean)
-              : [],
-          }))
-        : []
-    );
-  } else {
-    console.error("fetchVehicles failed:", vehiclesRes.reason);
-    setVehicles([]);
-  }
+      if (vehiclesRes.status === "fulfilled") {
+        const v = vehiclesRes.value;
+        setVehicles(
+          Array.isArray(v)
+            ? v.map((vehicle) => ({
+                ...vehicle,
+                image:
+                  cleanImageUrl(vehicle.image) ||
+                  cleanImageUrl(vehicle.images?.[0] || ""),
+                images: Array.isArray(vehicle.images)
+                  ? vehicle.images
+                      .map((img: string) => cleanImageUrl(img))
+                      .filter(Boolean)
+                  : [],
+              }))
+            : [],
+        );
+      } else {
+        console.error("fetchVehicles failed:", vehiclesRes.reason);
+        setVehicles([]);
+      }
 
-  if (contentRes.status === "fulfilled") {
-    const c = contentRes.value;
-    
-    setContent(c);
-  } else {
-    console.error("fetchContentAll failed:", contentRes.reason);
-    setContent([]);
-  }
+      if (contentRes.status === "fulfilled") {
+        const c = contentRes.value;
 
-  if (requestsRes.status === "fulfilled") {
-    setRequests(requestsRes.value);
-  } else {
-    console.error("fetchRequests failed:", requestsRes.reason);
-    setRequests([]);
-  }
+        setContent(c);
+      } else {
+        console.error("fetchContentAll failed:", contentRes.reason);
+        setContent([]);
+      }
 
-  setMessage("");
-} catch (err) {
-  console.error("ADMIN LOAD CRASHED:", err);
-  setMessage("Failed to load data");
-}
-   }, []); 
+      if (requestsRes.status === "fulfilled") {
+        setRequests(requestsRes.value);
+      } else {
+        console.error("fetchRequests failed:", requestsRes.reason);
+        setRequests([]);
+      }
+
+      setMessage("");
+    } catch (err) {
+      console.error("ADMIN LOAD CRASHED:", err);
+      setMessage("Failed to load data");
+    }
+  }, []);
   useEffect(() => {
     checkAuth().then((ok) => {
       if (!ok) {
@@ -352,7 +510,9 @@ export default function AdminDashboard() {
         category: vehicle.category,
         description: vehicle.description,
         image: cleanImageUrl(vehicle.image),
-        images: (vehicle.images || []).map((img) => cleanImageUrl(img)).filter(Boolean),
+        images: (vehicle.images || [])
+          .map((img) => cleanImageUrl(img))
+          .filter(Boolean),
         featured: vehicle.featured ?? false,
         visible: !(vehicle.visible !== false),
         specs: vehicle.specs || {},
@@ -361,7 +521,9 @@ export default function AdminDashboard() {
         agentId: vehicle.agentId ?? null,
       });
       await loadData();
-      setMessage(vehicle.visible !== false ? "Hidden from site" : "Published to site");
+      setMessage(
+        vehicle.visible !== false ? "Hidden from site" : "Published to site",
+      );
     } catch {
       setMessage("Failed to update");
     }
@@ -382,19 +544,20 @@ export default function AdminDashboard() {
   }) => {
     setSaving(true);
     try {
-     const normalizedData = {
-  ...data,
-  image: cleanImageUrl(data.image) || cleanImageUrl(data.images?.[0] || ""),
-  images: Array.isArray(data.images)
-    ? data.images.map((img) => cleanImageUrl(img)).filter(Boolean)
-    : [],
-};
+      const normalizedData = {
+        ...data,
+        image:
+          cleanImageUrl(data.image) || cleanImageUrl(data.images?.[0] || ""),
+        images: Array.isArray(data.images)
+          ? data.images.map((img) => cleanImageUrl(img)).filter(Boolean)
+          : [],
+      };
 
-if (editingVehicle && editingVehicle.id > 0) {
-  await updateVehicle(editingVehicle.id, normalizedData);
-} else {
-  await createVehicle(normalizedData);
-}
+      if (editingVehicle && editingVehicle.id > 0) {
+        await updateVehicle(editingVehicle.id, normalizedData);
+      } else {
+        await createVehicle(normalizedData);
+      }
       setEditingVehicle(null);
       setShowNewForm(false);
       await loadData();
@@ -417,19 +580,23 @@ if (editingVehicle && editingVehicle.id > 0) {
     }
   };
 
- const handleSaveContent = async (key: string, value: string, translations?: Record<string, string>) => {
-  setSaving(true);
-  try {
-    await updateContent(key, value, translations);
-    setEditingContent(null);
-    await loadData();
-    setMessage("Content updated");
-  } catch {
-    setMessage("Failed to update content");
-  } finally {
-    setSaving(false);
-  }
-};
+  const handleSaveContent = async (
+    key: string,
+    value: string,
+    translations?: Record<string, string>,
+  ) => {
+    setSaving(true);
+    try {
+      await updateContent(key, value, translations);
+      setEditingContent(null);
+      await loadData();
+      setMessage("Content updated");
+    } catch {
+      setMessage("Failed to update content");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -483,13 +650,21 @@ if (editingVehicle && editingVehicle.id > 0) {
         <RequestsTab
           requests={requests}
           onUpdate={(updated) =>
-            setRequests((prev) => prev.map((r) => (r.id === updated.id ? updated : r)))
+            setRequests((prev) =>
+              prev.map((r) => (r.id === updated.id ? updated : r)),
+            )
           }
-          onDelete={(id) => setRequests((prev) => prev.filter((r) => r.id !== id))}
+          onDelete={(id) =>
+            setRequests((prev) => prev.filter((r) => r.id !== id))
+          }
         />
       )}
 
-      {tab === "car-bookings" && <CarBookingCalendar onGenerateContract={handleGenerateContractFromBooking} />}
+      {tab === "car-bookings" && (
+        <CarBookingCalendar
+          onGenerateContract={handleGenerateContractFromBooking}
+        />
+      )}
 
       {tab === "yacht-bookings" && <YachtBookingCalendar />}
 
@@ -506,16 +681,48 @@ if (editingVehicle && editingVehicle.id > 0) {
   );
 
   const MOBILE_MENU_ITEMS: { label: string; icon: string; go: () => void }[] = [
-    { label: "Vehicles (Cars & Yachts)", icon: "🚗", go: () => setLocation("/admin/dashboard/vehicles") },
-    { label: "Car Bookings", icon: "📅", go: () => setLocation("/admin/bookings/cars") },
-    { label: "Yacht Bookings", icon: "⚓", go: () => setLocation("/admin/bookings/yachts") },
+    {
+      label: "Vehicles (Cars & Yachts)",
+      icon: "🚗",
+      go: () => setLocation("/admin/dashboard/vehicles"),
+    },
+    {
+      label: "Car Bookings",
+      icon: "📅",
+      go: () => setLocation("/admin/bookings/cars"),
+    },
+    {
+      label: "Yacht Bookings",
+      icon: "⚓",
+      go: () => setLocation("/admin/bookings/yachts"),
+    },
     { label: "CRM", icon: "💼", go: () => setLocation("/admin/crm") },
     { label: "Agents", icon: "🤝", go: () => setLocation("/admin/agents") },
-    { label: "Proposals", icon: "📄", go: () => setLocation("/admin/proposals") },
-    { label: "Contracts", icon: "📝", go: () => setLocation("/admin/contracts") },
-    { label: "Content / CMS", icon: "✎", go: () => setLocation("/admin/dashboard/content") },
-    { label: "Requests", icon: "📩", go: () => setLocation("/admin/dashboard/requests") },
-    { label: "Analytics", icon: "📊", go: () => setLocation("/admin/dashboard/analytics") },
+    {
+      label: "Proposals",
+      icon: "📄",
+      go: () => setLocation("/admin/proposals"),
+    },
+    {
+      label: "Contracts",
+      icon: "📝",
+      go: () => setLocation("/admin/contracts"),
+    },
+    {
+      label: "Content / CMS",
+      icon: "✎",
+      go: () => setLocation("/admin/dashboard/content"),
+    },
+    {
+      label: "Requests",
+      icon: "📩",
+      go: () => setLocation("/admin/dashboard/requests"),
+    },
+    {
+      label: "Analytics",
+      icon: "📊",
+      go: () => setLocation("/admin/dashboard/analytics"),
+    },
   ];
 
   return (
@@ -528,7 +735,9 @@ if (editingVehicle && editingVehicle.id > 0) {
               alt="TRANSYACHTGROUP"
               className="h-8 w-auto opacity-70"
             />
-            <span className="text-white/30 text-xs uppercase tracking-[0.2em]">Admin</span>
+            <span className="text-white/30 text-xs uppercase tracking-[0.2em]">
+              Admin
+            </span>
           </div>
 
           <div className="flex items-center gap-4">
@@ -563,7 +772,9 @@ if (editingVehicle && editingVehicle.id > 0) {
 
         {vehicles.length === 0 && content.length === 0 && (
           <div className="text-center py-16">
-            <p className="text-white/40 mb-4">No data found. Seed the initial content?</p>
+            <p className="text-white/40 mb-4">
+              No data found. Seed the initial content?
+            </p>
             <button
               onClick={handleSeed}
               disabled={saving}
@@ -585,7 +796,9 @@ if (editingVehicle && editingVehicle.id > 0) {
                   className="w-full min-h-[60px] flex items-center gap-4 px-5 py-4 rounded-xl border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] active:bg-white/[0.07] transition-colors text-left"
                 >
                   <span className="text-2xl shrink-0">{item.icon}</span>
-                  <span className="flex-1 text-white text-sm font-light uppercase tracking-[0.1em]">{item.label}</span>
+                  <span className="flex-1 text-white text-sm font-light uppercase tracking-[0.1em]">
+                    {item.label}
+                  </span>
                   <ChevronRight size={20} className="text-white/30 shrink-0" />
                 </button>
               ))}
@@ -597,7 +810,9 @@ if (editingVehicle && editingVehicle.id > 0) {
                 className="flex items-center gap-2 text-white/50 hover:text-white transition-colors min-h-[44px] mb-4"
               >
                 <ArrowLeft size={18} />
-                <span className="text-xs uppercase tracking-[0.15em]">Back to Menu</span>
+                <span className="text-xs uppercase tracking-[0.15em]">
+                  Back to Menu
+                </span>
               </button>
 
               {mobileSection === "vehicles" && (
@@ -634,12 +849,24 @@ if (editingVehicle && editingVehicle.id > 0) {
         <div className="hidden lg:block">
           <div className="flex gap-1 mb-8 border-b border-white/[0.06]">
             {[
-              { key: "cars" as Tab, label: `Cars (${cars.length})`, icon: "🚗" },
-              { key: "yachts" as Tab, label: `Yachts (${yachts.length})`, icon: "🛥" },
+              {
+                key: "cars" as Tab,
+                label: `Cars (${cars.length})`,
+                icon: "🚗",
+              },
+              {
+                key: "yachts" as Tab,
+                label: `Yachts (${yachts.length})`,
+                icon: "🛥",
+              },
               { key: "content" as Tab, label: "Site Text", icon: "✎" },
               { key: "requests" as Tab, label: "Requests", icon: "📩" },
               { key: "car-bookings" as Tab, label: "Car Bookings", icon: "📅" },
-              { key: "yacht-bookings" as Tab, label: "Yacht Bookings", icon: "⚓" },
+              {
+                key: "yacht-bookings" as Tab,
+                label: "Yacht Bookings",
+                icon: "⚓",
+              },
               { key: "crm" as Tab, label: "CRM", icon: "💼" },
               { key: "agents" as Tab, label: "Agents", icon: "🤝" },
               { key: "proposals" as Tab, label: "Proposals", icon: "📄" },
@@ -711,10 +938,13 @@ function CatalogSection({
   const isCar = category === "car";
   const label = isCar ? "Car" : "Yacht";
 
-  const [ownershipFilter, setOwnershipFilter] = useState<"all" | "own" | "agent">("all");
+  const [ownershipFilter, setOwnershipFilter] = useState<
+    "all" | "own" | "agent"
+  >("all");
   const [brandFilter, setBrandFilter] = useState<string>("all");
 
-  const vehicleBrand = (v: Vehicle): string => stripTags(v.name).trim().split(/\s+/)[0] || "";
+  const vehicleBrand = (v: Vehicle): string =>
+    stripTags(v.name).trim().split(/\s+/)[0] || "";
 
   // Brand filter is car-only — extracted from the first word of the vehicle
   // name (e.g. "Mercedes-Benz S580" -> "Mercedes-Benz").
@@ -731,8 +961,13 @@ function CatalogSection({
   const filteredVehicles = useMemo(() => {
     if (!isCar) return vehicles;
     return vehicles.filter((v) => {
-      if (ownershipFilter !== "all" && (v.ownership || "own") !== ownershipFilter) return false;
-      if (brandFilter !== "all" && vehicleBrand(v) !== brandFilter) return false;
+      if (
+        ownershipFilter !== "all" &&
+        (v.ownership || "own") !== ownershipFilter
+      )
+        return false;
+      if (brandFilter !== "all" && vehicleBrand(v) !== brandFilter)
+        return false;
       return true;
     });
   }, [vehicles, isCar, ownershipFilter, brandFilter]);
@@ -759,13 +994,17 @@ function CatalogSection({
         <div className="mb-6 space-y-3">
           <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3 sm:gap-6">
             <div>
-              <span className="block text-[10px] uppercase tracking-wide text-white/40 mb-1">Ownership</span>
+              <span className="block text-[10px] uppercase tracking-wide text-white/40 mb-1">
+                Ownership
+              </span>
               <div className="flex gap-1">
-                {([
-                  { key: "all", label: "All" },
-                  { key: "own", label: "Ours" },
-                  { key: "agent", label: "Agent" },
-                ] as const).map((o) => (
+                {(
+                  [
+                    { key: "all", label: "All" },
+                    { key: "own", label: "Ours" },
+                    { key: "agent", label: "Agent" },
+                  ] as const
+                ).map((o) => (
                   <button
                     key={o.key}
                     onClick={() => setOwnershipFilter(o.key)}
@@ -783,7 +1022,9 @@ function CatalogSection({
 
             {brands.length > 0 && (
               <div>
-                <span className="block text-[10px] uppercase tracking-wide text-white/40 mb-1">Brand</span>
+                <span className="block text-[10px] uppercase tracking-wide text-white/40 mb-1">
+                  Brand
+                </span>
                 <div className="flex flex-wrap gap-1">
                   <button
                     onClick={() => setBrandFilter("all")}
@@ -880,7 +1121,9 @@ function VehicleCard({
       ? (specs.unitSystem as "metric" | "imperial")
       : "metric";
   const specFields =
-    vehicle.category === "car" ? getCarSpecFields(vehicleUnits) : getYachtSpecFields(vehicleUnits);
+    vehicle.category === "car"
+      ? getCarSpecFields(vehicleUnits)
+      : getYachtSpecFields(vehicleUnits);
   const filledSpecs = specFields.filter((f) => specs[f.key]);
   const isHidden = vehicle.visible === false;
 
@@ -895,16 +1138,19 @@ function VehicleCard({
       <div className="p-4 flex items-center gap-4">
         <div className="relative flex-shrink-0">
           <img
-  src={cleanImageUrl(vehicle.image) || cleanImageUrl(vehicle.images?.[0] || "")}
-  alt={stripTags(vehicle.name)}
-  className={`w-20 h-14 object-cover rounded-md ${isHidden ? "grayscale" : ""}`}
-  onError={(e) => {
-    const fallback = cleanImageUrl(vehicle.images?.[0] || "");
-    if (e.currentTarget.src !== fallback && fallback) {
-      e.currentTarget.src = fallback;
-    }
-  }}
-/>
+            src={
+              cleanImageUrl(vehicle.image) ||
+              cleanImageUrl(vehicle.images?.[0] || "")
+            }
+            alt={stripTags(vehicle.name)}
+            className={`w-20 h-14 object-cover rounded-md ${isHidden ? "grayscale" : ""}`}
+            onError={(e) => {
+              const fallback = cleanImageUrl(vehicle.images?.[0] || "");
+              if (e.currentTarget.src !== fallback && fallback) {
+                e.currentTarget.src = fallback;
+              }
+            }}
+          />
           {(vehicle.images?.length || 0) > 1 && (
             <span className="absolute -top-1 -right-1 bg-[hsl(43,67%,55%)] text-black text-[8px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
               {vehicle.images?.length}
@@ -914,7 +1160,9 @@ function VehicleCard({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-white font-medium text-sm truncate">{stripTags(vehicle.name)}</h3>
+            <h3 className="text-white font-medium text-sm truncate">
+              {stripTags(vehicle.name)}
+            </h3>
 
             {isHidden && (
               <span className="text-[8px] uppercase tracking-[0.15em] bg-red-500/15 text-red-400/80 px-2 py-0.5 rounded-full border border-red-500/20">
@@ -928,15 +1176,18 @@ function VehicleCard({
               </span>
             )}
 
-            {vehicle.translations && Object.keys(vehicle.translations).length > 0 && (
-              <span className="text-[8px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400/70 border border-emerald-500/20">
-                {Object.keys(vehicle.translations).length} lang
-                {Object.keys(vehicle.translations).length > 1 ? "s" : ""}
-              </span>
-            )}
+            {vehicle.translations &&
+              Object.keys(vehicle.translations).length > 0 && (
+                <span className="text-[8px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400/70 border border-emerald-500/20">
+                  {Object.keys(vehicle.translations).length} lang
+                  {Object.keys(vehicle.translations).length > 1 ? "s" : ""}
+                </span>
+              )}
           </div>
 
-          <p className="text-white/30 text-xs">{stripTags(vehicle.description)}</p>
+          <p className="text-white/30 text-xs">
+            {stripTags(vehicle.description)}
+          </p>
 
           {filledSpecs.length > 0 && (
             <button
@@ -981,7 +1232,9 @@ function VehicleCard({
         <div className="border-t border-white/[0.04] px-4 py-3 grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 bg-white/[0.01]">
           {filledSpecs.map((f) => (
             <div key={f.key}>
-              <span className="text-[8px] uppercase tracking-[0.2em] text-white/20">{f.label}</span>
+              <span className="text-[8px] uppercase tracking-[0.2em] text-white/20">
+                {f.label}
+              </span>
               <p className="text-white/60 text-xs">{stripTags(specs[f.key])}</p>
             </div>
           ))}
@@ -1020,8 +1273,12 @@ function VehicleForm({
   const MAX_IMAGES = 30;
 
   const [name, setName] = useState(vehicle?.name || "");
-  const [ownership, setOwnership] = useState<"own" | "agent">(vehicle?.ownership === "agent" ? "agent" : "own");
-  const [agentId, setAgentId] = useState<number | null>(vehicle?.agentId ?? null);
+  const [ownership, setOwnership] = useState<"own" | "agent">(
+    vehicle?.ownership === "agent" ? "agent" : "own",
+  );
+  const [agentId, setAgentId] = useState<number | null>(
+    vehicle?.agentId ?? null,
+  );
   const [agents, setAgents] = useState<Agent[]>([]);
   const [showAgentDetails, setShowAgentDetails] = useState(false);
 
@@ -1034,40 +1291,56 @@ function VehicleForm({
 
   const selectedAgent = agents.find((a) => a.id === agentId) || null;
   const [description, setDescription] = useState(vehicle?.description || "");
-  const [fullDescription, setFullDescription] = useState(() => vehicle?.specs?.fullDescription || "");
+  const [fullDescription, setFullDescription] = useState(
+    () => vehicle?.specs?.fullDescription || "",
+  );
   const [unitSystem, setUnitSystem] = useState<"metric" | "imperial">(() => {
     const value = vehicle?.specs?.unitSystem;
     return value === "imperial" ? "imperial" : "metric";
   });
 
-  const [vehicleTranslations, setVehicleTranslations] = useState<Record<string, Record<string, string>>>(() => {
-    return vehicle?.translations ? JSON.parse(JSON.stringify(vehicle.translations)) : {};
+  const [vehicleTranslations, setVehicleTranslations] = useState<
+    Record<string, Record<string, string>>
+  >(() => {
+    return vehicle?.translations
+      ? JSON.parse(JSON.stringify(vehicle.translations))
+      : {};
   });
 
   const [activeLang, setActiveLang] = useState("en");
   const [translating, setTranslating] = useState(false);
   const [translateMsg, setTranslateMsg] = useState("");
 
-  const activeSpecFields = isCar ? getCarSpecFields(unitSystem) : getYachtSpecFields(unitSystem);
+  const activeSpecFields = isCar
+    ? getCarSpecFields(unitSystem)
+    : getYachtSpecFields(unitSystem);
 
   const [images, setImages] = useState<string[]>(() => {
-  if (vehicle?.images && Array.isArray(vehicle.images) && vehicle.images.length > 0) {
-    const cleaned = vehicle.images.map(cleanImageUrl).filter(Boolean);
-    if (cleaned.length > 0) return cleaned;
-  }
+    if (
+      vehicle?.images &&
+      Array.isArray(vehicle.images) &&
+      vehicle.images.length > 0
+    ) {
+      const cleaned = vehicle.images.map(cleanImageUrl).filter(Boolean);
+      if (cleaned.length > 0) return cleaned;
+    }
 
-  const fallback = cleanImageUrl(vehicle?.image || vehicle?.images?.[0] || "");
-  if (fallback) return [fallback];
+    const fallback = cleanImageUrl(
+      vehicle?.image || vehicle?.images?.[0] || "",
+    );
+    if (fallback) return [fallback];
 
-  return [];
-});
+    return [];
+  });
 
   const [featured, setFeatured] = useState(vehicle?.featured ?? false);
   const [urlInput, setUrlInput] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [specs, setSpecs] = useState<Record<string, string>>(() => {
-    const defaultFields = isCar ? getCarSpecFields("metric") : getYachtSpecFields("metric");
+    const defaultFields = isCar
+      ? getCarSpecFields("metric")
+      : getYachtSpecFields("metric");
     const initial: Record<string, string> = {};
     defaultFields.forEach((f) => {
       initial[f.key] = "";
@@ -1085,41 +1358,40 @@ function VehicleForm({
   const [uploadingCount, setUploadingCount] = useState(0);
 
   const uploadFile = useCallback(async (file: File): Promise<string | null> => {
-  try {
-    file = await compressImage(file, 800, 0.8);
-    const safeName = file.name.replace(/\s+/g, "-").replace(/[^\w.-]/g, "");
-    const fileName = `${Date.now()}-${safeName}`;
+    try {
+      file = await compressImage(file, 800, 0.8);
+      const safeName = file.name.replace(/\s+/g, "-").replace(/[^\w.-]/g, "");
+      const fileName = `${Date.now()}-${safeName}`;
 
-    const { error } = await supabase.storage
-      .from("vehicle_images") // если bucket называется иначе, замени здесь
-      .upload(fileName, file, {
-        upsert: false,
-      });
+      const { error } = await supabase.storage
+        .from("vehicle_images") // если bucket называется иначе, замени здесь
+        .upload(fileName, file, {
+          upsert: false,
+        });
 
-    if (error) {
-      console.error("SUPABASE UPLOAD ERROR:", error);
-      alert(`Upload failed: ${error.message}`);
+      if (error) {
+        console.error("SUPABASE UPLOAD ERROR:", error);
+        alert(`Upload failed: ${error.message}`);
+        return null;
+      }
+
+      const { data } = supabase.storage
+        .from("vehicle_images")
+        .getPublicUrl(fileName);
+
+      return cleanImageUrl(data.publicUrl);
+    } catch (err) {
+      console.error("UPLOAD ERROR:", err);
+
+      if (err instanceof Error) {
+        alert(`Upload crashed: ${err.message}`);
+      } else {
+        alert("Upload crashed: unknown error");
+      }
+
       return null;
     }
-
-    const { data } = supabase.storage
-      .from("vehicle_images")
-      .getPublicUrl(fileName);
-
-    return cleanImageUrl(data.publicUrl);
-  } catch (err) {
-    console.error("UPLOAD ERROR:", err);
-
-    if (err instanceof Error) {
-      alert(`Upload crashed: ${err.message}`);
-    } else {
-      alert("Upload crashed: unknown error");
-    }
-
-    return null;
-  }
-}, []);
-    
+  }, []);
 
   const handleFileSelect = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1145,10 +1417,16 @@ function VehicleForm({
       setUploadProgress(100);
 
       if (newUrls.length > 0) {
-  setImages((prev) =>
-    Array.from(new Set([...prev, ...newUrls].map((img) => cleanImageUrl(img)).filter(Boolean)))
-  );
-}
+        setImages((prev) =>
+          Array.from(
+            new Set(
+              [...prev, ...newUrls]
+                .map((img) => cleanImageUrl(img))
+                .filter(Boolean),
+            ),
+          ),
+        );
+      }
 
       setIsUploading(false);
       setUploadingCount(0);
@@ -1157,18 +1435,24 @@ function VehicleForm({
         fileInputRef.current.value = "";
       }
     },
-    [images.length, uploadFile]
+    [images.length, uploadFile],
   );
 
   const addUrl = () => {
-  const cleanedUrl = cleanImageUrl(urlInput);
-  if (!cleanedUrl || images.length >= MAX_IMAGES) return;
+    const cleanedUrl = cleanImageUrl(urlInput);
+    if (!cleanedUrl || images.length >= MAX_IMAGES) return;
 
-  setImages((prev) =>
-    Array.from(new Set([...prev, cleanedUrl].map((img) => cleanImageUrl(img)).filter(Boolean)))
-  );
-  setUrlInput("");
-};
+    setImages((prev) =>
+      Array.from(
+        new Set(
+          [...prev, cleanedUrl]
+            .map((img) => cleanImageUrl(img))
+            .filter(Boolean),
+        ),
+      ),
+    );
+    setUrlInput("");
+  };
 
   const removeImage = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
@@ -1206,7 +1490,11 @@ function VehicleForm({
     return vehicleTranslations[langCode]?.[field] || "";
   };
 
-  const setTranslatedField = (langCode: string, field: string, value: string) => {
+  const setTranslatedField = (
+    langCode: string,
+    field: string,
+    value: string,
+  ) => {
     setVehicleTranslations((prev) => ({
       ...prev,
       [langCode]: {
@@ -1223,7 +1511,9 @@ function VehicleForm({
     setTranslateMsg("");
 
     try {
-      const targetLangs = ADMIN_LANGS.filter((l) => l.code !== "en").map((l) => l.code);
+      const targetLangs = ADMIN_LANGS.filter((l) => l.code !== "en").map(
+        (l) => l.code,
+      );
       const results: Record<string, Record<string, string>> = {};
 
       const translationTasks: Promise<void>[] = [];
@@ -1235,7 +1525,7 @@ function VehicleForm({
               if (!results[lang]) results[lang] = {};
               results[lang].name = val;
             });
-          })
+          }),
         );
       }
 
@@ -1246,7 +1536,7 @@ function VehicleForm({
               if (!results[lang]) results[lang] = {};
               results[lang].description = val;
             });
-          })
+          }),
         );
       }
 
@@ -1257,7 +1547,7 @@ function VehicleForm({
               if (!results[lang]) results[lang] = {};
               results[lang].fullDescription = val;
             });
-          })
+          }),
         );
       }
 
@@ -1296,7 +1586,7 @@ function VehicleForm({
         tasks.push(
           translateText(name, "en", [targetLang]).then((r) => {
             results.name = r[targetLang] || "";
-          })
+          }),
         );
       }
 
@@ -1304,7 +1594,7 @@ function VehicleForm({
         tasks.push(
           translateText(description, "en", [targetLang]).then((r) => {
             results.description = r[targetLang] || "";
-          })
+          }),
         );
       }
 
@@ -1312,7 +1602,7 @@ function VehicleForm({
         tasks.push(
           translateText(fullDescription, "en", [targetLang]).then((r) => {
             results.fullDescription = r[targetLang] || "";
-          })
+          }),
         );
       }
 
@@ -1326,7 +1616,9 @@ function VehicleForm({
         },
       }));
 
-      setTranslateMsg(`Translated to ${ADMIN_LANGS.find((l) => l.code === targetLang)?.label}`);
+      setTranslateMsg(
+        `Translated to ${ADMIN_LANGS.find((l) => l.code === targetLang)?.label}`,
+      );
       setTimeout(() => setTranslateMsg(""), 3000);
     } catch (err) {
       console.error(err);
@@ -1339,7 +1631,7 @@ function VehicleForm({
 
   const translationCount = () => {
     return Object.values(vehicleTranslations).filter((langData) =>
-      Object.values(langData).some((v) => v && v.trim())
+      Object.values(langData).some((v) => v && v.trim()),
     ).length;
   };
 
@@ -1353,56 +1645,67 @@ function VehicleForm({
       if (stripTags(v).trim()) cleanSpecs[k] = v.trim();
     });
 
-    if (fullDescription.trim()) cleanSpecs.fullDescription = fullDescription.trim();
+    if (fullDescription.trim())
+      cleanSpecs.fullDescription = fullDescription.trim();
     cleanSpecs.unitSystem = unitSystem;
 
     const cleanedImages = Array.from(
-  new Set(images.map((img) => cleanImageUrl(img)).filter(Boolean))
-);
-const mainImage = cleanImageUrl(cleanedImages[0] || "");
+      new Set(images.map((img) => cleanImageUrl(img)).filter(Boolean)),
+    );
+    const mainImage = cleanImageUrl(cleanedImages[0] || "");
 
     const cleanTranslations: Record<string, Record<string, string>> = {};
-Object.entries(vehicleTranslations).forEach(([lang, fields]) => {
-  const cleanFields: Record<string, string> = {};
+    Object.entries(vehicleTranslations).forEach(([lang, fields]) => {
+      const cleanFields: Record<string, string> = {};
 
-  Object.entries(fields).forEach(([k, v]) => {
-    const cleanedValue = v.trim();
+      Object.entries(fields).forEach(([k, v]) => {
+        const cleanedValue = v.trim();
 
-    if (cleanedValue) {
-      cleanFields[k] = cleanedValue;
-    }
-  });
+        if (cleanedValue) {
+          cleanFields[k] = cleanedValue;
+        }
+      });
 
-  if (Object.keys(cleanFields).length > 0) {
-    cleanTranslations[lang] = cleanFields;
-  }
-});
+      if (Object.keys(cleanFields).length > 0) {
+        cleanTranslations[lang] = cleanFields;
+      }
+    });
 
     const payload = {
-  name: name.trim(),
-  category,
-  description: description.trim(),
-  image: mainImage,
-  images: cleanedImages,
-  featured,
-  specs: cleanSpecs,
-  ...(isCar ? { ownership, agentId: ownership === "agent" ? agentId : null } : {}),
-  ...(Object.keys(cleanTranslations).length > 0 ? { translations: cleanTranslations } : {}),
-};
+      name: name.trim(),
+      category,
+      description: description.trim(),
+      image: mainImage,
+      images: cleanedImages,
+      featured,
+      specs: cleanSpecs,
+      ...(isCar
+        ? { ownership, agentId: ownership === "agent" ? agentId : null }
+        : {}),
+      ...(Object.keys(cleanTranslations).length > 0
+        ? { translations: cleanTranslations }
+        : {}),
+    };
 
-onSave(payload);
+    onSave(payload);
   };
 
   return (
     <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-6 mb-6">
-      <h3 className="text-white font-serif text-lg mb-5">{vehicle ? `Edit ${label}` : `New ${label}`}</h3>
+      <h3 className="text-white font-serif text-lg mb-5">
+        {vehicle ? `Edit ${label}` : `New ${label}`}
+      </h3>
 
       <div className="mb-4">
         <div className="flex flex-wrap items-center gap-1 mb-3">
           {ADMIN_LANGS.map((l) => {
             const hasTranslation =
               l.code === "en"
-                ? !!(name.trim() || description.trim() || fullDescription.trim())
+                ? !!(
+                    name.trim() ||
+                    description.trim() ||
+                    fullDescription.trim()
+                  )
                 : !!(
                     vehicleTranslations[l.code]?.name?.trim() ||
                     vehicleTranslations[l.code]?.description?.trim() ||
@@ -1417,8 +1720,8 @@ onSave(payload);
                   activeLang === l.code
                     ? "bg-[hsl(43,67%,55%)] text-black font-medium"
                     : hasTranslation
-                    ? "bg-white/[0.06] text-white/60 hover:bg-white/[0.1]"
-                    : "bg-white/[0.02] text-white/25 hover:bg-white/[0.06] border border-dashed border-white/[0.08]"
+                      ? "bg-white/[0.06] text-white/60 hover:bg-white/[0.1]"
+                      : "bg-white/[0.02] text-white/25 hover:bg-white/[0.06] border border-dashed border-white/[0.08]"
                 }`}
               >
                 {l.flag} {l.code}
@@ -1436,7 +1739,10 @@ onSave(payload);
         <div className="flex items-center gap-2 mb-4">
           <button
             onClick={handleAutoTranslateVehicle}
-            disabled={translating || (!name.trim() && !description.trim() && !fullDescription.trim())}
+            disabled={
+              translating ||
+              (!name.trim() && !description.trim() && !fullDescription.trim())
+            }
             className="text-[9px] uppercase tracking-[0.2em] px-3 py-1.5 rounded bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 disabled:opacity-30 transition-colors border border-blue-500/20"
           >
             {translating ? "Translating..." : "Auto-translate All"}
@@ -1445,14 +1751,21 @@ onSave(payload);
           {activeLang !== "en" && (
             <button
               onClick={() => handleTranslateSingleLang(activeLang)}
-              disabled={translating || (!name.trim() && !description.trim() && !fullDescription.trim())}
+              disabled={
+                translating ||
+                (!name.trim() && !description.trim() && !fullDescription.trim())
+              }
               className="text-[9px] uppercase tracking-[0.2em] px-3 py-1.5 rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-30 transition-colors border border-emerald-500/20"
             >
               {translating ? "..." : `Translate → ${activeLang.toUpperCase()}`}
             </button>
           )}
 
-          {translateMsg && <span className="text-[10px] text-emerald-400/80">{translateMsg}</span>}
+          {translateMsg && (
+            <span className="text-[10px] text-emerald-400/80">
+              {translateMsg}
+            </span>
+          )}
         </div>
       </div>
 
@@ -1462,21 +1775,32 @@ onSave(payload);
             <label className="text-[9px] uppercase tracking-[0.3em] text-white/40 font-light block mb-1.5">
               Name
             </label>
-            <RichTextEditor content={convertPlainToHtml(name)} onChange={setName} inline />
+            <RichTextEditor
+              content={convertPlainToHtml(name)}
+              onChange={setName}
+              inline
+            />
           </div>
 
           <div className="mb-5">
             <label className="text-[9px] uppercase tracking-[0.3em] text-white/40 font-light block mb-1.5">
               Short Description
             </label>
-            <RichTextEditor content={convertPlainToHtml(description)} onChange={setDescription} inline />
+            <RichTextEditor
+              content={convertPlainToHtml(description)}
+              onChange={setDescription}
+              inline
+            />
           </div>
 
           <div className="mb-5">
             <label className="block text-[9px] uppercase tracking-[0.3em] text-white/40 font-light mb-2">
               Full Description
             </label>
-            <RichTextEditor content={convertPlainToHtml(fullDescription)} onChange={setFullDescription} />
+            <RichTextEditor
+              content={convertPlainToHtml(fullDescription)}
+              onChange={setFullDescription}
+            />
           </div>
         </>
       ) : (
@@ -1487,7 +1811,9 @@ onSave(payload);
             </label>
             <RichTextEditor
               key={`name-${activeLang}`}
-              content={convertPlainToHtml(getTranslatedField(activeLang, "name"))}
+              content={convertPlainToHtml(
+                getTranslatedField(activeLang, "name"),
+              )}
               onChange={(html) => setTranslatedField(activeLang, "name", html)}
               inline
             />
@@ -1495,30 +1821,42 @@ onSave(payload);
 
           <div className="mb-5">
             <label className="text-[9px] uppercase tracking-[0.3em] text-white/40 font-light block mb-1.5">
-              Short Description ({ADMIN_LANGS.find((l) => l.code === activeLang)?.label})
+              Short Description (
+              {ADMIN_LANGS.find((l) => l.code === activeLang)?.label})
             </label>
             <RichTextEditor
               key={`desc-${activeLang}`}
-              content={convertPlainToHtml(getTranslatedField(activeLang, "description"))}
-              onChange={(html) => setTranslatedField(activeLang, "description", html)}
+              content={convertPlainToHtml(
+                getTranslatedField(activeLang, "description"),
+              )}
+              onChange={(html) =>
+                setTranslatedField(activeLang, "description", html)
+              }
               inline
             />
           </div>
 
           <div className="mb-5">
             <label className="block text-[9px] uppercase tracking-[0.3em] text-white/40 font-light mb-2">
-              Full Description ({ADMIN_LANGS.find((l) => l.code === activeLang)?.label})
+              Full Description (
+              {ADMIN_LANGS.find((l) => l.code === activeLang)?.label})
             </label>
             <RichTextEditor
               key={`full-${activeLang}`}
-              content={convertPlainToHtml(getTranslatedField(activeLang, "fullDescription"))}
-              onChange={(html) => setTranslatedField(activeLang, "fullDescription", html)}
+              content={convertPlainToHtml(
+                getTranslatedField(activeLang, "fullDescription"),
+              )}
+              onChange={(html) =>
+                setTranslatedField(activeLang, "fullDescription", html)
+              }
             />
           </div>
 
           {name && (
             <div className="mb-4 p-3 bg-white/[0.02] border border-white/[0.04] rounded-md">
-              <p className="text-[8px] uppercase tracking-[0.3em] text-white/25 mb-1">English Original</p>
+              <p className="text-[8px] uppercase tracking-[0.3em] text-white/25 mb-1">
+                English Original
+              </p>
               <p className="text-white/40 text-xs">
                 {stripTags(name)} — {stripTags(description)}
               </p>
@@ -1574,13 +1912,13 @@ onSave(payload);
                 className="relative group aspect-[4/3] rounded-md overflow-hidden border border-white/[0.08]"
               >
                 <img
-  src={cleanImageUrl(img)}
-  alt={`Photo ${idx + 1}`}
-  className="w-full h-full object-cover"
-  onError={(e) => {
-    e.currentTarget.style.opacity = "0.25";
-  }}
-/>
+                  src={cleanImageUrl(img)}
+                  alt={`Photo ${idx + 1}`}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.opacity = "0.25";
+                  }}
+                />
 
                 {idx === 0 && (
                   <span className="absolute top-1 left-1 bg-[hsl(43,67%,55%)] text-black text-[7px] font-bold px-1.5 py-0.5 rounded uppercase">
@@ -1647,12 +1985,15 @@ onSave(payload);
                     />
                   </div>
                   <p className="text-[hsl(43,67%,55%)]/60 text-xs">
-                    Uploading {uploadingCount} photo{uploadingCount > 1 ? "s" : ""}... {uploadProgress}%
+                    Uploading {uploadingCount} photo
+                    {uploadingCount > 1 ? "s" : ""}... {uploadProgress}%
                   </p>
                 </div>
               ) : (
                 <div>
-                  <p className="text-white/40 text-sm mb-1">Click to add photos (select multiple)</p>
+                  <p className="text-white/40 text-sm mb-1">
+                    Click to add photos (select multiple)
+                  </p>
                   <p className="text-white/20 text-[10px]">
                     JPG, PNG, WebP — up to {MAX_IMAGES - images.length} more
                   </p>
@@ -1691,13 +2032,17 @@ onSave(payload);
             onChange={(e) => setFeatured(e.target.checked)}
             className="w-4 h-4 accent-[hsl(43,67%,55%)]"
           />
-          <span className="text-white/50 text-sm">Show on homepage (featured)</span>
+          <span className="text-white/50 text-sm">
+            Show on homepage (featured)
+          </span>
         </label>
       </div>
 
       {isCar && (
         <div className="mb-6">
-          <label className="block text-[10px] uppercase tracking-wide text-white/40 mb-2">Ownership</label>
+          <label className="block text-[10px] uppercase tracking-wide text-white/40 mb-2">
+            Ownership
+          </label>
           <div className="flex gap-1">
             <button
               type="button"
@@ -1725,10 +2070,16 @@ onSave(payload);
 
           {ownership === "agent" && (
             <div className="mt-4">
-              <label className="block text-[10px] uppercase tracking-wide text-white/40 mb-2">Agent</label>
+              <label className="block text-[10px] uppercase tracking-wide text-white/40 mb-2">
+                Agent
+              </label>
               <select
                 value={agentId ?? ""}
-                onChange={(e) => setAgentId(e.target.value ? parseInt(e.target.value, 10) : null)}
+                onChange={(e) =>
+                  setAgentId(
+                    e.target.value ? parseInt(e.target.value, 10) : null,
+                  )
+                }
                 className="w-full h-11 bg-black/40 border border-white/[0.08] rounded-md px-3 text-white text-sm focus:outline-none focus:border-[hsl(43,67%,55%)]/30"
               >
                 <option value="">Select agent…</option>
@@ -1750,12 +2101,22 @@ onSave(payload);
                   </button>
                   {showAgentDetails && (
                     <div className="mt-2 bg-white/[0.03] border border-white/[0.06] rounded-md p-3 text-xs text-white/60 space-y-1">
-                      {selectedAgent.phone && <p>Phone: {selectedAgent.phone}</p>}
-                      {selectedAgent.email && <p>Email: {selectedAgent.email}</p>}
-                      {selectedAgent.address && <p>Address: {selectedAgent.address}</p>}
-                      {!selectedAgent.phone && !selectedAgent.email && !selectedAgent.address && (
-                        <p className="text-white/30">No further details on file.</p>
+                      {selectedAgent.phone && (
+                        <p>Phone: {selectedAgent.phone}</p>
                       )}
+                      {selectedAgent.email && (
+                        <p>Email: {selectedAgent.email}</p>
+                      )}
+                      {selectedAgent.address && (
+                        <p>Address: {selectedAgent.address}</p>
+                      )}
+                      {!selectedAgent.phone &&
+                        !selectedAgent.email &&
+                        !selectedAgent.address && (
+                          <p className="text-white/30">
+                            No further details on file.
+                          </p>
+                        )}
                     </div>
                   )}
                 </div>
@@ -1848,64 +2209,72 @@ function ContentTab({
   saving: boolean;
   onEdit: (c: ContentItem) => void;
   onCancel: () => void;
-  onSave: (key: string, value: string, translations?: Record<string, string>) => void;
+  onSave: (
+    key: string,
+    value: string,
+    translations?: Record<string, string>,
+  ) => void;
 }) {
   const [editValue, setEditValue] = useState("");
-  const [editTranslations, setEditTranslations] = useState<Record<string, string>>({});
+  const [editTranslations, setEditTranslations] = useState<
+    Record<string, string>
+  >({});
   const [activeLang, setActiveLang] = useState("en");
   const [translating, setTranslating] = useState(false);
   const [translateMsg, setTranslateMsg] = useState("");
   const [uploadingBg, setUploadingBg] = useState(false);
   const [uploadingOfficePhoto, setUploadingOfficePhoto] = useState(false);
-const [uploadMsg, setUploadMsg] = useState("");
+  const [uploadMsg, setUploadMsg] = useState("");
 
   useEffect(() => {
     if (!editingContent) return;
     setEditValue(editingContent.value);
-    setEditTranslations(editingContent.translations ? { ...editingContent.translations } : {});
+    setEditTranslations(
+      editingContent.translations ? { ...editingContent.translations } : {},
+    );
     setActiveLang("en");
     setTranslateMsg("");
   }, [editingContent]);
 
   const keyLabels: Record<string, string> = {
-  hero_title: "Hero Title (Slogan)",
-  hero_tagline: "Hero Tagline",
-  hero_subtitle: "Hero Subtitle",
-  about_title: "About Us — Title",
-  about_slogan: "About Us — Slogan",
-  about_text: "About Us — Main Text",
-  yacht_section_title: "Yacht Section Title",
-  yacht_section_subtitle: "Yacht Section Subtitle",
-  yacht_section_desc: "Yacht Section Description",
-  yacht_section_bg: "Yacht Section Background (URL)",
-  car_section_title: "Car Section Title",
-  car_section_subtitle: "Car Section Subtitle",
-  car_section_desc: "Car Section Description",
-  car_section_bg: "Car Section Background (URL)",
-  collection_title: "Collection Title",
-  collection_subtitle: "Collection Subtitle",
-  form_title: "Contact Form Title",
-  form_subtitle: "Contact Form Subtitle",
-  form_desc: "Contact Form Description",
-  phone_number: "Phone Number",
-  whatsapp_number: "WhatsApp Number",
-  admin_email: "Admin Email (receives contact form submissions)",
-  footer_desc: "Footer Description",
-  office_photos: "Office Location Photos",
+    hero_title: "Hero Title (Slogan)",
+    hero_tagline: "Hero Tagline",
+    hero_subtitle: "Hero Subtitle",
+    about_title: "About Us — Title",
+    about_slogan: "About Us — Slogan",
+    about_text: "About Us — Main Text",
+    yacht_section_title: "Yacht Section Title",
+    yacht_section_subtitle: "Yacht Section Subtitle",
+    yacht_section_desc: "Yacht Section Description",
+    yacht_section_bg: "Yacht Section Background (URL)",
+    car_section_title: "Car Section Title",
+    car_section_subtitle: "Car Section Subtitle",
+    car_section_desc: "Car Section Description",
+    car_section_bg: "Car Section Background (URL)",
+    collection_title: "Collection Title",
+    collection_subtitle: "Collection Subtitle",
+    form_title: "Contact Form Title",
+    form_subtitle: "Contact Form Subtitle",
+    form_desc: "Contact Form Description",
+    phone_number: "Phone Number",
+    whatsapp_number: "WhatsApp Number",
+    admin_email: "Admin Email (receives contact form submissions)",
+    footer_desc: "Footer Description",
+    office_photos: "Office Location Photos",
     privacy_policy_content: "Privacy Policy Content",
-legal_notice_content: "Legal Notice Content",
-};
+    legal_notice_content: "Legal Notice Content",
+  };
 
   const plainTextKeys = new Set([
-  "phone_number",
-  "whatsapp_number",
-  "admin_email",
-  "yacht_section_bg",
-  "car_section_bg",
-  "office_photos",
-]);
+    "phone_number",
+    "whatsapp_number",
+    "admin_email",
+    "yacht_section_bg",
+    "car_section_bg",
+    "office_photos",
+  ]);
   const isBackgroundImageKey = (key: string) =>
-  key === "yacht_section_bg" || key === "car_section_bg";
+    key === "yacht_section_bg" || key === "car_section_bg";
   const isPhotoArrayKey = (key: string) => key === "office_photos";
   const isRichText = (key: string) => !plainTextKeys.has(key);
 
@@ -1915,7 +2284,8 @@ legal_notice_content: "Legal Notice Content",
     return convertPlainToHtml(item.value);
   };
 
-  const currentEditText = activeLang === "en" ? editValue : editTranslations[activeLang] || "";
+  const currentEditText =
+    activeLang === "en" ? editValue : editTranslations[activeLang] || "";
 
   const setCurrentEditText = (val: string) => {
     if (activeLang === "en") {
@@ -1928,75 +2298,85 @@ legal_notice_content: "Legal Notice Content",
     }
   };
   const handleBgUpload = async (file: File) => {
-  setUploadingBg(true);
-  setUploadMsg("");
+    setUploadingBg(true);
+    setUploadMsg("");
 
-  try {
-    file = await compressImage(file, 800, 0.8);
-    const safeName = file.name.replace(/\s+/g, "-").replace(/[^\w.-]/g, "");
-    const fileName = `content-bg/${Date.now()}-${safeName}`;
+    try {
+      file = await compressImage(file, 800, 0.8);
+      const safeName = file.name.replace(/\s+/g, "-").replace(/[^\w.-]/g, "");
+      const fileName = `content-bg/${Date.now()}-${safeName}`;
 
-    const { error } = await supabase.storage
-      .from("vehicle_images")
-      .upload(fileName, file, {
-        upsert: false,
-      });
+      const { error } = await supabase.storage
+        .from("vehicle_images")
+        .upload(fileName, file, {
+          upsert: false,
+        });
 
-    if (error) {
-      console.error("SUPABASE BG UPLOAD ERROR:", error);
-      setUploadMsg(`Upload failed: ${error.message}`);
+      if (error) {
+        console.error("SUPABASE BG UPLOAD ERROR:", error);
+        setUploadMsg(`Upload failed: ${error.message}`);
+        setTimeout(() => setUploadMsg(""), 4000);
+        return;
+      }
+
+      const { data } = supabase.storage
+        .from("vehicle_images")
+        .getPublicUrl(fileName);
+
+      setCurrentEditText(cleanImageUrl(data.publicUrl));
+      setUploadMsg("Image uploaded");
+      setTimeout(() => setUploadMsg(""), 3000);
+    } catch (err) {
+      console.error("BG UPLOAD ERROR:", err);
+      setUploadMsg(
+        err instanceof Error
+          ? `Upload failed: ${err.message}`
+          : "Upload failed",
+      );
       setTimeout(() => setUploadMsg(""), 4000);
-      return;
+    } finally {
+      setUploadingBg(false);
     }
-
-    const { data } = supabase.storage
-      .from("vehicle_images")
-      .getPublicUrl(fileName);
-
-    setCurrentEditText(cleanImageUrl(data.publicUrl));
-    setUploadMsg("Image uploaded");
-    setTimeout(() => setUploadMsg(""), 3000);
-  } catch (err) {
-    console.error("BG UPLOAD ERROR:", err);
-    setUploadMsg(err instanceof Error ? `Upload failed: ${err.message}` : "Upload failed");
-    setTimeout(() => setUploadMsg(""), 4000);
-  } finally {
-    setUploadingBg(false);
-  }
-};
+  };
 
   const handleOfficePhotoUpload = async (file: File) => {
-  setUploadingOfficePhoto(true);
-  setUploadMsg("");
-  try {
-    file = await compressImage(file, 800, 0.8);
-    const safeName = file.name.replace(/\s+/g, "-").replace(/[^\w.-]/g, "");
-    const fileName = `content-office/${Date.now()}-${safeName}`;
-    const { error } = await supabase.storage
-      .from("vehicle_images")
-      .upload(fileName, file, { upsert: false });
-    if (error) {
-      setUploadMsg(`Upload failed: ${error.message}`);
-      setTimeout(() => setUploadMsg(""), 4000);
-      return;
-    }
-    const { data } = supabase.storage.from("vehicle_images").getPublicUrl(fileName);
-    const url = cleanImageUrl(data.publicUrl);
+    setUploadingOfficePhoto(true);
+    setUploadMsg("");
     try {
-      const arr: string[] = JSON.parse(editValue || "[]");
-      setEditValue(JSON.stringify([...arr, url]));
-    } catch {
-      setEditValue(JSON.stringify([url]));
+      file = await compressImage(file, 800, 0.8);
+      const safeName = file.name.replace(/\s+/g, "-").replace(/[^\w.-]/g, "");
+      const fileName = `content-office/${Date.now()}-${safeName}`;
+      const { error } = await supabase.storage
+        .from("vehicle_images")
+        .upload(fileName, file, { upsert: false });
+      if (error) {
+        setUploadMsg(`Upload failed: ${error.message}`);
+        setTimeout(() => setUploadMsg(""), 4000);
+        return;
+      }
+      const { data } = supabase.storage
+        .from("vehicle_images")
+        .getPublicUrl(fileName);
+      const url = cleanImageUrl(data.publicUrl);
+      try {
+        const arr: string[] = JSON.parse(editValue || "[]");
+        setEditValue(JSON.stringify([...arr, url]));
+      } catch {
+        setEditValue(JSON.stringify([url]));
+      }
+      setUploadMsg("Photo added — click Save to apply");
+      setTimeout(() => setUploadMsg(""), 4000);
+    } catch (err) {
+      setUploadMsg(
+        err instanceof Error
+          ? `Upload failed: ${err.message}`
+          : "Upload failed",
+      );
+      setTimeout(() => setUploadMsg(""), 4000);
+    } finally {
+      setUploadingOfficePhoto(false);
     }
-    setUploadMsg("Photo added — click Save to apply");
-    setTimeout(() => setUploadMsg(""), 4000);
-  } catch (err) {
-    setUploadMsg(err instanceof Error ? `Upload failed: ${err.message}` : "Upload failed");
-    setTimeout(() => setUploadMsg(""), 4000);
-  } finally {
-    setUploadingOfficePhoto(false);
-  }
-};
+  };
 
   const handleAutoTranslate = async () => {
     if (!editValue.trim()) return;
@@ -2004,7 +2384,9 @@ legal_notice_content: "Legal Notice Content",
     setTranslateMsg("");
 
     try {
-      const targetLangs = ADMIN_LANGS.filter((l) => l.code !== "en").map((l) => l.code);
+      const targetLangs = ADMIN_LANGS.filter((l) => l.code !== "en").map(
+        (l) => l.code,
+      );
       const results = await translateText(editValue, "en", targetLangs);
       setEditTranslations((prev) => ({ ...prev, ...results }));
       setTranslateMsg("All languages translated!");
@@ -2024,7 +2406,9 @@ legal_notice_content: "Legal Notice Content",
     try {
       const results = await translateText(editValue, "en", [targetLang]);
       setEditTranslations((prev) => ({ ...prev, ...results }));
-      setTranslateMsg(`Translated to ${ADMIN_LANGS.find((l) => l.code === targetLang)?.label}`);
+      setTranslateMsg(
+        `Translated to ${ADMIN_LANGS.find((l) => l.code === targetLang)?.label}`,
+      );
       setTimeout(() => setTranslateMsg(""), 3000);
     } catch {
       setTranslateMsg("Translation failed.");
@@ -2036,9 +2420,15 @@ legal_notice_content: "Legal Notice Content",
 
   const handleSaveWithTranslations = (key: string) => {
     const cleanedTranslations = Object.fromEntries(
-      Object.entries(editTranslations).filter(([, v]) => v && v.trim())
+      Object.entries(editTranslations).filter(([, v]) => v && v.trim()),
     );
-    onSave(key, editValue, Object.keys(cleanedTranslations).length > 0 ? cleanedTranslations : undefined);
+    onSave(
+      key,
+      editValue,
+      Object.keys(cleanedTranslations).length > 0
+        ? cleanedTranslations
+        : undefined,
+    );
   };
 
   const handleSaveCurrentLang = (key: string) => {
@@ -2056,13 +2446,13 @@ legal_notice_content: "Legal Notice Content",
   const translatable = (key: string) => !NON_TRANSLATABLE.has(key);
 
   const aboutKeys = new Set(["about_title", "about_slogan", "about_text"]);
-const legalKeys = new Set(["privacy_policy_content", "legal_notice_content"]);
+  const legalKeys = new Set(["privacy_policy_content", "legal_notice_content"]);
 
-const aboutItems = content.filter((i) => aboutKeys.has(i.key));
-const legalItems = content.filter((i) => legalKeys.has(i.key));
-const otherItems = content.filter(
-  (i) => !aboutKeys.has(i.key) && !legalKeys.has(i.key)
-);
+  const aboutItems = content.filter((i) => aboutKeys.has(i.key));
+  const legalItems = content.filter((i) => legalKeys.has(i.key));
+  const otherItems = content.filter(
+    (i) => !aboutKeys.has(i.key) && !legalKeys.has(i.key),
+  );
 
   const translationCount = (item: ContentItem) => {
     if (!item.translations) return 0;
@@ -2070,7 +2460,10 @@ const otherItems = content.filter(
   };
 
   const renderContentItem = (item: ContentItem) => (
-    <div key={item.id} className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-4">
+    <div
+      key={item.id}
+      className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-4"
+    >
       {editingContent?.id === item.id ? (
         <div>
           <label className="text-[9px] uppercase tracking-[0.3em] text-[hsl(43,67%,55%)]/60 font-light block mb-2">
@@ -2081,7 +2474,10 @@ const otherItems = content.filter(
             <div className="mb-3">
               <div className="flex flex-wrap items-center gap-1 mb-2">
                 {ADMIN_LANGS.map((l) => {
-                  const hasValue = l.code === "en" ? !!editValue.trim() : !!editTranslations[l.code]?.trim();
+                  const hasValue =
+                    l.code === "en"
+                      ? !!editValue.trim()
+                      : !!editTranslations[l.code]?.trim();
                   return (
                     <button
                       key={l.code}
@@ -2090,8 +2486,8 @@ const otherItems = content.filter(
                         activeLang === l.code
                           ? "bg-[hsl(43,67%,55%)] text-black font-medium"
                           : hasValue
-                          ? "bg-white/[0.06] text-white/60 hover:bg-white/[0.1]"
-                          : "bg-white/[0.02] text-white/25 hover:bg-white/[0.06] border border-dashed border-white/[0.08]"
+                            ? "bg-white/[0.06] text-white/60 hover:bg-white/[0.1]"
+                            : "bg-white/[0.02] text-white/25 hover:bg-white/[0.06] border border-dashed border-white/[0.08]"
                       }`}
                     >
                       {l.flag} {l.code}
@@ -2115,103 +2511,129 @@ const otherItems = content.filter(
                     disabled={translating || !editValue.trim()}
                     className="text-[9px] uppercase tracking-[0.2em] px-3 py-1.5 rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-30 transition-colors border border-emerald-500/20"
                   >
-                    {translating ? "..." : `Translate → ${activeLang.toUpperCase()}`}
+                    {translating
+                      ? "..."
+                      : `Translate → ${activeLang.toUpperCase()}`}
                   </button>
                 )}
 
-                {translateMsg && <span className="text-[10px] text-emerald-400/80">{translateMsg}</span>}
+                {translateMsg && (
+                  <span className="text-[10px] text-emerald-400/80">
+                    {translateMsg}
+                  </span>
+                )}
               </div>
             </div>
           )}
 
           {isBackgroundImageKey(item.key) && (
-  <div className="mb-3 flex flex-wrap items-center gap-2">
-    <label className="text-[9px] uppercase tracking-[0.2em] px-3 py-1.5 rounded bg-white/[0.04] border border-white/[0.08] text-white/60 cursor-pointer hover:bg-white/[0.07] transition-colors">
-      {uploadingBg ? "Uploading..." : "Upload Image"}
-      <input
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
-          if (!file) return;
-          await handleBgUpload(file);
-          e.currentTarget.value = "";
-        }}
-      />
-    </label>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <label className="text-[9px] uppercase tracking-[0.2em] px-3 py-1.5 rounded bg-white/[0.04] border border-white/[0.08] text-white/60 cursor-pointer hover:bg-white/[0.07] transition-colors">
+                {uploadingBg ? "Uploading..." : "Upload Image"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    await handleBgUpload(file);
+                    e.currentTarget.value = "";
+                  }}
+                />
+              </label>
 
-    {uploadMsg && (
-      <span className="text-[10px] text-emerald-400/80">{uploadMsg}</span>
-    )}
-  </div>
-)}
-
-{isPhotoArrayKey(item.key) ? (
-  <div>
-    {(() => {
-      let arr: string[] = [];
-      try { arr = JSON.parse(editValue || "[]"); } catch {}
-      return arr.length > 0 ? (
-        <div className="grid grid-cols-3 gap-2 mb-3">
-          {arr.map((url, idx) => (
-            <div key={idx} className="relative aspect-[4/3] rounded overflow-hidden border border-white/[0.06] group">
-              <img src={url} alt="" className="w-full h-full object-cover" />
-              <button
-                onClick={() => {
-                  try {
-                    const a: string[] = JSON.parse(editValue || "[]");
-                    setEditValue(JSON.stringify(a.filter((_, i) => i !== idx)));
-                  } catch {}
-                }}
-                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500/80 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-              >×</button>
+              {uploadMsg && (
+                <span className="text-[10px] text-emerald-400/80">
+                  {uploadMsg}
+                </span>
+              )}
             </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-white/30 text-xs mb-3">No photos uploaded yet.</p>
-      );
-    })()}
-    <label className="text-[9px] uppercase tracking-[0.2em] px-3 py-1.5 rounded bg-white/[0.04] border border-white/[0.08] text-white/60 cursor-pointer hover:bg-white/[0.07] transition-colors inline-flex items-center gap-2">
-      {uploadingOfficePhoto ? "Uploading..." : "Upload Photo"}
-      <input
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
-          if (!file) return;
-          await handleOfficePhotoUpload(file);
-          e.currentTarget.value = "";
-        }}
-      />
-    </label>
-    {uploadMsg && <span className="text-[10px] text-emerald-400/80 ml-2">{uploadMsg}</span>}
-  </div>
-) : isBackgroundImageKey(item.key) ? (
-  <input
-    type="text"
-    value={currentEditText}
-    onChange={(e) => setCurrentEditText(e.target.value)}
-    placeholder="Paste image URL or upload a file"
-    className="w-full bg-black/40 border border-white/[0.08] rounded px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-[hsl(43,67%,55%)]/30"
-  />
-) : isRichText(item.key) ? (
-  <RichTextEditor
-    key={`content-${activeLang}`}
-    content={convertPlainToHtml(currentEditText)}
-    onChange={setCurrentEditText}
-  />
-) : (
-  <RichTextEditor
-    key={`plain-${activeLang}`}
-    content={convertPlainToHtml(currentEditText)}
-    onChange={setCurrentEditText}
-    inline
-  />
-)}
-              
+          )}
+
+          {isPhotoArrayKey(item.key) ? (
+            <div>
+              {(() => {
+                let arr: string[] = [];
+                try {
+                  arr = JSON.parse(editValue || "[]");
+                } catch {}
+                return arr.length > 0 ? (
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    {arr.map((url, idx) => (
+                      <div
+                        key={idx}
+                        className="relative aspect-[4/3] rounded overflow-hidden border border-white/[0.06] group"
+                      >
+                        <img
+                          src={url}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          onClick={() => {
+                            try {
+                              const a: string[] = JSON.parse(editValue || "[]");
+                              setEditValue(
+                                JSON.stringify(a.filter((_, i) => i !== idx)),
+                              );
+                            } catch {}
+                          }}
+                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500/80 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-white/30 text-xs mb-3">
+                    No photos uploaded yet.
+                  </p>
+                );
+              })()}
+              <label className="text-[9px] uppercase tracking-[0.2em] px-3 py-1.5 rounded bg-white/[0.04] border border-white/[0.08] text-white/60 cursor-pointer hover:bg-white/[0.07] transition-colors inline-flex items-center gap-2">
+                {uploadingOfficePhoto ? "Uploading..." : "Upload Photo"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    await handleOfficePhotoUpload(file);
+                    e.currentTarget.value = "";
+                  }}
+                />
+              </label>
+              {uploadMsg && (
+                <span className="text-[10px] text-emerald-400/80 ml-2">
+                  {uploadMsg}
+                </span>
+              )}
+            </div>
+          ) : isBackgroundImageKey(item.key) ? (
+            <input
+              type="text"
+              value={currentEditText}
+              onChange={(e) => setCurrentEditText(e.target.value)}
+              placeholder="Paste image URL or upload a file"
+              className="w-full bg-black/40 border border-white/[0.08] rounded px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-[hsl(43,67%,55%)]/30"
+            />
+          ) : isRichText(item.key) ? (
+            <RichTextEditor
+              key={`content-${activeLang}`}
+              content={convertPlainToHtml(currentEditText)}
+              onChange={setCurrentEditText}
+            />
+          ) : (
+            <RichTextEditor
+              key={`plain-${activeLang}`}
+              content={convertPlainToHtml(currentEditText)}
+              onChange={setCurrentEditText}
+              inline
+            />
+          )}
 
           <div className="flex flex-wrap gap-3 mt-3">
             <button
@@ -2256,7 +2678,8 @@ const otherItems = content.filter(
 
               {translatable(item.key) && translationCount(item) > 0 && (
                 <span className="text-[8px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400/70 border border-emerald-500/20">
-                  {translationCount(item)} lang{translationCount(item) > 1 ? "s" : ""}
+                  {translationCount(item)} lang
+                  {translationCount(item) > 1 ? "s" : ""}
                 </span>
               )}
             </div>
@@ -2267,7 +2690,9 @@ const otherItems = content.filter(
                 dangerouslySetInnerHTML={{ __html: getPreviewHtml(item) }}
               />
             ) : (
-              <p className="text-white/70 text-sm whitespace-pre-line">{stripTags(item.value)}</p>
+              <p className="text-white/70 text-sm whitespace-pre-line">
+                {stripTags(item.value)}
+              </p>
             )}
           </div>
 
@@ -2287,12 +2712,14 @@ const otherItems = content.filter(
       {aboutItems.length > 0 && (
         <div className="mb-10">
           <h2 className="font-serif text-xl text-white mb-2">About Us</h2>
-          <p className="text-white/30 text-xs mb-4">Slogan and main text displayed on the About Us page</p>
+          <p className="text-white/30 text-xs mb-4">
+            Slogan and main text displayed on the About Us page
+          </p>
           <div className="space-y-3">{aboutItems.map(renderContentItem)}</div>
         </div>
       )}
 
-            {legalItems.length > 0 && (
+      {legalItems.length > 0 && (
         <div className="mb-10">
           <h2 className="font-serif text-xl text-white mb-2">Legal Pages</h2>
           <p className="text-white/30 text-xs mb-4">
@@ -2303,33 +2730,34 @@ const otherItems = content.filter(
       )}
 
       <h2 className="font-serif text-xl text-white mb-6">Site Text Content</h2>
-<div className="space-y-3">
-  {otherItems
-    .filter(
-      (item) =>
-        item.key !== "yacht_section_bg" &&
-        item.key !== "car_section_bg"
-    )
-    .map(renderContentItem)}
-</div>
+      <div className="space-y-3">
+        {otherItems
+          .filter(
+            (item) =>
+              item.key !== "yacht_section_bg" && item.key !== "car_section_bg",
+          )
+          .map(renderContentItem)}
+      </div>
 
-{/* 👉 НОВЫЙ БЛОК */}
-<div className="mt-10">
-  <h2 className="font-serif text-xl text-white mb-2">Category Backgrounds</h2>
-  <p className="text-white/30 text-xs mb-4">
-    Background images for yacht and car sections
-  </p>
+      {/* 👉 НОВЫЙ БЛОК */}
+      <div className="mt-10">
+        <h2 className="font-serif text-xl text-white mb-2">
+          Category Backgrounds
+        </h2>
+        <p className="text-white/30 text-xs mb-4">
+          Background images for yacht and car sections
+        </p>
 
-  <div className="space-y-3">
-    {content
-      .filter(
-        (item) =>
-          item.key === "yacht_section_bg" ||
-          item.key === "car_section_bg"
-      )
-      .map(renderContentItem)}
-  </div>
-</div>
+        <div className="space-y-3">
+          {content
+            .filter(
+              (item) =>
+                item.key === "yacht_section_bg" ||
+                item.key === "car_section_bg",
+            )
+            .map(renderContentItem)}
+        </div>
+      </div>
     </div>
   );
 }
@@ -2402,26 +2830,35 @@ function RequestsTab({
 
   return (
     <div>
-      <h2 className="font-serif text-xl text-white mb-6">Contact Requests ({requests.length})</h2>
+      <h2 className="font-serif text-xl text-white mb-6">
+        Contact Requests ({requests.length})
+      </h2>
 
       {requests.length === 0 ? (
         <p className="text-white/40 text-sm">No requests yet.</p>
       ) : (
         <div className="space-y-4">
           {requests.map((r) => (
-            <div key={r.id} className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-5">
+            <div
+              key={r.id}
+              className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-5"
+            >
               {editingId === r.id ? (
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <InputField
                       label="First Name"
                       value={editData.firstName || ""}
-                      onChange={(val) => setEditData((d) => ({ ...d, firstName: val }))}
+                      onChange={(val) =>
+                        setEditData((d) => ({ ...d, firstName: val }))
+                      }
                     />
                     <InputField
                       label="Last Name"
                       value={editData.lastName || ""}
-                      onChange={(val) => setEditData((d) => ({ ...d, lastName: val }))}
+                      onChange={(val) =>
+                        setEditData((d) => ({ ...d, lastName: val }))
+                      }
                     />
                   </div>
 
@@ -2429,12 +2866,16 @@ function RequestsTab({
                     <InputField
                       label="Email"
                       value={editData.email || ""}
-                      onChange={(val) => setEditData((d) => ({ ...d, email: val }))}
+                      onChange={(val) =>
+                        setEditData((d) => ({ ...d, email: val }))
+                      }
                     />
                     <InputField
                       label="Phone"
                       value={editData.phone || ""}
-                      onChange={(val) => setEditData((d) => ({ ...d, phone: val }))}
+                      onChange={(val) =>
+                        setEditData((d) => ({ ...d, phone: val }))
+                      }
                     />
                   </div>
 
@@ -2445,7 +2886,12 @@ function RequestsTab({
                       </label>
                       <select
                         value={editData.interest || ""}
-                        onChange={(e) => setEditData((d) => ({ ...d, interest: e.target.value }))}
+                        onChange={(e) =>
+                          setEditData((d) => ({
+                            ...d,
+                            interest: e.target.value,
+                          }))
+                        }
                         className="w-full bg-black/40 border border-white/[0.08] rounded px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-[hsl(43,67%,55%)]/30"
                       >
                         <option value="">General</option>
@@ -2462,7 +2908,9 @@ function RequestsTab({
                       </label>
                       <select
                         value={editData.status || "new"}
-                        onChange={(e) => setEditData((d) => ({ ...d, status: e.target.value }))}
+                        onChange={(e) =>
+                          setEditData((d) => ({ ...d, status: e.target.value }))
+                        }
                         className="w-full bg-black/40 border border-white/[0.08] rounded px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-[hsl(43,67%,55%)]/30"
                       >
                         <option value="new">New</option>
@@ -2479,7 +2927,9 @@ function RequestsTab({
                     </label>
                     <textarea
                       value={editData.message || ""}
-                      onChange={(e) => setEditData((d) => ({ ...d, message: e.target.value }))}
+                      onChange={(e) =>
+                        setEditData((d) => ({ ...d, message: e.target.value }))
+                      }
                       rows={4}
                       className="w-full bg-black/40 border border-white/[0.08] rounded px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-[hsl(43,67%,55%)]/30 resize-y"
                     />
@@ -2526,7 +2976,9 @@ function RequestsTab({
                         </span>
 
                         <span className="text-[10px] uppercase tracking-wider px-2 py-1 rounded bg-[hsl(43,67%,55%)]/10 text-[hsl(43,67%,55%)] border border-[hsl(43,67%,55%)]/20">
-                          {r.interest ? interestLabels[r.interest] || r.interest : "General"}
+                          {r.interest
+                            ? interestLabels[r.interest] || r.interest
+                            : "General"}
                         </span>
                       </div>
 
@@ -2542,7 +2994,9 @@ function RequestsTab({
                     </div>
                   </div>
 
-                  <p className="text-white/70 text-sm whitespace-pre-wrap mb-3">{r.message}</p>
+                  <p className="text-white/70 text-sm whitespace-pre-wrap mb-3">
+                    {r.message}
+                  </p>
 
                   <div className="flex gap-2 pt-1 border-t border-white/[0.04]">
                     <button
@@ -2554,7 +3008,9 @@ function RequestsTab({
 
                     {confirmDeleteId === r.id ? (
                       <div className="flex items-center gap-2 mt-2">
-                        <span className="text-red-400/70 text-[10px]">Delete?</span>
+                        <span className="text-red-400/70 text-[10px]">
+                          Delete?
+                        </span>
                         <button
                           onClick={() => handleDelete(r.id)}
                           disabled={deletingId === r.id}
@@ -2600,7 +3056,9 @@ function AnalyticsTab() {
 
       if (range !== "all") {
         const d = new Date();
-        d.setDate(d.getDate() - (range === "7d" ? 7 : range === "30d" ? 30 : 90));
+        d.setDate(
+          d.getDate() - (range === "7d" ? 7 : range === "30d" ? 30 : 90),
+        );
         from = d.toISOString();
       }
 
@@ -2626,7 +3084,11 @@ function AnalyticsTab() {
   }
 
   if (!stats) {
-    return <p className="text-white/40 text-sm text-center py-12">Failed to load analytics data.</p>;
+    return (
+      <p className="text-white/40 text-sm text-center py-12">
+        Failed to load analytics data.
+      </p>
+    );
   }
 
   const {
@@ -2644,13 +3106,26 @@ function AnalyticsTab() {
   const maxDailyViews = Math.max(...dailyChart.map((d) => d.views), 1);
   const maxHourlyViews = Math.max(...hourlyBreakdown.map((h) => h.views), 1);
 
-  const sortedPages = Object.entries(pageBreakdown).sort(([, a], [, b]) => b - a);
-  const sortedReferrers = Object.entries(referrerBreakdown).sort(([, a], [, b]) => b - a);
-  const sortedBrowsers = Object.entries(browserBreakdown).sort(([, a], [, b]) => b - a);
-  const sortedLangs = Object.entries(languageBreakdown).sort(([, a], [, b]) => b - a);
-  const sortedVehicles = Object.entries(vehicleViewBreakdown).sort(([, a], [, b]) => b - a);
+  const sortedPages = Object.entries(pageBreakdown).sort(
+    ([, a], [, b]) => b - a,
+  );
+  const sortedReferrers = Object.entries(referrerBreakdown).sort(
+    ([, a], [, b]) => b - a,
+  );
+  const sortedBrowsers = Object.entries(browserBreakdown).sort(
+    ([, a], [, b]) => b - a,
+  );
+  const sortedLangs = Object.entries(languageBreakdown).sort(
+    ([, a], [, b]) => b - a,
+  );
+  const sortedVehicles = Object.entries(vehicleViewBreakdown).sort(
+    ([, a], [, b]) => b - a,
+  );
 
-  const totalDevices = (deviceBreakdown.desktop || 0) + (deviceBreakdown.tablet || 0) + (deviceBreakdown.mobile || 0);
+  const totalDevices =
+    (deviceBreakdown.desktop || 0) +
+    (deviceBreakdown.tablet || 0) +
+    (deviceBreakdown.mobile || 0);
 
   const formatDuration = (s: number) => {
     if (s < 60) return `${s}s`;
@@ -2680,7 +3155,9 @@ function AnalyticsTab() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="font-serif text-xl text-white">Analytics & Conversions</h2>
+        <h2 className="font-serif text-xl text-white">
+          Analytics & Conversions
+        </h2>
 
         <div className="flex gap-1 bg-white/[0.03] border border-white/[0.06] rounded-lg p-1">
           {(["7d", "30d", "90d", "all"] as const).map((r) => (
@@ -2709,27 +3186,68 @@ function AnalyticsTab() {
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
         {[
-          { label: "Page Views", value: overview.totalPageViews, color: "text-white" },
-          { label: "Unique Visitors", value: overview.uniqueVisitors, color: "text-blue-400" },
+          {
+            label: "Page Views",
+            value: overview.totalPageViews,
+            color: "text-white",
+          },
+          {
+            label: "Unique Visitors",
+            value: overview.uniqueVisitors,
+            color: "text-blue-400",
+          },
           {
             label: "Bounce Rate",
             value: `${overview.bounceRate}%`,
-            color: overview.bounceRate > 70 ? "text-red-400" : "text-emerald-400",
+            color:
+              overview.bounceRate > 70 ? "text-red-400" : "text-emerald-400",
           },
-          { label: "Avg. Session", value: formatDuration(overview.avgSessionDuration), color: "text-yellow-400" },
-          { label: "Pages / Session", value: overview.pagesPerSession, color: "text-violet-400" },
-          { label: "Form Submissions", value: overview.formSubmissions, color: "text-emerald-400" },
+          {
+            label: "Avg. Session",
+            value: formatDuration(overview.avgSessionDuration),
+            color: "text-yellow-400",
+          },
+          {
+            label: "Pages / Session",
+            value: overview.pagesPerSession,
+            color: "text-violet-400",
+          },
+          {
+            label: "Form Submissions",
+            value: overview.formSubmissions,
+            color: "text-emerald-400",
+          },
           {
             label: "Conversion Rate",
             value: `${overview.conversionRate}%`,
-            color: overview.conversionRate > 5 ? "text-emerald-400" : "text-orange-400",
+            color:
+              overview.conversionRate > 5
+                ? "text-emerald-400"
+                : "text-orange-400",
           },
-          { label: "Total Requests", value: overview.totalRequests, color: "text-[hsl(43,67%,55%)]" },
-          { label: "Vehicle Views", value: overview.vehicleDetailViews, color: "text-blue-300" },
-          { label: "Total Sessions", value: overview.totalSessions, color: "text-white/70" },
+          {
+            label: "Total Requests",
+            value: overview.totalRequests,
+            color: "text-[hsl(43,67%,55%)]",
+          },
+          {
+            label: "Vehicle Views",
+            value: overview.vehicleDetailViews,
+            color: "text-blue-300",
+          },
+          {
+            label: "Total Sessions",
+            value: overview.totalSessions,
+            color: "text-white/70",
+          },
         ].map((m) => (
-          <div key={m.label} className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-4">
-            <p className="text-[8px] uppercase tracking-[0.3em] text-white/35 font-light mb-2">{m.label}</p>
+          <div
+            key={m.label}
+            className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-4"
+          >
+            <p className="text-[8px] uppercase tracking-[0.3em] text-white/35 font-light mb-2">
+              {m.label}
+            </p>
             <p className={`text-2xl font-light ${m.color}`}>{m.value}</p>
           </div>
         ))}
@@ -2744,17 +3262,27 @@ function AnalyticsTab() {
           <div className="h-[200px] flex items-end gap-[2px]">
             {dailyChart.map((d, i) => {
               const viewH = (d.views / maxDailyViews) * 100;
-              const convH = d.conversions > 0 ? Math.max((d.conversions / maxDailyViews) * 100, 4) : 0;
+              const convH =
+                d.conversions > 0
+                  ? Math.max((d.conversions / maxDailyViews) * 100, 4)
+                  : 0;
 
               return (
-                <div key={i} className="flex-1 flex flex-col items-center justify-end gap-0 group relative h-full">
+                <div
+                  key={i}
+                  className="flex-1 flex flex-col items-center justify-end gap-0 group relative h-full"
+                >
                   <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-black/90 border border-white/10 rounded px-2 py-1 text-[9px] text-white/80 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
-                    {d.date.slice(5)}: {d.views} views, {d.visitors} visitors, {d.conversions} conv
+                    {d.date.slice(5)}: {d.views} views, {d.visitors} visitors,{" "}
+                    {d.conversions} conv
                   </div>
 
                   {convH > 0 && (
                     <div
-                      style={{ height: `${convH}%`, backgroundColor: barColorGreen }}
+                      style={{
+                        height: `${convH}%`,
+                        backgroundColor: barColorGreen,
+                      }}
                       className="w-full rounded-t-sm opacity-80"
                     />
                   )}
@@ -2769,18 +3297,28 @@ function AnalyticsTab() {
           </div>
 
           <div className="flex justify-between mt-2">
-            <span className="text-[9px] text-white/25">{dailyChart[0]?.date?.slice(5)}</span>
+            <span className="text-[9px] text-white/25">
+              {dailyChart[0]?.date?.slice(5)}
+            </span>
             <div className="flex gap-4">
               <span className="text-[9px] text-white/25 flex items-center gap-1">
-                <span className="w-2 h-2 rounded-sm inline-block" style={{ backgroundColor: barColor, opacity: 0.6 }} />
+                <span
+                  className="w-2 h-2 rounded-sm inline-block"
+                  style={{ backgroundColor: barColor, opacity: 0.6 }}
+                />
                 Views
               </span>
               <span className="text-[9px] text-white/25 flex items-center gap-1">
-                <span className="w-2 h-2 rounded-sm inline-block" style={{ backgroundColor: barColorGreen, opacity: 0.8 }} />
+                <span
+                  className="w-2 h-2 rounded-sm inline-block"
+                  style={{ backgroundColor: barColorGreen, opacity: 0.8 }}
+                />
                 Conversions
               </span>
             </div>
-            <span className="text-[9px] text-white/25">{dailyChart[dailyChart.length - 1]?.date?.slice(5)}</span>
+            <span className="text-[9px] text-white/25">
+              {dailyChart[dailyChart.length - 1]?.date?.slice(5)}
+            </span>
           </div>
         </div>
       )}
@@ -2788,11 +3326,16 @@ function AnalyticsTab() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         {hourlyBreakdown.length > 0 && (
           <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-5">
-            <h3 className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-light mb-4">Traffic by Hour</h3>
+            <h3 className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-light mb-4">
+              Traffic by Hour
+            </h3>
 
             <div className="h-[120px] flex items-end gap-[2px]">
               {hourlyBreakdown.map((h) => (
-                <div key={h.hour} className="flex-1 group relative flex flex-col items-center justify-end h-full">
+                <div
+                  key={h.hour}
+                  className="flex-1 group relative flex flex-col items-center justify-end h-full"
+                >
                   <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-black/90 border border-white/10 rounded px-2 py-1 text-[9px] text-white/80 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
                     {String(h.hour).padStart(2, "0")}:00 — {h.views} views
                   </div>
@@ -2817,16 +3360,25 @@ function AnalyticsTab() {
         )}
 
         <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-5">
-          <h3 className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-light mb-4">Device Breakdown</h3>
+          <h3 className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-light mb-4">
+            Device Breakdown
+          </h3>
 
           {totalDevices > 0 ? (
             <div className="space-y-3">
               {[
-                { label: "Desktop", value: deviceBreakdown.desktop, icon: "🖥" },
+                {
+                  label: "Desktop",
+                  value: deviceBreakdown.desktop,
+                  icon: "🖥",
+                },
                 { label: "Tablet", value: deviceBreakdown.tablet, icon: "📱" },
                 { label: "Mobile", value: deviceBreakdown.mobile, icon: "📲" },
               ].map((d) => {
-                const pct = totalDevices > 0 ? Math.round((d.value / totalDevices) * 100) : 0;
+                const pct =
+                  totalDevices > 0
+                    ? Math.round((d.value / totalDevices) * 100)
+                    : 0;
 
                 return (
                   <div key={d.label}>
@@ -2856,15 +3408,22 @@ function AnalyticsTab() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-5">
-          <h3 className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-light mb-4">Top Pages</h3>
+          <h3 className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-light mb-4">
+            Top Pages
+          </h3>
           {sortedPages.length > 0 ? (
             <div className="space-y-2">
               {sortedPages.slice(0, 10).map(([page, count]) => {
-                const pct = overview.totalPageViews > 0 ? Math.round((count / overview.totalPageViews) * 100) : 0;
+                const pct =
+                  overview.totalPageViews > 0
+                    ? Math.round((count / overview.totalPageViews) * 100)
+                    : 0;
                 return (
                   <div key={page}>
                     <div className="flex justify-between text-xs mb-0.5">
-                      <span className="text-white/60 truncate mr-2">{getPageLabel(page)}</span>
+                      <span className="text-white/60 truncate mr-2">
+                        {getPageLabel(page)}
+                      </span>
                       <span className="text-white/30 shrink-0">
                         {count} ({pct}%)
                       </span>
@@ -2885,7 +3444,9 @@ function AnalyticsTab() {
         </div>
 
         <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-5">
-          <h3 className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-light mb-4">Traffic Sources</h3>
+          <h3 className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-light mb-4">
+            Traffic Sources
+          </h3>
           {sortedReferrers.length > 0 ? (
             <div className="space-y-2">
               {sortedReferrers.slice(0, 10).map(([ref, count]) => {
@@ -2901,7 +3462,10 @@ function AnalyticsTab() {
                     </div>
                     <div className="h-1 bg-white/[0.04] rounded-full overflow-hidden">
                       <div
-                        style={{ width: `${pct}%`, backgroundColor: barColorAlt }}
+                        style={{
+                          width: `${pct}%`,
+                          backgroundColor: barColorAlt,
+                        }}
                         className="h-full rounded-full opacity-50"
                       />
                     </div>
@@ -2915,7 +3479,9 @@ function AnalyticsTab() {
         </div>
 
         <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-5">
-          <h3 className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-light mb-4">Popular Vehicles</h3>
+          <h3 className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-light mb-4">
+            Popular Vehicles
+          </h3>
           {sortedVehicles.length > 0 ? (
             <div className="space-y-2">
               {sortedVehicles.slice(0, 10).map(([vid, count]) => {
@@ -2929,7 +3495,10 @@ function AnalyticsTab() {
                     </div>
                     <div className="h-1 bg-white/[0.04] rounded-full overflow-hidden">
                       <div
-                        style={{ width: `${pct}%`, backgroundColor: barColorGreen }}
+                        style={{
+                          width: `${pct}%`,
+                          backgroundColor: barColorGreen,
+                        }}
                         className="h-full rounded-full opacity-50"
                       />
                     </div>
@@ -2945,7 +3514,9 @@ function AnalyticsTab() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-5">
-          <h3 className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-light mb-4">Browsers</h3>
+          <h3 className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-light mb-4">
+            Browsers
+          </h3>
           {sortedBrowsers.length > 0 ? (
             <div className="space-y-2">
               {sortedBrowsers.map(([browser, count]) => {
@@ -2967,7 +3538,9 @@ function AnalyticsTab() {
         </div>
 
         <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-5">
-          <h3 className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-light mb-4">Languages</h3>
+          <h3 className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-light mb-4">
+            Languages
+          </h3>
           {sortedLangs.length > 0 ? (
             <div className="space-y-2">
               {sortedLangs.map(([lang, count]) => {
@@ -2990,31 +3563,63 @@ function AnalyticsTab() {
       </div>
 
       <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-5">
-        <h3 className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-light mb-4">Conversion Funnel</h3>
+        <h3 className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-light mb-4">
+          Conversion Funnel
+        </h3>
 
         <div className="flex items-end justify-center gap-6 h-[160px]">
           {[
-            { label: "Visitors", value: overview.uniqueVisitors, color: barColorAlt },
-            { label: "Vehicle Views", value: overview.vehicleDetailViews, color: barColor },
-            { label: "Form Submissions", value: overview.formSubmissions, color: barColorGreen },
+            {
+              label: "Visitors",
+              value: overview.uniqueVisitors,
+              color: barColorAlt,
+            },
+            {
+              label: "Vehicle Views",
+              value: overview.vehicleDetailViews,
+              color: barColor,
+            },
+            {
+              label: "Form Submissions",
+              value: overview.formSubmissions,
+              color: barColorGreen,
+            },
           ].map((step, i) => {
             const maxVal = Math.max(overview.uniqueVisitors, 1);
             const h = Math.max((step.value / maxVal) * 100, 4);
             const prevVal =
               i === 0
                 ? step.value
-                : [overview.uniqueVisitors, overview.vehicleDetailViews, overview.formSubmissions][i - 1];
-            const dropoff = prevVal > 0 ? Math.round(((prevVal - step.value) / prevVal) * 100) : 0;
+                : [
+                    overview.uniqueVisitors,
+                    overview.vehicleDetailViews,
+                    overview.formSubmissions,
+                  ][i - 1];
+            const dropoff =
+              prevVal > 0
+                ? Math.round(((prevVal - step.value) / prevVal) * 100)
+                : 0;
 
             return (
-              <div key={step.label} className="flex flex-col items-center gap-2 flex-1 max-w-[200px]">
-                <span className="text-white/80 text-lg font-light">{step.value}</span>
-                {i > 0 && <span className="text-red-400/60 text-[9px]">-{dropoff}%</span>}
+              <div
+                key={step.label}
+                className="flex flex-col items-center gap-2 flex-1 max-w-[200px]"
+              >
+                <span className="text-white/80 text-lg font-light">
+                  {step.value}
+                </span>
+                {i > 0 && (
+                  <span className="text-red-400/60 text-[9px]">
+                    -{dropoff}%
+                  </span>
+                )}
                 <div
                   style={{ height: `${h}%`, backgroundColor: step.color }}
                   className="w-full max-w-[80px] rounded-t-md opacity-60"
                 />
-                <span className="text-[9px] uppercase tracking-[0.15em] text-white/35">{step.label}</span>
+                <span className="text-[9px] uppercase tracking-[0.15em] text-white/35">
+                  {step.label}
+                </span>
               </div>
             );
           })}

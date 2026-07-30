@@ -7,6 +7,7 @@ import {
   ImagePlus,
   FileText,
   FileDown,
+  Pencil,
 } from "lucide-react";
 import {
   fetchVehicles,
@@ -69,7 +70,7 @@ export function CarBookingCalendar({
   onGenerateContract,
 }: {
   /** Wired up by the admin dashboard — switches to the Contracts tab pre-filled with this booking. */
-  onGenerateContract?: (booking: Booking) => void;
+  onGenerateContract?: (booking: Booking, contract?: StoredContract) => void;
 } = {}) {
   const [vehicles, setVehicles] = useState<VehicleLite[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -259,7 +260,7 @@ function CarBookingFormModal({
   target: EditTarget;
   onClose: () => void;
   onSaved: () => void;
-  onGenerateContract?: (booking: Booking) => void;
+  onGenerateContract?: (booking: Booking, contract?: StoredContract) => void;
 }) {
   const { t } = useLanguage();
   const editingBooking = target.booking;
@@ -1437,16 +1438,11 @@ function CarBookingFormModal({
                 <p className="text-[11px] text-white/30">Loading…</p>
               ) : savedContracts.length ? (
                 savedContracts.map((contract) => (
-                  <button
+                  <div
                     key={contract.contractNumber}
-                    type="button"
-                    onClick={() =>
-                      handleDownloadContract(contract.contractNumber)
-                    }
-                    disabled={contractDownloading === contract.contractNumber}
-                    className="w-full flex items-center justify-between gap-3 rounded-md border border-white/[0.08] px-3 py-2 text-left text-xs text-white/70 hover:text-white hover:border-white/20 disabled:opacity-50 transition-colors"
+                    className="flex items-center gap-2 rounded-md border border-white/[0.08] px-3 py-2"
                   >
-                    <span>
+                    <span className="min-w-0 flex-1">
                       <span className="block text-white">
                         {contract.contractNumber}
                       </span>
@@ -1458,8 +1454,31 @@ function CarBookingFormModal({
                           : "Issued contract"}
                       </span>
                     </span>
-                    <FileDown size={15} />
-                  </button>
+                    {onGenerateContract && contract.snapshot && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onGenerateContract(editingBooking, contract);
+                          onClose();
+                        }}
+                        aria-label={`Edit ${contract.contractNumber}`}
+                        className="p-2 text-white/50 hover:text-gold transition-colors"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleDownloadContract(contract.contractNumber)
+                      }
+                      disabled={contractDownloading === contract.contractNumber}
+                      aria-label={`Download ${contract.contractNumber}`}
+                      className="p-2 text-white/50 hover:text-white disabled:opacity-50 transition-colors"
+                    >
+                      <FileDown size={15} />
+                    </button>
+                  </div>
                 ))
               ) : (
                 <p className="text-[11px] text-white/30">

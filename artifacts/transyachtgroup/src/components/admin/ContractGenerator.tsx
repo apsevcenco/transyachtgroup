@@ -11,10 +11,20 @@ import { stripTags, vehiclePhotos, type VehicleLite } from "./bookingShared";
 import { VehicleThumb } from "./VehicleThumb";
 
 export interface ContractPrefill {
+  editContractNumber?: string;
   bookingId?: number;
   vehicleId?: number;
   renterName?: string;
+  renterDob?: string;
+  renterPob?: string;
+  renterNationality?: string;
+  renterPassport?: string;
+  renterPassportExpiry?: string;
+  renterLicence?: string;
+  renterLicenceExpiry?: string;
+  renterLicenceIssuedBy?: string;
   renterPhone?: string;
+  renterEmail?: string;
   pickupDate?: string;
   returnDate?: string;
   pickupLocation?: string;
@@ -23,6 +33,7 @@ export interface ContractPrefill {
   depositAmount?: number | null;
   kmPerDay?: number | null;
   extraKmPrice?: number | null;
+  representativeName?: string;
 }
 
 /** Shared with CarBookingCalendar's "Generate Contract" button so both entry points fill the form identically. */
@@ -113,6 +124,9 @@ export function ContractGenerator({
   );
 
   const [representativeName, setRepresentativeName] = useState("");
+  const [editContractNumber, setEditContractNumber] = useState(
+    prefill?.editContractNumber || "",
+  );
 
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
@@ -160,10 +174,21 @@ export function ContractGenerator({
   }, [vehicles, vehicleSearch]);
 
   const applyPrefill = (p: ContractPrefill) => {
+    setEditContractNumber(p.editContractNumber || "");
     if (p.bookingId != null) setBookingIdInput(String(p.bookingId));
     if (p.vehicleId != null) setVehicleId(p.vehicleId);
     if (p.renterName) setRenterName(p.renterName);
+    if (p.renterDob) setRenterDob(p.renterDob);
+    if (p.renterPob) setRenterPob(p.renterPob);
+    if (p.renterNationality) setRenterNationality(p.renterNationality);
+    if (p.renterPassport) setRenterPassport(p.renterPassport);
+    if (p.renterPassportExpiry) setRenterPassportExpiry(p.renterPassportExpiry);
+    if (p.renterLicence) setRenterLicence(p.renterLicence);
+    if (p.renterLicenceExpiry) setRenterLicenceExpiry(p.renterLicenceExpiry);
+    if (p.renterLicenceIssuedBy)
+      setRenterLicenceIssuedBy(p.renterLicenceIssuedBy);
     if (p.renterPhone) setRenterPhone(p.renterPhone);
+    if (p.renterEmail) setRenterEmail(p.renterEmail);
     if (p.pickupDate) setPickupDate(p.pickupDate);
     if (p.returnDate) setReturnDate(p.returnDate);
     if (p.pickupLocation) setPickupLocation(p.pickupLocation);
@@ -172,6 +197,7 @@ export function ContractGenerator({
     if (p.depositAmount != null) setDepositAmount(numToStr(p.depositAmount));
     if (p.kmPerDay != null) setKmPerDay(numToStr(p.kmPerDay));
     if (p.extraKmPrice != null) setExtraKmPrice(numToStr(p.extraKmPrice));
+    if (p.representativeName) setRepresentativeName(p.representativeName);
   };
 
   // Re-apply prefill whenever a fresh one arrives from the parent (e.g. the
@@ -254,6 +280,7 @@ export function ContractGenerator({
         depositAmount: strToNum(depositAmount),
         kmPerDay: strToNum(kmPerDay),
         extraKmPrice: strToNum(extraKmPrice),
+        editContractNumber: editContractNumber || undefined,
         representativeName: representativeName.trim(),
       };
       const fingerprint = JSON.stringify(payload);
@@ -285,7 +312,11 @@ export function ContractGenerator({
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       requestRef.current = null;
-      setSuccess("Contract generated and downloaded.");
+      setSuccess(
+        editContractNumber
+          ? `Contract ${editContractNumber} updated and downloaded.`
+          : "Contract generated and downloaded.",
+      );
     } catch (err: any) {
       setError(err.message || "Failed to generate contract");
     } finally {
@@ -616,7 +647,13 @@ export function ContractGenerator({
             ) : (
               <FileDown size={14} />
             )}
-            {generating ? "Generating…" : "Generate Contract"}
+            {generating
+              ? editContractNumber
+                ? "Updating…"
+                : "Generating…"
+              : editContractNumber
+                ? `Update ${editContractNumber}`
+                : "Generate Contract"}
           </button>
         </div>
       </div>
