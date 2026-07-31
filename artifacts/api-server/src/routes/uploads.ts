@@ -17,8 +17,11 @@ router.post("/admin/uploads/public-image", adminAuth, limiter, async (req, res) 
       res.status(415).json({ error: "Only JPEG, PNG and WebP images are allowed" }); return;
     }
     const declared = Number(req.headers["content-length"] || 0);
-    if (!declared || declared > 5 * 1024 * 1024) {
-      res.status(413).json({ error: "Image must be between 1 byte and 5 MB" }); return;
+    // A reverse proxy may legitimately forward the upload with chunked
+    // transfer encoding and no Content-Length. Treat the header as an early
+    // upper-bound check only; the loop below remains the authoritative limit.
+    if (Number.isFinite(declared) && declared > 5 * 1024 * 1024) {
+      res.status(413).json({ error: "Image must not exceed 5 MB" }); return;
     }
     const chunks: Buffer[] = [];
     let size = 0;
@@ -28,6 +31,9 @@ router.post("/admin/uploads/public-image", adminAuth, limiter, async (req, res) 
       chunks.push(value);
     }
     const buffer = Buffer.concat(chunks);
+    if (buffer.length === 0) {
+      res.status(400).json({ error: "Image file is empty" }); return;
+    }
     const jpeg = buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
     const png = buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
     const webp = buffer.subarray(0, 4).toString("ascii") === "RIFF" && buffer.subarray(8, 12).toString("ascii") === "WEBP";
