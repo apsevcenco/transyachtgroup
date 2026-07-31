@@ -22,7 +22,7 @@ catalog:
   '@vitejs/plugin-react': ^5.0.4
   class-variance-authority: ^0.7.1
   clsx: 2.1.1
-  drizzle-orm: ^0.45.1
+  drizzle-orm: ^0.45.2
   framer-motion: 12.35.1
   lucide-react: ^0.545.0
   react: 19.1.0
@@ -38,6 +38,13 @@ minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
   - '@replit/*'
   - stripe-replit-sync
+  - body-parser
+  - dompurify
+  - drizzle-orm
+  - ip-address
+  - lodash
+  - qs
+  - sharp
 
 onlyBuiltDependencies:
   - '@swc/core'
@@ -46,6 +53,10 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 overrides:
+  body-parser: '>=2.3.0'
+  ip-address: '>=10.1.1'
+  lodash: '>=4.17.24'
+  qs: '>=6.15.2'
   '@esbuild-kit/esm-loader': npm:tsx@^4.21.0
   '@expo/ngrok-bin>@expo/ngrok-bin-darwin-arm64': '-'
   '@expo/ngrok-bin>@expo/ngrok-bin-darwin-x64': '-'
