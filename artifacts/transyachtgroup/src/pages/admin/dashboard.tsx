@@ -16,6 +16,7 @@ import {
   fetchAnalyticsStats,
   fetchAgents,
   type Agent,
+  uploadAdminPublicImage,
 } from "@/lib/api";
 import { useLocation, useParams } from "wouter";
 import {
@@ -27,7 +28,6 @@ import {
 import RichTextEditor, {
   SharedToolbarGroup,
 } from "@/components/RichTextEditor";
-import { supabase } from "@/lib/supabaseClient";
 import { compressImage } from "@/lib/imageCompress";
 import { CarBookingCalendar } from "@/components/admin/CarBookingCalendar";
 import { YachtBookingCalendar } from "@/components/admin/YachtBookingCalendar";
@@ -40,6 +40,7 @@ import {
   type ContractPrefill,
 } from "@/components/admin/ContractGenerator";
 import type { Booking, StoredContract } from "@/lib/api";
+import DOMPurify from "dompurify";
 
 const API_ORIGIN =
   (import.meta.env.VITE_API_ORIGIN as string | undefined) ?? "";
@@ -1392,26 +1393,7 @@ function VehicleForm({
   const uploadFile = useCallback(async (file: File): Promise<string | null> => {
     try {
       file = await compressImage(file, 800, 0.8);
-      const safeName = file.name.replace(/\s+/g, "-").replace(/[^\w.-]/g, "");
-      const fileName = `${Date.now()}-${safeName}`;
-
-      const { error } = await supabase.storage
-        .from("vehicle_images") // если bucket называется иначе, замени здесь
-        .upload(fileName, file, {
-          upsert: false,
-        });
-
-      if (error) {
-        console.error("SUPABASE UPLOAD ERROR:", error);
-        alert(`Upload failed: ${error.message}`);
-        return null;
-      }
-
-      const { data } = supabase.storage
-        .from("vehicle_images")
-        .getPublicUrl(fileName);
-
-      return cleanImageUrl(data.publicUrl);
+      return cleanImageUrl(await uploadAdminPublicImage(file, "vehicles"));
     } catch (err) {
       console.error("UPLOAD ERROR:", err);
 
@@ -2319,8 +2301,14 @@ function ContentTab({
 
   const getPreviewHtml = (item: ContentItem) => {
     if (!isRichText(item.key)) return "";
-    if (item.value.trim().startsWith("<")) return item.value;
-    return convertPlainToHtml(item.value);
+    const html = item.value.trim().startsWith("<")
+      ? item.value
+      : convertPlainToHtml(item.value);
+    return DOMPurify.sanitize(html, {
+      USE_PROFILES: { html: true },
+      FORBID_TAGS: ["script", "style", "iframe", "object", "embed", "form"],
+      FORBID_ATTR: ["style"],
+    });
   };
 
   const currentEditText =
@@ -2342,27 +2330,8 @@ function ContentTab({
 
     try {
       file = await compressImage(file, 800, 0.8);
-      const safeName = file.name.replace(/\s+/g, "-").replace(/[^\w.-]/g, "");
-      const fileName = `content-bg/${Date.now()}-${safeName}`;
-
-      const { error } = await supabase.storage
-        .from("vehicle_images")
-        .upload(fileName, file, {
-          upsert: false,
-        });
-
-      if (error) {
-        console.error("SUPABASE BG UPLOAD ERROR:", error);
-        setUploadMsg(`Upload failed: ${error.message}`);
-        setTimeout(() => setUploadMsg(""), 4000);
-        return;
-      }
-
-      const { data } = supabase.storage
-        .from("vehicle_images")
-        .getPublicUrl(fileName);
-
-      setCurrentEditText(cleanImageUrl(data.publicUrl));
+      const url = await uploadAdminPublicImage(file, "content-bg");
+      setCurrentEditText(cleanImageUrl(url));
       setUploadMsg("Image uploaded");
       setTimeout(() => setUploadMsg(""), 3000);
     } catch (err) {
@@ -2383,20 +2352,9 @@ function ContentTab({
     setUploadMsg("");
     try {
       file = await compressImage(file, 800, 0.8);
-      const safeName = file.name.replace(/\s+/g, "-").replace(/[^\w.-]/g, "");
-      const fileName = `content-office/${Date.now()}-${safeName}`;
-      const { error } = await supabase.storage
-        .from("vehicle_images")
-        .upload(fileName, file, { upsert: false });
-      if (error) {
-        setUploadMsg(`Upload failed: ${error.message}`);
-        setTimeout(() => setUploadMsg(""), 4000);
-        return;
-      }
-      const { data } = supabase.storage
-        .from("vehicle_images")
-        .getPublicUrl(fileName);
-      const url = cleanImageUrl(data.publicUrl);
+      const url = cleanImageUrl(
+        await uploadAdminPublicImage(file, "content-office"),
+      );
       try {
         const arr: string[] = JSON.parse(editValue || "[]");
         setEditValue(JSON.stringify([...arr, url]));

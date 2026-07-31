@@ -13,13 +13,13 @@ function getLang(): string {
   return localStorage.getItem("tyg_lang") || "en";
 }
 
-export async function adminLogin(password: string) {
+export async function adminLogin(password: string, otp?: string) {
   let res: Response;
   try {
     res = await fetch(`${API_BASE}/admin/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ password, otp }),
     });
   } catch {
     throw new Error("Cannot reach API — check your connection");
@@ -61,9 +61,11 @@ export async function fetchVehicles(
 ) {
   const l = lang || getLang();
   const qs = new URLSearchParams({ lang: l });
-  if (includeHidden) qs.set("all", "true");
   if (category) qs.set("category", category);
-  const res = await fetch(`${API_BASE}/vehicles?${qs}`);
+  const path = includeHidden ? "/admin/vehicles" : "/vehicles";
+  const res = await fetch(`${API_BASE}${path}?${qs}`, {
+    headers: includeHidden ? authHeaders() : undefined,
+  });
   if (!res.ok) throw new Error("Failed to fetch vehicles");
   return res.json();
 }
@@ -422,6 +424,36 @@ export async function createBooking(data: BookingInput) {
     throw new Error(body.error || "Failed to create booking");
   }
   return res.json() as Promise<Booking>;
+}
+
+export async function uploadPrivateBookingPhoto(file: File): Promise<string> {
+  const res = await fetch(`${API_BASE}/bookings/photos`, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": file.type },
+    body: file,
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Failed to upload booking photo");
+  }
+  const data = await res.json();
+  return data.signedUrl;
+}
+
+export async function uploadAdminPublicImage(
+  file: File,
+  scope: "vehicles" | "content-bg" | "content-office",
+): Promise<string> {
+  const res = await fetch(`${API_BASE}/admin/uploads/public-image`, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": file.type, "X-Upload-Scope": scope },
+    body: file,
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Failed to upload image");
+  }
+  return (await res.json()).url;
 }
 
 export async function updateBooking(id: number, data: BookingInput) {

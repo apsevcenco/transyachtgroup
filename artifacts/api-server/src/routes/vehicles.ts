@@ -27,10 +27,9 @@ const PUBLIC_CACHE = "public, max-age=60, stale-while-revalidate=86400";
 router.get("/vehicles", async (req, res) => {
   try {
     const lang = String(req.query.lang || "en");
-    const includeHidden = req.query.all === "true";
     const category = req.query.category ? String(req.query.category) : null;
 
-    const visibilityFilter = includeHidden ? undefined : ne(vehiclesTable.visible, false);
+    const visibilityFilter = ne(vehiclesTable.visible, false);
     const categoryFilter = category ? eq(vehiclesTable.category, category) : undefined;
     const filters = [visibilityFilter, categoryFilter].filter((f): f is NonNullable<typeof f> => !!f);
 
@@ -38,10 +37,29 @@ router.get("/vehicles", async (req, res) => {
       ? await db.select().from(vehiclesTable).where(and(...filters)).orderBy(vehiclesTable.id)
       : await db.select().from(vehiclesTable).orderBy(vehiclesTable.id);
 
-    if (!includeHidden) res.set("Cache-Control", PUBLIC_CACHE);
+    res.set("Cache-Control", PUBLIC_CACHE);
     res.json(vehicles.map(v => applyLang(v, lang)));
   } catch (err) {
     console.error("Vehicles fetch error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/admin/vehicles", adminAuth, async (req, res) => {
+  try {
+    const lang = String(req.query.lang || "en");
+    const category = req.query.category ? String(req.query.category) : null;
+    const rows = category
+      ? await db
+          .select()
+          .from(vehiclesTable)
+          .where(eq(vehiclesTable.category, category))
+          .orderBy(vehiclesTable.id)
+      : await db.select().from(vehiclesTable).orderBy(vehiclesTable.id);
+    res.set("Cache-Control", "no-store");
+    res.json(rows.map((vehicle) => applyLang(vehicle, lang)));
+  } catch (err) {
+    req.log?.error?.({ err }, "Admin vehicles fetch failed");
     res.status(500).json({ error: "Internal server error" });
   }
 });

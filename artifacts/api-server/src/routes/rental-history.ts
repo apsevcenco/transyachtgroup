@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { rentalHistoryTable } from "@workspace/db/schema";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { adminAuth } from "../middleware/auth";
+import { signBookingPhotos } from "../lib/privateStorage";
 
 const router: IRouter = Router();
 
@@ -28,7 +29,7 @@ router.get("/rental-history", async (req, res) => {
       ? await db.select().from(rentalHistoryTable).where(and(...conditions)).orderBy(desc(rentalHistoryTable.completedAt))
       : await db.select().from(rentalHistoryTable).orderBy(desc(rentalHistoryTable.completedAt));
 
-    res.json(rentals);
+    res.json(await Promise.all(rentals.map(signBookingPhotos)));
   } catch (err) {
     console.error("Rental history fetch error:", err);
     res.status(500).json({ error: "Internal server error" });

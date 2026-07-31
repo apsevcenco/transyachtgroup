@@ -11,6 +11,7 @@ import bookingsRouter from "./bookings";
 import rentalHistoryRouter from "./rental-history";
 import agentsRouter from "./agents";
 import contractsRouter from "./contracts";
+import uploadsRouter from "./uploads";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(bookingsRouter);
 router.use(rentalHistoryRouter);
 router.use(agentsRouter);
 router.use(contractsRouter);
+router.use(uploadsRouter);
 
 export default router;

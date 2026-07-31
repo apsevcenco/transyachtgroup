@@ -18,6 +18,7 @@ import {
   checkAvailability,
   fetchAgent,
   fetchBookingContracts,
+  uploadPrivateBookingPhoto,
   downloadStoredContract,
   type Booking,
   type BookingInput,
@@ -27,7 +28,6 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { GanttGrid } from "./GanttGrid";
 import { VehicleThumb } from "./VehicleThumb";
 import { VehiclePhotoModal } from "./VehiclePhotoModal";
-import { supabase } from "@/lib/supabaseClient";
 import { compressImage } from "@/lib/imageCompress";
 import {
   STATUSES,
@@ -368,10 +368,6 @@ function CarBookingFormModal({
 
   // A new booking has no id yet — use a stable per-session placeholder as the
   // storage folder name so uploads have somewhere to go before the first save.
-  const photoFolderId = useRef(
-    editingBooking?.id ??
-      `new-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-  ).current;
   const photoFileInputRef = useRef<HTMLInputElement>(null);
   const photoCameraInputRef = useRef<HTMLInputElement>(null);
   const isReadOnly = editingBooking?.status === "completed";
@@ -590,23 +586,7 @@ function CarBookingFormModal({
   const uploadBookingPhoto = async (file: File): Promise<string | null> => {
     try {
       const compressed = await compressImage(file, 800, 0.85);
-      const safeName = compressed.name
-        .replace(/\s+/g, "-")
-        .replace(/[^\w.-]/g, "");
-      const path = `booking-photos/${photoFolderId}/${Date.now()}-${safeName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("vehicle_images")
-        .upload(path, compressed, { upsert: false });
-      if (uploadError) {
-        console.error("Booking photo upload error:", uploadError);
-        return null;
-      }
-
-      const { data } = supabase.storage
-        .from("vehicle_images")
-        .getPublicUrl(path);
-      return data.publicUrl;
+      return await uploadPrivateBookingPhoto(compressed);
     } catch (err) {
       console.error("Booking photo upload crashed:", err);
       return null;

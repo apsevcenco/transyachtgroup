@@ -3,11 +3,28 @@
 // Shared by the admin vehicle photo uploader and the booking photo
 // uploader so both produce visually consistent, similarly-sized images.
 export function compressImage(file: File, maxWidth: number, _quality: number): Promise<File> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+    if (!allowedTypes.has(file.type)) {
+      reject(new Error("Only JPEG, PNG and WebP images are allowed"));
+      return;
+    }
+    if (file.size <= 0 || file.size > 15 * 1024 * 1024) {
+      reject(new Error("Image must be between 1 byte and 15 MB"));
+      return;
+    }
     const img = new Image();
     const objectUrl = URL.createObjectURL(file);
     img.onload = () => {
       URL.revokeObjectURL(objectUrl);
+      if (
+        !img.naturalWidth ||
+        !img.naturalHeight ||
+        img.naturalWidth * img.naturalHeight > 40_000_000
+      ) {
+        reject(new Error("Image dimensions are invalid or too large"));
+        return;
+      }
       const scale = Math.min(1, maxWidth / img.naturalWidth);
       const w = Math.round(img.naturalWidth * scale);
       const h = Math.round(img.naturalHeight * scale);
@@ -15,7 +32,7 @@ export function compressImage(file: File, maxWidth: number, _quality: number): P
       canvas.width = w;
       canvas.height = h;
       const ctx = canvas.getContext("2d");
-      if (!ctx) { resolve(file); return; }
+      if (!ctx) { reject(new Error("Image processor is unavailable")); return; }
       ctx.drawImage(img, 0, 0, w, h);
       const imgData = ctx.getImageData(0, 0, w, h);
       const d = imgData.data;
@@ -128,7 +145,7 @@ export function compressImage(file: File, maxWidth: number, _quality: number): P
       ctx.putImageData(imgData, 0, 0);
       canvas.toBlob(
         (blob) => {
-          if (!blob) { resolve(file); return; }
+          if (!blob) { reject(new Error("Image could not be re-encoded")); return; }
           const name = file.name.replace(/\.[^.]+$/, ".jpg");
           resolve(new File([blob], name, { type: "image/jpeg" }));
         },
@@ -136,7 +153,10 @@ export function compressImage(file: File, maxWidth: number, _quality: number): P
         0.85,
       );
     };
-    img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file); };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("File is not a valid supported image"));
+    };
     img.src = objectUrl;
   });
 }

@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 
 export default function AdminLogin() {
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [, setLocation] = useLocation();
@@ -14,16 +15,10 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      console.log("LOGIN TRY →", password);
-
-      const result = await adminLogin(password);
-
-      console.log("LOGIN SUCCESS →", result);
+      await adminLogin(password, otp);
 
       setLocation("/admin/dashboard");
     } catch (err: any) {
-      console.error("LOGIN ERROR →", err);
-
       setError(
         err?.message || "Login failed (check API connection)"
       );
@@ -70,6 +65,21 @@ export default function AdminLogin() {
               className="w-full h-12 bg-black/40 border border-white/[0.08] rounded-md px-4 text-white text-sm focus:outline-none focus:border-[hsl(43,67%,55%)]/30 transition-colors"
               placeholder="Enter admin password"
               required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] uppercase tracking-[0.3em] text-white/40 font-light">
+              Authenticator code
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              className="w-full h-12 bg-black/40 border border-white/[0.08] rounded-md px-4 text-white text-sm tracking-[0.4em] focus:outline-none focus:border-[hsl(43,67%,55%)]/30 transition-colors"
+              placeholder="Optional until MFA is configured"
             />
           </div>
 

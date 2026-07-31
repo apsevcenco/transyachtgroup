@@ -6,7 +6,7 @@ import {
   vehiclesTable,
   bookingsTable,
 } from "@workspace/db/schema";
-import { desc, eq, like, sql } from "drizzle-orm";
+import { desc, eq, like } from "drizzle-orm";
 import { adminAuth } from "../middleware/auth";
 import {
   renderContractHtml,
@@ -67,37 +67,6 @@ interface ParsedContractRequest {
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const CONTRACT_NUMBER = /^[A-Z0-9][A-Z0-9-]{0,49}$/;
-let contractSchemaReady: Promise<void> | null = null;
-
-function ensureContractSchema(): Promise<void> {
-  if (!contractSchemaReady) {
-    contractSchemaReady = db
-      .execute(
-        sql`
-        ALTER TABLE contracts
-          ADD COLUMN IF NOT EXISTS request_id VARCHAR(64) UNIQUE,
-          ADD COLUMN IF NOT EXISTS renter_email TEXT,
-          ADD COLUMN IF NOT EXISTS snapshot JSONB,
-          ADD COLUMN IF NOT EXISTS pdf_sha256 VARCHAR(64),
-          ADD COLUMN IF NOT EXISTS pdf_base64 TEXT,
-          ADD COLUMN IF NOT EXISTS template_version VARCHAR(30),
-          ADD COLUMN IF NOT EXISTS issued_at TIMESTAMP;
-
-        ALTER TABLE contracts
-          ALTER COLUMN total_amount TYPE NUMERIC(12,2) USING total_amount::NUMERIC,
-          ALTER COLUMN deposit_amount TYPE NUMERIC(12,2) USING deposit_amount::NUMERIC,
-          ALTER COLUMN extra_km_price TYPE NUMERIC(12,2) USING extra_km_price::NUMERIC;
-      `,
-      )
-      .then(() => undefined)
-      .catch((error) => {
-        contractSchemaReady = null;
-        throw error;
-      });
-  }
-  return contractSchemaReady;
-}
-
 function isRealIsoDate(value: string): boolean {
   if (!ISO_DATE.test(value)) return false;
   const date = new Date(`${value}T00:00:00Z`);
@@ -413,7 +382,6 @@ router.post(
         return;
       }
       const data = parsed.data;
-      await ensureContractSchema();
 
       const [existingRequest] = await db
         .select()
@@ -674,7 +642,6 @@ router.get(
       res.status(400).json({ error: "Invalid booking ID" });
       return;
     }
-    await ensureContractSchema();
     const contracts = await db
       .select({
         contractNumber: contractsTable.contractNumber,

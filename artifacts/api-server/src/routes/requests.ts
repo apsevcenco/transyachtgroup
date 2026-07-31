@@ -3,21 +3,45 @@ import { db } from "@workspace/db";
 import { contactRequestsTable } from "@workspace/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { adminAuth } from "../middleware/auth";
+import rateLimit from "express-rate-limit";
 
 const router: IRouter = Router();
+const publicRequestLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { error: "Too many requests. Please try again later." },
+});
 
-router.post("/requests", async (req, res) => {
+function boundedText(value: unknown, max: number): string | null {
+  if (typeof value !== "string") return null;
+  const clean = value.trim();
+  return clean && clean.length <= max ? clean : null;
+}
+
+router.post("/requests", publicRequestLimiter, async (req, res) => {
   try {
-    const { firstName, lastName, email, phone, interest, message } = req.body;
+    const firstName = boundedText(req.body?.firstName, 100);
+    const lastName = boundedText(req.body?.lastName, 100);
+    const email = boundedText(req.body?.email, 254);
+    const phone = boundedText(req.body?.phone, 40);
+    const interest = boundedText(req.body?.interest, 50);
+    const message = boundedText(req.body?.message, 4000);
+    const website = boundedText(req.body?.website, 200);
 
-    if (!firstName || !lastName || !email || !message) {
+    if (website) {
+      res.status(201).json({ success: true });
+      return;
+    }
+    if (!firstName || !lastName || !email || !message || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       res.status(400).json({ error: "First name, last name, email, and message are required" });
       return;
     }
 
     const [request] = await db
       .insert(contactRequestsTable)
-      .values({ firstName, lastName, email, phone: phone || null, interest: interest || null, message })
+      .values({ firstName, lastName, email, phone, interest, message })
       .returning();
 
     res.status(201).json({

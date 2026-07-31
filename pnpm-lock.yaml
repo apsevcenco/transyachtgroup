@@ -182,6 +182,9 @@ importers:
 
   artifacts/api-server:
     dependencies:
+      '@supabase/supabase-js':
+        specifier: ^2.57.4
+        version: 2.105.4
       '@sparticuz/chromium':
         specifier: ^133.0.0
         version: 133.0.0

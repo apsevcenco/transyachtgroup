@@ -3,30 +3,46 @@ import { db } from "@workspace/db";
 import { analyticsEventsTable, contactRequestsTable } from "@workspace/db/schema";
 import { desc, sql, eq, gte, lte, and, count } from "drizzle-orm";
 import { adminAuth } from "../middleware/auth";
+import rateLimit from "express-rate-limit";
 
 const router: IRouter = Router();
+const analyticsLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 60,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+});
+const allowedEvents = new Set(["page_view", "form_submit", "vehicle_view", "click", "session_end"]);
+const short = (value: unknown, max: number): string | null =>
+  typeof value === "string" && value.length > 0 && value.length <= max ? value : null;
 
-router.post("/analytics/track", async (req, res) => {
+router.post("/analytics/track", analyticsLimiter, async (req, res) => {
   try {
     const { sessionId, eventType, page, referrer, userAgent, language, screenWidth, screenHeight, vehicleId, duration, metadata } = req.body;
 
-    if (!sessionId || !eventType || !page) {
+    const validSession = short(sessionId, 64);
+    const validEvent = short(eventType, 30);
+    const validPage = short(page, 500);
+    const validMetadata =
+      metadata && typeof metadata === "object" && !Array.isArray(metadata) &&
+      JSON.stringify(metadata).length <= 4000 ? metadata : {};
+    if (!validSession || !validEvent || !allowedEvents.has(validEvent) || !validPage) {
       res.status(400).json({ error: "sessionId, eventType, and page are required" });
       return;
     }
 
     await db.insert(analyticsEventsTable).values({
-      sessionId,
-      eventType,
-      page,
-      referrer: referrer || null,
-      userAgent: userAgent || null,
-      language: language || null,
+      sessionId: validSession,
+      eventType: validEvent,
+      page: validPage,
+      referrer: short(referrer, 1000),
+      userAgent: short(userAgent, 500),
+      language: short(language, 10),
       screenWidth: screenWidth ? String(screenWidth) : null,
       screenHeight: screenHeight ? String(screenHeight) : null,
       vehicleId: vehicleId ? String(vehicleId) : null,
       duration: duration ? String(duration) : null,
-      metadata: metadata || {},
+      metadata: validMetadata,
     });
 
     res.json({ success: true });

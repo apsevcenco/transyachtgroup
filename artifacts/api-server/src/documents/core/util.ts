@@ -1,6 +1,7 @@
 /** Shared, framework-free helpers for the adaptive document engine. */
 
 import type { YachtProfile } from "../documentTypes";
+import { safeRemoteFetch } from "../../lib/safeRemoteFetch";
 
 /** HTML-escape any value for safe interpolation into a template string. */
 export function esc(v: unknown): string {
@@ -71,11 +72,20 @@ export async function validateImageUrls(
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), timeoutMs);
       try {
-        const res = await fetch(url, {
+        const configuredHosts = (process.env.PDF_IMAGE_HOSTS || "")
+          .split(",").map((host) => host.trim().toLowerCase()).filter(Boolean);
+        const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+        if (supabaseUrl) {
+          try { configuredHosts.push(new URL(supabaseUrl).hostname.toLowerCase()); } catch { /* invalid config is handled elsewhere */ }
+        }
+        const hostAllowlist = configuredHosts.length || process.env.NODE_ENV === "production"
+          ? new Set(configuredHosts)
+          : undefined;
+        const res = await safeRemoteFetch(url, {
           method: "GET",
           signal: ctrl.signal,
           headers: { Range: "bytes=0-0" },
-        });
+        }, { allowedHosts: hostAllowlist });
         if (!res.ok && res.status !== 206) return `http ${res.status}`;
         const ct = (res.headers.get("content-type") ?? "").toLowerCase();
         if (!/^image\//.test(ct)) return `content-type ${ct || "unknown"}`;

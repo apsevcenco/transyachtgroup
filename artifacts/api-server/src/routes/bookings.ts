@@ -10,6 +10,12 @@ import { eq, and, gte, lte, inArray, ne, sql } from "drizzle-orm";
 import { adminAuth } from "../middleware/auth";
 import { bookingDateTime, isValidTime } from "../lib/bookingIntervals";
 import ical from "node-ical";
+import { safeRemoteFetch } from "../lib/safeRemoteFetch";
+import {
+  bookingPhotoPath,
+  signBookingPhotos,
+  uploadBookingPhoto,
+} from "../lib/privateStorage";
 
 function totalDaysInclusive(startDate: string, endDate: string): number {
   const start = new Date(startDate + "T00:00:00");
@@ -79,29 +85,6 @@ function conflictMessage(
 const router: IRouter = Router();
 
 router.use(adminAuth);
-let bookingEmailSchemaReady: Promise<void> | null = null;
-router.use(async (_req, _res, next) => {
-  try {
-    if (!bookingEmailSchemaReady) {
-      bookingEmailSchemaReady = db
-        .execute(
-          sql`ALTER TABLE bookings
-            ADD COLUMN IF NOT EXISTS client_email TEXT,
-            ADD COLUMN IF NOT EXISTS start_time VARCHAR(5),
-            ADD COLUMN IF NOT EXISTS end_time VARCHAR(5)`,
-        )
-        .then(() => undefined)
-        .catch((error) => {
-          bookingEmailSchemaReady = null;
-          throw error;
-        });
-    }
-    await bookingEmailSchemaReady;
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
 
 function plainText(value: unknown): string | null {
   if (value == null) return null;
@@ -113,6 +96,19 @@ function plainText(value: unknown): string | null {
 
 function toISODate(d: Date): string {
   return d.toISOString().slice(0, 10);
+}
+
+function normalizedBookingBody(body: unknown): unknown {
+  if (!body || typeof body !== "object") return body;
+  const value = body as Record<string, unknown>;
+  if (!Array.isArray(value.bookingPhotos)) return body;
+  return {
+    ...value,
+    bookingPhotos: value.bookingPhotos
+      .filter((photo): photo is string => typeof photo === "string")
+      .slice(0, 20)
+      .map(bookingPhotoPath),
+  };
 }
 
 // GET /bookings — list all, optionally filtered by vehicleId and/or a date range
@@ -139,7 +135,7 @@ router.get("/bookings", async (req, res) => {
           .orderBy(bookingsTable.startDate)
       : await db.select().from(bookingsTable).orderBy(bookingsTable.startDate);
 
-    res.json(bookings);
+    res.json(await Promise.all(bookings.map(signBookingPhotos)));
   } catch (err) {
     console.error("Bookings fetch error:", err);
     res.status(500).json({ error: "Internal server error" });
@@ -188,6 +184,45 @@ router.get("/bookings/availability", async (req, res) => {
 });
 
 // GET /bookings/:id
+router.post("/bookings/photos", async (req, res) => {
+  try {
+    const contentType = String(req.headers["content-type"] || "").split(";")[0];
+    if (!["image/jpeg", "image/png", "image/webp"].includes(contentType)) {
+      res.status(415).json({ error: "Only JPEG, PNG and WebP images are allowed" });
+      return;
+    }
+    const declared = Number(req.headers["content-length"] || 0);
+    if (!declared || declared > 5 * 1024 * 1024) {
+      res.status(413).json({ error: "Photo must be between 1 byte and 5 MB" });
+      return;
+    }
+    const chunks: Buffer[] = [];
+    let size = 0;
+    for await (const chunk of req) {
+      const buffer = Buffer.from(chunk);
+      size += buffer.length;
+      if (size > 5 * 1024 * 1024) {
+        res.status(413).json({ error: "Photo exceeds 5 MB" });
+        return;
+      }
+      chunks.push(buffer);
+    }
+    const buffer = Buffer.concat(chunks);
+    const isJpeg = buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+    const isPng = buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+    const isWebp = buffer.subarray(0, 4).toString("ascii") === "RIFF" && buffer.subarray(8, 12).toString("ascii") === "WEBP";
+    if (!(isJpeg || isPng || isWebp)) {
+      res.status(415).json({ error: "File signature does not match an allowed image" });
+      return;
+    }
+    const uploaded = await uploadBookingPhoto(buffer, contentType);
+    res.status(201).json(uploaded);
+  } catch (err) {
+    req.log?.error?.({ err }, "Private booking photo upload failed");
+    res.status(500).json({ error: "Failed to upload booking photo" });
+  }
+});
+
 router.get("/bookings/:id", async (req, res) => {
   try {
     const id = parseInt(String(req.params.id), 10);
@@ -203,7 +238,7 @@ router.get("/bookings/:id", async (req, res) => {
       res.status(404).json({ error: "Booking not found" });
       return;
     }
-    res.json(booking);
+    res.json(await signBookingPhotos(booking));
   } catch (err) {
     console.error("Booking fetch error:", err);
     res.status(500).json({ error: "Internal server error" });
@@ -213,7 +248,7 @@ router.get("/bookings/:id", async (req, res) => {
 // POST /bookings
 router.post("/bookings", async (req, res) => {
   try {
-    const parsed = insertBookingSchema.safeParse(req.body);
+    const parsed = insertBookingSchema.safeParse(normalizedBookingBody(req.body));
     if (!parsed.success) {
       res
         .status(400)
@@ -260,7 +295,7 @@ router.post("/bookings", async (req, res) => {
       .insert(bookingsTable)
       .values(parsed.data)
       .returning();
-    res.status(201).json(booking);
+    res.status(201).json(await signBookingPhotos(booking));
   } catch (err) {
     console.error("Booking create error:", err);
     res.status(500).json({ error: "Internal server error" });
@@ -271,7 +306,7 @@ router.post("/bookings", async (req, res) => {
 router.put("/bookings/:id", async (req, res) => {
   try {
     const id = parseInt(String(req.params.id), 10);
-    const parsed = insertBookingSchema.safeParse(req.body);
+    const parsed = insertBookingSchema.safeParse(normalizedBookingBody(req.body));
     if (!parsed.success) {
       res
         .status(400)
@@ -395,7 +430,7 @@ router.put("/bookings/:id", async (req, res) => {
       return updated;
     });
 
-    res.json(booking);
+    res.json(await signBookingPhotos(booking));
   } catch (err) {
     console.error("Booking update error:", err);
     res.status(500).json({ error: "Internal server error" });
@@ -435,9 +470,18 @@ router.post("/bookings/ical-sync", async (req, res) => {
       return;
     }
 
-    let parsed: Awaited<ReturnType<typeof ical.async.fromURL>>;
+    let parsed: Awaited<ReturnType<typeof ical.async.parseICS>>;
     try {
-      parsed = await ical.async.fromURL(icalUrl);
+      const response = await safeRemoteFetch(icalUrl, {
+        signal: AbortSignal.timeout(10_000),
+        headers: { Accept: "text/calendar" },
+      });
+      if (!response.ok) throw new Error(`iCal server returned ${response.status}`);
+      const declaredLength = Number(response.headers.get("content-length") || 0);
+      if (declaredLength > 2_000_000) throw new Error("iCal feed is too large");
+      const source = await response.text();
+      if (source.length > 2_000_000) throw new Error("iCal feed is too large");
+      parsed = await ical.async.parseICS(source);
     } catch (err) {
       res
         .status(400)
