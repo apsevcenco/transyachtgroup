@@ -2,7 +2,7 @@
 // unsharp-mask/brightness correction, and re-encodes as JPEG q=0.85.
 // Shared by the admin vehicle photo uploader and the booking photo
 // uploader so both produce visually consistent, similarly-sized images.
-export function compressImage(file: File, maxWidth: number, _quality: number): Promise<File> {
+export function compressImage(file: File, maxWidth: number, quality: number): Promise<File> {
   return new Promise((resolve, reject) => {
     const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
     if (!allowedTypes.has(file.type)) {
@@ -143,15 +143,23 @@ export function compressImage(file: File, maxWidth: number, _quality: number): P
       console.info(`[photo] optimized: ${lumLabel} (avg lum ${Math.round(avgLum)})`);
 
       ctx.putImageData(imgData, 0, 0);
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) { reject(new Error("Image could not be re-encoded")); return; }
-          const name = file.name.replace(/\.[^.]+$/, ".jpg");
-          resolve(new File([blob], name, { type: "image/jpeg" }));
-        },
-        "image/jpeg",
-        0.85,
-      );
+      const name = file.name.replace(/\.[^.]+$/, ".jpg");
+      const targetBytes = 1_500_000;
+      const encode = (currentQuality: number) => {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) { reject(new Error("Image could not be re-encoded")); return; }
+            if (blob.size > targetBytes && currentQuality > 0.55) {
+              encode(Math.max(0.55, currentQuality - 0.1));
+              return;
+            }
+            resolve(new File([blob], name, { type: "image/jpeg" }));
+          },
+          "image/jpeg",
+          currentQuality,
+        );
+      };
+      encode(Math.min(0.88, Math.max(0.65, quality)));
     };
     img.onerror = () => {
       URL.revokeObjectURL(objectUrl);

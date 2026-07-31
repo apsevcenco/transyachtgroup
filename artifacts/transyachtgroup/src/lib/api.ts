@@ -456,6 +456,18 @@ export async function uploadAdminPublicImage(
   return (await res.json()).url;
 }
 
+export async function deleteAdminPublicImage(url: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/admin/uploads/public-image`, {
+    method: "DELETE",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Failed to delete image");
+  }
+}
+
 export async function updateBooking(id: number, data: BookingInput) {
   const res = await fetch(`${API_BASE}/bookings/${id}`, {
     method: "PUT",
@@ -699,6 +711,8 @@ export interface ContractGenerateRequest {
   renterEmail: string;
   pickupDate: string;
   returnDate: string;
+  pickupTime: string;
+  returnTime: string;
   pickupLocation: string;
   returnLocation: string;
   totalAmount: number;
@@ -772,6 +786,8 @@ export interface StoredContract {
     vehicle?: { name?: string };
     pickupDate?: string;
     returnDate?: string;
+    pickupTime?: string;
+    returnTime?: string;
     pickupLocation?: string;
     returnLocation?: string;
     totalAmount?: number;

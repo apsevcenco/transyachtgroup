@@ -15,6 +15,10 @@ test("multi-day rental follows rental-industry day count", () => {
   assert.equal(rentalDayCount("2026-07-30", "2026-08-03"), 4);
 });
 
+test("31 July 17:00 to 7 August 17:00 counts as seven rental days", () => {
+  assert.equal(rentalDayCount("2026-07-31", "2026-08-07"), 7);
+});
+
 test("adjacent rentals do not overlap", () => {
   assert.equal(
     bookingIntervalsOverlap(

@@ -17,6 +17,7 @@ import {
   fetchAgents,
   type Agent,
   uploadAdminPublicImage,
+  deleteAdminPublicImage,
 } from "@/lib/api";
 import { useLocation, useParams } from "wouter";
 import {
@@ -396,6 +397,8 @@ export default function AdminDashboard() {
             renterEmail: snapshot.renter?.email,
             pickupDate: snapshot.pickupDate,
             returnDate: snapshot.returnDate,
+            pickupTime: snapshot.pickupTime || base.pickupTime,
+            returnTime: snapshot.returnTime || base.returnTime,
             pickupLocation: snapshot.pickupLocation,
             returnLocation: snapshot.returnLocation,
             totalAmount: snapshot.totalAmount,
@@ -2324,15 +2327,20 @@ function ContentTab({
       }));
     }
   };
-  const handleBgUpload = async (file: File) => {
+  const handleBgUpload = async (file: File, key: string) => {
     setUploadingBg(true);
     setUploadMsg("");
 
     try {
       file = await compressImage(file, 800, 0.8);
-      const url = await uploadAdminPublicImage(file, "content-bg");
-      setCurrentEditText(cleanImageUrl(url));
-      setUploadMsg("Image uploaded");
+      const previousUrl = currentEditText.trim();
+      const url = cleanImageUrl(await uploadAdminPublicImage(file, "content-bg"));
+      if (previousUrl && previousUrl !== url) {
+        await deleteAdminPublicImage(previousUrl).catch(() => undefined);
+      }
+      setCurrentEditText(url);
+      onSave(key, url);
+      setUploadMsg("Image compressed, replaced and saved");
       setTimeout(() => setUploadMsg(""), 3000);
     } catch (err) {
       console.error("BG UPLOAD ERROR:", err);
@@ -2340,6 +2348,26 @@ function ContentTab({
         err instanceof Error
           ? `Upload failed: ${err.message}`
           : "Upload failed",
+      );
+      setTimeout(() => setUploadMsg(""), 4000);
+    } finally {
+      setUploadingBg(false);
+    }
+  };
+
+  const handleBgDelete = async (key: string) => {
+    const currentUrl = currentEditText.trim();
+    setUploadingBg(true);
+    setUploadMsg("");
+    try {
+      if (currentUrl) await deleteAdminPublicImage(currentUrl);
+      setCurrentEditText("");
+      onSave(key, "");
+      setUploadMsg("Background removed");
+      setTimeout(() => setUploadMsg(""), 3000);
+    } catch (err) {
+      setUploadMsg(
+        err instanceof Error ? `Delete failed: ${err.message}` : "Delete failed",
       );
       setTimeout(() => setUploadMsg(""), 4000);
     } finally {
@@ -2543,11 +2571,22 @@ function ContentTab({
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
-                    await handleBgUpload(file);
+                    await handleBgUpload(file, item.key);
                     e.currentTarget.value = "";
                   }}
                 />
               </label>
+
+              {!!currentEditText.trim() && (
+                <button
+                  type="button"
+                  onClick={() => handleBgDelete(item.key)}
+                  disabled={uploadingBg || saving}
+                  className="text-[9px] uppercase tracking-[0.2em] px-3 py-1.5 rounded bg-red-500/15 border border-red-500/25 text-red-300 hover:bg-red-500/25 disabled:opacity-40 transition-colors"
+                >
+                  Delete Background
+                </button>
+              )}
 
               {uploadMsg && (
                 <span className="text-[10px] text-emerald-400/80">

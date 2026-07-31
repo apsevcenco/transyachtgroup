@@ -70,3 +70,18 @@ export async function uploadPublicImage(
   if (error) throw error;
   return storage.getPublicUrl(path).data.publicUrl;
 }
+
+export async function deletePublicImage(urlValue: string): Promise<boolean> {
+  let url: URL;
+  try { url = new URL(urlValue); } catch { return false; }
+  const configuredUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  if (!configuredUrl || url.hostname !== new URL(configuredUrl).hostname) return false;
+  const marker = "/object/public/vehicle_images/";
+  const index = url.pathname.indexOf(marker);
+  if (index < 0) return false;
+  const path = decodeURIComponent(url.pathname.slice(index + marker.length));
+  if (!path || path.includes("..")) return false;
+  const { error } = await storageClient().storage.from("vehicle_images").remove([path]);
+  if (error) throw error;
+  return true;
+}

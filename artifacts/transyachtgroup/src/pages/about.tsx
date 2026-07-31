@@ -60,9 +60,12 @@ export default function About() {
   const aboutTitle = content.about_title || "About Us";
   const slogan = content.about_slogan || DEFAULT_SLOGAN;
   const text = content.about_text || DEFAULT_TEXT;
-  const aboutBackground =
-    (content.about_background || "").trim() ||
-    `${import.meta.env.BASE_URL}images/hero-bg.jpg`;
+  const aboutBackground = Object.prototype.hasOwnProperty.call(
+    content,
+    "about_background",
+  )
+    ? (content.about_background || "").trim()
+    : `${import.meta.env.BASE_URL}images/hero-bg.jpg`;
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
@@ -89,14 +92,14 @@ export default function About() {
               className="relative"
             >
               <div className="relative rounded-2xl overflow-hidden aspect-[4/3] lg:aspect-[3/4]">
-                <img
-                  src={aboutBackground}
-                  alt={strip(aboutTitle)}
-                  className="w-full h-full object-cover about-hero-img"
-                  style={{
-                    objectPosition: "50% 50%",
-                  }}
-                />
+                {aboutBackground && (
+                  <img
+                    src={aboutBackground}
+                    alt={strip(aboutTitle)}
+                    className="w-full h-full object-cover about-hero-img"
+                    style={{ objectPosition: "50% 50%" }}
+                  />
+                )}
                 <div className="absolute inset-0 about-hero-gradient-top" />
                 <div className="absolute inset-0 bg-gradient-to-r from-black/30 to-black/60" />
                 <div className="absolute inset-0 pointer-events-none about-hero-blur" />

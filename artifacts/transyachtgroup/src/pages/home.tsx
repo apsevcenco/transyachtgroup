@@ -88,6 +88,14 @@ export default function Home() {
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
   });
+  const contentBackground = (key: string, fallback: string): string =>
+    Object.prototype.hasOwnProperty.call(siteContent, key)
+      ? (siteContent[key] || "").trim()
+      : fallback;
+  const heroBackground = contentBackground(
+    "hero_background",
+    `${import.meta.env.BASE_URL}images/hero-bg.jpg`,
+  );
   const handleRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -147,40 +155,16 @@ export default function Home() {
           <div className="absolute inset-0 cinematic-vignette z-20" />
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="hero-bg-mask relative w-[95vw] h-[95vh] md:w-[90vw] md:h-[82vh] max-w-[1300px] max-h-[850px]">
-              {(siteContent.hero_background || "").trim() ? (
+              {heroBackground ? (
                 <img
-                  src={siteContent.hero_background.trim()}
+                  src={heroBackground}
                   alt=""
                   className="w-full h-full object-cover"
                   {...({ fetchpriority: "high" } as any)}
                   decoding="async"
                   style={{ objectPosition: "35% 50%" }}
                 />
-              ) : (
-                <picture>
-                  <source
-                    media="(max-width: 767px)"
-                    srcSet={`${import.meta.env.BASE_URL}images/hero-bg-mobile.webp`}
-                    type="image/webp"
-                  />
-                  <source
-                    media="(max-width: 767px)"
-                    srcSet={`${import.meta.env.BASE_URL}images/hero-bg-mobile.jpg`}
-                  />
-                  <source
-                    srcSet={`${import.meta.env.BASE_URL}images/hero-bg.webp`}
-                    type="image/webp"
-                  />
-                  <img
-                    src={`${import.meta.env.BASE_URL}images/hero-bg.jpg`}
-                    alt=""
-                    className="w-full h-full object-cover"
-                    {...({ fetchpriority: "high" } as any)}
-                    decoding="async"
-                    style={{ objectPosition: "35% 50%" }}
-                  />
-                </picture>
-              )}
+              ) : null}
             </div>
           </div>
           <div
@@ -263,9 +247,10 @@ export default function Home() {
                 "Curated fleet of exceptional superyachts, delivering unparalleled privacy and luxury on the open water.",
               link: t("view_collection"),
               route: "/yachts",
-              bg:
-                (siteContent.yacht_section_bg || "").trim() ||
+              bg: contentBackground(
+                "yacht_section_bg",
                 `${import.meta.env.BASE_URL}images/hero-bg.jpg`,
+              ),
               borderClass:
                 "border-b md:border-b-0 md:border-r border-white/[0.04]",
             },
@@ -279,9 +264,10 @@ export default function Home() {
                 "Elite automotive experiences without limits. Access the world's most sought-after hypercars and luxury vehicles.",
               link: t("view_collection"),
               route: "/cars",
-              bg:
-                (siteContent.car_section_bg || "").trim() ||
+              bg: contentBackground(
+                "car_section_bg",
                 `${import.meta.env.BASE_URL}images/hero-bg.jpg`,
+              ),
               borderClass: "",
             },
           ].map((cat) => (
@@ -298,7 +284,9 @@ export default function Home() {
               <div className="absolute inset-0 bg-gradient-to-t from-background/70 to-transparent z-10" />
               <div
                 className="absolute inset-0 bg-cover bg-center opacity-35 group-hover:scale-110 group-hover:opacity-45 transition-all duration-[1.5s] ease-out"
-                style={{ backgroundImage: `url('${cat.bg}')` }}
+                style={{
+                  backgroundImage: cat.bg ? `url('${cat.bg}')` : "none",
+                }}
               />
 
               <div className="relative z-20 h-full flex flex-col items-center justify-center text-center p-12 lg:p-28 min-h-[50vh]">

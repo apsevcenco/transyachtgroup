@@ -6,7 +6,7 @@ import {
   vehiclesTable,
   bookingsTable,
 } from "@workspace/db/schema";
-import { desc, eq, like } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { adminAuth } from "../middleware/auth";
 import {
   renderContractHtml,
@@ -15,6 +15,7 @@ import {
 import { renderPdf } from "../documents/pdf/generatePdf";
 import { stripHtml } from "../documents/builders/proposal";
 import { logger } from "../lib/logger";
+import { nextGlobalContractSequence } from "../lib/contractNumbers";
 import { createHash } from "node:crypto";
 
 const router: IRouter = Router();
@@ -55,6 +56,8 @@ interface ParsedContractRequest {
   renterEmail: string;
   pickupDate: string;
   returnDate: string;
+  pickupTime: string;
+  returnTime: string;
   pickupLocation: string;
   returnLocation: string;
   totalAmount: number;
@@ -66,6 +69,7 @@ interface ParsedContractRequest {
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const TIME = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 const CONTRACT_NUMBER = /^[A-Z0-9][A-Z0-9-]{0,49}$/;
 function isRealIsoDate(value: string): boolean {
   if (!ISO_DATE.test(value)) return false;
@@ -134,6 +138,8 @@ function parseContractRequest(
   const renterLicenceExpiry = str(b.renterLicenceExpiry);
   const pickupDate = str(b.pickupDate);
   const returnDate = str(b.returnDate);
+  const pickupTime = str(b.pickupTime);
+  const returnTime = str(b.returnTime);
   for (const [key, value] of [
     ["renterDob", renterDob],
     ["renterPassportExpiry", renterPassportExpiry],
@@ -144,7 +150,11 @@ function parseContractRequest(
     if (!isRealIsoDate(value))
       return { error: `${key} must be a real date in YYYY-MM-DD format` };
   }
-  if (returnDate < pickupDate)
+  if (!TIME.test(pickupTime))
+    return { error: "pickupTime must be a real time in HH:mm format" };
+  if (!TIME.test(returnTime))
+    return { error: "returnTime must be a real time in HH:mm format" };
+  if (`${returnDate}T${returnTime}` < `${pickupDate}T${pickupTime}`)
     return { error: "returnDate must not be before pickupDate" };
   if (renterPassportExpiry < returnDate)
     return { error: "renterPassportExpiry must cover the rental period" };
@@ -202,6 +212,8 @@ function parseContractRequest(
       renterEmail: requiredText.renterEmail,
       pickupDate,
       returnDate,
+      pickupTime,
+      returnTime,
       pickupLocation: requiredText.pickupLocation,
       returnLocation: requiredText.returnLocation,
       totalAmount,
@@ -236,14 +248,11 @@ async function nextContractNumber(dateKey: string): Promise<string> {
   const prefix = `TYG-${dateKey}-`;
   const rows = await db
     .select({ contractNumber: contractsTable.contractNumber })
-    .from(contractsTable)
-    .where(like(contractsTable.contractNumber, `${prefix}%`));
-  let maxSeq = 0;
-  for (const r of rows) {
-    const m = r.contractNumber.match(/-(\d{3})$/);
-    if (m) maxSeq = Math.max(maxSeq, parseInt(m[1], 10));
-  }
-  return `${prefix}${String(maxSeq + 1).padStart(3, "0")}`;
+    .from(contractsTable);
+  const sequence = nextGlobalContractSequence(
+    rows.map((row) => row.contractNumber),
+  );
+  return `${prefix}${String(sequence).padStart(3, "0")}`;
 }
 
 function isUniqueViolation(err: unknown): boolean {
@@ -276,6 +285,12 @@ router.post(
           throw new Error(`${key} must be a real date in YYYY-MM-DD format`);
         return value;
       };
+      const optionalTime = (key: string): string => {
+        const value = text(key, 5);
+        if (value && !TIME.test(value))
+          throw new Error(`${key} must be a real time in HH:mm format`);
+        return value;
+      };
       const optionalNumber = (key: string): number | null => {
         const value = numOrNull(body[key]);
         if (value == null) return null;
@@ -289,7 +304,14 @@ router.post(
 
       const pickupDate = optionalDate("pickupDate");
       const returnDate = optionalDate("returnDate");
-      if (pickupDate && returnDate && returnDate < pickupDate)
+      const pickupTime = optionalTime("pickupTime");
+      const returnTime = optionalTime("returnTime");
+      if (
+        pickupDate &&
+        returnDate &&
+        `${returnDate}T${returnTime || "23:59"}` <
+          `${pickupDate}T${pickupTime || "00:00"}`
+      )
         throw new Error("returnDate must not be before pickupDate");
 
       let vehicle: typeof vehiclesTable.$inferSelect | null = null;
@@ -336,6 +358,8 @@ router.post(
         },
         pickupDate,
         returnDate,
+        pickupTime,
+        returnTime,
         pickupLocation: text("pickupLocation"),
         returnLocation: text("returnLocation"),
         totalAmount: optionalNumber("totalAmount"),
@@ -424,6 +448,10 @@ router.post(
         if (booking.startDate !== data.pickupDate)
           mismatches.push("pickup date");
         if (booking.endDate !== data.returnDate) mismatches.push("return date");
+        if ((booking.startTime || "00:00") !== data.pickupTime)
+          mismatches.push("pickup time");
+        if ((booking.endTime || "23:59") !== data.returnTime)
+          mismatches.push("return time");
         if (
           normalized(booking.clientName || "") !== normalized(data.renterName)
         ) {
@@ -515,6 +543,8 @@ router.post(
           },
           pickupDate: data.pickupDate,
           returnDate: data.returnDate,
+          pickupTime: data.pickupTime,
+          returnTime: data.returnTime,
           pickupLocation: data.pickupLocation,
           returnLocation: data.returnLocation,
           totalAmount: data.totalAmount,

@@ -28,6 +28,8 @@ export interface ContractPrefill {
   renterEmail?: string;
   pickupDate?: string;
   returnDate?: string;
+  pickupTime?: string;
+  returnTime?: string;
   pickupLocation?: string;
   returnLocation?: string;
   totalAmount?: number | null;
@@ -49,6 +51,8 @@ export function buildContractPrefillFromBooking(
     renterEmail: booking.clientEmail || "",
     pickupDate: booking.startDate,
     returnDate: booking.endDate,
+    pickupTime: booking.startTime || "00:00",
+    returnTime: booking.endTime || "23:59",
     totalAmount: booking.totalAmount ?? null,
     depositAmount: booking.depositAmount ?? null,
     kmPerDay: booking.kmIncluded ?? null,
@@ -107,6 +111,8 @@ export function ContractGenerator({
 
   const [pickupDate, setPickupDate] = useState(prefill?.pickupDate || "");
   const [returnDate, setReturnDate] = useState(prefill?.returnDate || "");
+  const [pickupTime, setPickupTime] = useState(prefill?.pickupTime || "00:00");
+  const [returnTime, setReturnTime] = useState(prefill?.returnTime || "23:59");
   const [pickupLocation, setPickupLocation] = useState(
     prefill?.pickupLocation || "",
   );
@@ -195,6 +201,8 @@ export function ContractGenerator({
     if (p.renterEmail) setRenterEmail(p.renterEmail);
     if (p.pickupDate) setPickupDate(p.pickupDate);
     if (p.returnDate) setReturnDate(p.returnDate);
+    if (p.pickupTime) setPickupTime(p.pickupTime);
+    if (p.returnTime) setReturnTime(p.returnTime);
     if (p.pickupLocation) setPickupLocation(p.pickupLocation);
     if (p.returnLocation) setReturnLocation(p.returnLocation);
     if (p.totalAmount != null) setTotalAmount(numToStr(p.totalAmount));
@@ -245,6 +253,8 @@ export function ContractGenerator({
     !!renterEmail.trim() &&
     !!pickupDate &&
     !!returnDate &&
+    !!pickupTime &&
+    !!returnTime &&
     !!pickupLocation.trim() &&
     !!returnLocation.trim() &&
     totalAmount.trim() !== "" &&
@@ -252,8 +262,12 @@ export function ContractGenerator({
     kmPerDay.trim() !== "" &&
     extraKmPrice.trim() !== "" &&
     !!representativeName.trim() &&
-    returnDate >= pickupDate;
-  const oneOffFormValid = !pickupDate || !returnDate || returnDate >= pickupDate;
+    `${returnDate}T${returnTime}` >= `${pickupDate}T${pickupTime}`;
+  const oneOffFormValid =
+    !pickupDate ||
+    !returnDate ||
+    `${returnDate}T${returnTime || "23:59"}` >=
+      `${pickupDate}T${pickupTime || "00:00"}`;
   const canSubmit = oneOffMode ? oneOffFormValid : registeredFormValid;
 
   const handleGenerate = async () => {
@@ -279,6 +293,8 @@ export function ContractGenerator({
         renterEmail: renterEmail.trim(),
         pickupDate,
         returnDate,
+        pickupTime,
+        returnTime,
         pickupLocation: pickupLocation.trim(),
         returnLocation: returnLocation.trim(),
         representativeName: representativeName.trim(),
@@ -625,6 +641,26 @@ export function ContractGenerator({
                   type="date"
                   value={returnDate}
                   onChange={(e) => setReturnDate(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>Pick-up Time</label>
+                <input
+                  type="time"
+                  value={pickupTime}
+                  onChange={(e) => setPickupTime(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Return Time</label>
+                <input
+                  type="time"
+                  value={returnTime}
+                  onChange={(e) => setReturnTime(e.target.value)}
                   className={inputClass}
                 />
               </div>

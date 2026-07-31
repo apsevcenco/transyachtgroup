@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import rateLimit from "express-rate-limit";
 import { adminAuth } from "../middleware/auth";
-import { uploadPublicImage } from "../lib/privateStorage";
+import { deletePublicImage, uploadPublicImage } from "../lib/privateStorage";
 
 const router: IRouter = Router();
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 60, standardHeaders: "draft-8", legacyHeaders: false });
@@ -37,6 +37,19 @@ router.post("/admin/uploads/public-image", adminAuth, limiter, async (req, res) 
   } catch (err) {
     req.log?.error?.({ err }, "Public image upload failed");
     res.status(500).json({ error: "Failed to upload image" });
+  }
+});
+
+router.delete("/admin/uploads/public-image", adminAuth, limiter, async (req, res) => {
+  try {
+    const url = typeof req.body?.url === "string" ? req.body.url.trim() : "";
+    if (!url || url.length > 2000) {
+      res.status(400).json({ error: "A valid image URL is required" }); return;
+    }
+    res.json({ success: true, objectDeleted: await deletePublicImage(url) });
+  } catch (err) {
+    req.log?.error?.({ err }, "Public image deletion failed");
+    res.status(500).json({ error: "Failed to delete image" });
   }
 });
 
