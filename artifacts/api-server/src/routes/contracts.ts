@@ -285,6 +285,122 @@ function isUniqueViolation(err: unknown): boolean {
   );
 }
 
+/**
+ * Generates an unregistered PDF. This route deliberately has no idempotency,
+ * numbering or database writes: closing the response discards the contract.
+ */
+router.post(
+  "/admin/contracts/generate-once",
+  adminAuth,
+  contractLimiter,
+  async (req, res) => {
+    try {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const text = (key: string, max = 300): string => {
+        const value = str(body[key]);
+        if (value.length > max) throw new Error(`${key} is too long`);
+        return value;
+      };
+      const optionalDate = (key: string): string => {
+        const value = text(key, 10);
+        if (value && !isRealIsoDate(value))
+          throw new Error(`${key} must be a real date in YYYY-MM-DD format`);
+        return value;
+      };
+      const optionalNumber = (key: string): number | null => {
+        const value = numOrNull(body[key]);
+        if (value == null) return null;
+        if (value < 0) throw new Error(`${key} must be non-negative`);
+        return value;
+      };
+
+      const renterEmail = text("renterEmail", 200);
+      if (renterEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(renterEmail))
+        throw new Error("renterEmail must be a valid email address");
+
+      const pickupDate = optionalDate("pickupDate");
+      const returnDate = optionalDate("returnDate");
+      if (pickupDate && returnDate && returnDate < pickupDate)
+        throw new Error("returnDate must not be before pickupDate");
+
+      let vehicle: typeof vehiclesTable.$inferSelect | null = null;
+      if (body.vehicleId != null && body.vehicleId !== "") {
+        const vehicleId = Number(body.vehicleId);
+        if (!Number.isInteger(vehicleId) || vehicleId <= 0)
+          throw new Error("vehicleId must be a positive integer");
+        const rows = await db
+          .select()
+          .from(vehiclesTable)
+          .where(eq(vehiclesTable.id, vehicleId))
+          .limit(1);
+        vehicle = rows[0] ?? null;
+        if (!vehicle) {
+          res.status(404).json({ error: "Vehicle not found" });
+          return;
+        }
+      }
+
+      const specs = (vehicle?.specs as Record<string, string>) || {};
+      const contractInput: ContractInput = {
+        contractNumber: text("contractNumber", 100),
+        dateOfIssue: todayInParis().iso,
+        renter: {
+          name: text("renterName", 200),
+          dob: optionalDate("renterDob"),
+          pob: text("renterPob", 200),
+          nationality: text("renterNationality", 200),
+          passport: text("renterPassport", 200),
+          passportExpiry: optionalDate("renterPassportExpiry"),
+          licence: text("renterLicence", 200),
+          licenceExpiry: optionalDate("renterLicenceExpiry"),
+          licenceIssuedBy: text("renterLicenceIssuedBy", 200),
+          phone: text("renterPhone", 200),
+          email: renterEmail,
+        },
+        vehicle: {
+          name: vehicle ? stripHtml(vehicle.name) : "",
+          category: stripHtml(specs.bodyType),
+          plate: stripHtml(specs.registrationPlate),
+          vin: stripHtml(specs.vin),
+          fuelType: stripHtml(specs.fuelType),
+          colour: stripHtml(specs.colour),
+        },
+        pickupDate,
+        returnDate,
+        pickupLocation: text("pickupLocation"),
+        returnLocation: text("returnLocation"),
+        totalAmount: optionalNumber("totalAmount"),
+        depositAmount: optionalNumber("depositAmount"),
+        kmPerDay: optionalNumber("kmPerDay"),
+        extraKmPrice: optionalNumber("extraKmPrice"),
+        representativeName: text("representativeName", 200),
+      };
+
+      const buffer = await renderPdf(renderContractHtml(contractInput), {
+        scale: 1,
+        layoutGuard: { selector: ".ctr-page", expectedElements: 2 },
+      });
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="one-off-contract.pdf"',
+      );
+      res.setHeader("Content-Length", buffer.length);
+      res.send(buffer);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const inputError = /must be|is too long|non-negative/.test(msg);
+      logger.error({ err: msg }, "one-off contract PDF error");
+      res.status(inputError ? 400 : 500).json({
+        error: inputError
+          ? msg
+          : "Failed to generate one-off contract PDF",
+        detail: inputError ? undefined : msg,
+      });
+    }
+  },
+);
+
 router.post(
   "/admin/contracts/generate",
   adminAuth,

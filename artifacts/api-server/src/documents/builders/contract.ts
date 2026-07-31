@@ -54,10 +54,10 @@ export interface ContractInput {
   returnDate: string; // ISO date
   pickupLocation: string;
   returnLocation: string;
-  totalAmount: number;
-  depositAmount: number;
-  kmPerDay: number;
-  extraKmPrice: number;
+  totalAmount: number | null;
+  depositAmount: number | null;
+  kmPerDay: number | null;
+  extraKmPrice: number | null;
   representativeName: string;
 }
 
@@ -135,14 +135,17 @@ function formatDateShort(iso: string | undefined): string {
 }
 
 /** Inclusive day count — matches totalDaysInclusive() in routes/bookings.ts. */
-function daysInclusive(start: string, end: string): number {
+function daysInclusive(start: string, end: string): number | null {
+  if (!start || !end) return null;
   const s = new Date(start + "T00:00:00");
   const e = new Date(end + "T00:00:00");
+  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return null;
   const days = Math.round((e.getTime() - s.getTime()) / 86400000) + 1;
   return Math.max(1, days);
 }
 
-function fmtEur(n: number): string {
+function fmtEur(n: number | null): string {
+  if (n == null) return "—";
   return `€ ${n.toLocaleString("en-GB", { maximumFractionDigits: 2 })}`;
 }
 
@@ -154,8 +157,12 @@ export function renderContractHtml(input: ContractInput): string {
   const dateOfIssue =
     input.dateOfIssue || new Date().toISOString().slice(0, 10);
   const days = daysInclusive(input.pickupDate, input.returnDate);
-  const agreedMileage = input.kmPerDay * days;
-  const totalDue = input.totalAmount + input.depositAmount;
+  const agreedMileage =
+    input.kmPerDay == null || days == null ? null : input.kmPerDay * days;
+  const totalDue =
+    input.totalAmount == null || input.depositAmount == null
+      ? null
+      : input.totalAmount + input.depositAmount;
   const vehicleName = stripHtml(input.vehicle.name);
 
   const HEAD = `'Porter FT', 'Wix MadeFor Display', -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`;
@@ -322,12 +329,17 @@ export function renderContractHtml(input: ContractInput): string {
       "Return",
       `${esc(formatDate(input.returnDate))} — ${esc(input.returnLocation)}`,
     ) +
-    kv("Total Days", `${days} day${days === 1 ? "" : "s"}`) +
+    kv("Total Days", days == null ? "—" : `${days} day${days === 1 ? "" : "s"}`) +
     kv(
       "Agreed Mileage",
-      `${agreedMileage.toLocaleString("en-GB")} km (${input.kmPerDay} km/day × ${days} day${days === 1 ? "" : "s"})`,
+      agreedMileage == null
+        ? "—"
+        : `${agreedMileage.toLocaleString("en-GB")} km (${input.kmPerDay} km/day × ${days} day${days === 1 ? "" : "s"})`,
     ) +
-    kv("Excess Mileage Rate", `${fmtEur(input.extraKmPrice)} / km`) +
+    kv(
+      "Excess Mileage Rate",
+      input.extraKmPrice == null ? "—" : `${fmtEur(input.extraKmPrice)} / km`,
+    ) +
     `</tbody></table>` +
     `</div>`;
 
@@ -337,7 +349,7 @@ export function renderContractHtml(input: ContractInput): string {
     `<table class="ctr-charges">` +
     `<thead><tr><th>Item</th><th>Period</th><th class="ctr-ta-r">Amount</th></tr></thead>` +
     `<tbody>` +
-    `<tr><td>Vehicle Rental</td><td>${esc(formatDateShort(input.pickupDate))} → ${esc(formatDateShort(input.returnDate))} (${days} day${days === 1 ? "" : "s"})</td><td class="ctr-ta-r">${esc(fmtEur(input.totalAmount))}</td></tr>` +
+    `<tr><td>Vehicle Rental</td><td>${esc(formatDateShort(input.pickupDate))} → ${esc(formatDateShort(input.returnDate))}${days == null ? "" : ` (${days} day${days === 1 ? "" : "s"})`}</td><td class="ctr-ta-r">${esc(fmtEur(input.totalAmount))}</td></tr>` +
     `<tr><td>Excess Mileage</td><td>Billed after return — per km over agreed allowance</td><td class="ctr-ta-r">TBD</td></tr>` +
     `<tr><td>Insurance</td><td>Included in rental</td><td class="ctr-ta-r">Included</td></tr>` +
     `<tr><td>Security Deposit (Refundable)</td><td>Held for duration of rental</td><td class="ctr-ta-r">${esc(fmtEur(input.depositAmount))}</td></tr>` +

@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { ChevronDown, FileDown, Loader2 } from "lucide-react";
+import { ChevronDown, FileDown, Loader2, Unlink } from "lucide-react";
 import {
   fetchVehicles,
   fetchBooking,
   generateContract,
+  generateOneOffContract,
   type Booking,
   type ContractGenerateRequest,
 } from "@/lib/api";
@@ -125,6 +126,8 @@ export function ContractGenerator({
   );
 
   const [representativeName, setRepresentativeName] = useState("");
+  const [oneOffMode, setOneOffMode] = useState(false);
+  const [manualContractNumber, setManualContractNumber] = useState("");
   const [editContractNumber, setEditContractNumber] = useState(
     prefill?.editContractNumber || "",
   );
@@ -227,7 +230,7 @@ export function ContractGenerator({
     }
   };
 
-  const canSubmit =
+  const registeredFormValid =
     !!vehicleId &&
     !!renterName.trim() &&
     !!renterDob &&
@@ -250,18 +253,19 @@ export function ContractGenerator({
     extraKmPrice.trim() !== "" &&
     !!representativeName.trim() &&
     returnDate >= pickupDate;
+  const oneOffFormValid = !pickupDate || !returnDate || returnDate >= pickupDate;
+  const canSubmit = oneOffMode ? oneOffFormValid : registeredFormValid;
 
   const handleGenerate = async () => {
-    if (!canSubmit || !vehicleId) return;
+    if (!canSubmit || (!oneOffMode && !vehicleId)) return;
     setGenerating(true);
     setError("");
     setSuccess("");
     try {
-      const payload = {
+      const commonPayload = {
         bookingId: bookingIdInput.trim()
           ? parseInt(bookingIdInput.trim(), 10)
           : undefined,
-        vehicleId,
         renterName: renterName.trim(),
         renterDob,
         renterPob: renterPob.trim(),
@@ -277,12 +281,44 @@ export function ContractGenerator({
         returnDate,
         pickupLocation: pickupLocation.trim(),
         returnLocation: returnLocation.trim(),
+        representativeName: representativeName.trim(),
+      };
+      if (oneOffMode) {
+        const blob = await generateOneOffContract({
+          ...commonPayload,
+          contractNumber: manualContractNumber.trim(),
+          vehicleId: vehicleId ?? undefined,
+          totalAmount: totalAmount.trim() ? strToNum(totalAmount) : undefined,
+          depositAmount: depositAmount.trim()
+            ? strToNum(depositAmount)
+            : undefined,
+          kmPerDay: kmPerDay.trim() ? strToNum(kmPerDay) : undefined,
+          extraKmPrice: extraKmPrice.trim()
+            ? strToNum(extraKmPrice)
+            : undefined,
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        const safeNumber =
+          manualContractNumber.trim().replace(/[^\w-]+/g, "-") || "one-off";
+        a.download = `contract-${safeNumber}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setSuccess("One-off PDF generated. It was not saved or registered.");
+        return;
+      }
+
+      const payload = {
+        ...commonPayload,
+        vehicleId: vehicleId!,
         totalAmount: strToNum(totalAmount),
         depositAmount: strToNum(depositAmount),
         kmPerDay: strToNum(kmPerDay),
         extraKmPrice: strToNum(extraKmPrice),
         editContractNumber: editContractNumber || undefined,
-        representativeName: representativeName.trim(),
       };
       const fingerprint = JSON.stringify(payload);
       if (
@@ -331,33 +367,74 @@ export function ContractGenerator({
         <h2 className="font-serif text-xl text-white">
           Rental Agreement Generator
         </h2>
+        <button
+          type="button"
+          onClick={() => {
+            setOneOffMode((value) => !value);
+            setError("");
+            setSuccess("");
+          }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-[11px] uppercase tracking-wide border transition-colors ${
+            oneOffMode
+              ? "border-gold/50 bg-gold/10 text-gold"
+              : "border-white/10 text-white/60 hover:text-white"
+          }`}
+        >
+          <Unlink size={14} />
+          {oneOffMode ? "Return to Registered" : "One-off Contract"}
+        </button>
       </div>
+
+      {oneOffMode && (
+        <div className="bg-gold/[0.08] border border-gold/25 rounded-lg p-4 mb-6">
+          <p className="text-gold text-xs font-medium mb-1">One-off mode</p>
+          <p className="text-white/55 text-xs leading-relaxed">
+            No automatic number, booking link, registration or database save.
+            All fields are optional; only the PDF is downloaded.
+          </p>
+        </div>
+      )}
 
       {/* Pre-fill from booking */}
-      <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-4 mb-6">
-        <p className={sectionLabelClass}>Pre-fill from Booking (optional)</p>
-        <div className="flex gap-2">
-          <input
-            type="number"
-            value={bookingIdInput}
-            onChange={(e) => setBookingIdInput(e.target.value)}
-            placeholder="Booking ID"
-            className={inputClass}
-          />
-          <button
-            onClick={handleLoadBooking}
-            disabled={bookingLoading}
-            className="shrink-0 px-4 py-2 rounded-md text-[11px] uppercase tracking-wide border border-white/10 text-white/60 hover:text-white/80 hover:border-white/20 transition-colors disabled:opacity-50"
-          >
-            {bookingLoading ? "Loading…" : "Load"}
-          </button>
+      {!oneOffMode && (
+        <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-4 mb-6">
+          <p className={sectionLabelClass}>Pre-fill from Booking (optional)</p>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              value={bookingIdInput}
+              onChange={(e) => setBookingIdInput(e.target.value)}
+              placeholder="Booking ID"
+              className={inputClass}
+            />
+            <button
+              onClick={handleLoadBooking}
+              disabled={bookingLoading}
+              className="shrink-0 px-4 py-2 rounded-md text-[11px] uppercase tracking-wide border border-white/10 text-white/60 hover:text-white/80 hover:border-white/20 transition-colors disabled:opacity-50"
+            >
+              {bookingLoading ? "Loading…" : "Load"}
+            </button>
+          </div>
+          {bookingLookupError && (
+            <p className="text-red-400 text-xs mt-2">{bookingLookupError}</p>
+          )}
         </div>
-        {bookingLookupError && (
-          <p className="text-red-400 text-xs mt-2">{bookingLookupError}</p>
-        )}
-      </div>
+      )}
 
       <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-6 space-y-5">
+        {oneOffMode && (
+          <div>
+            <label className={labelClass}>Contract Number (optional)</label>
+            <input
+              type="text"
+              value={manualContractNumber}
+              onChange={(e) => setManualContractNumber(e.target.value)}
+              className={inputClass}
+              placeholder="Enter any contract number"
+              maxLength={100}
+            />
+          </div>
+        )}
         {/* Vehicle selector */}
         <div>
           <label className={labelClass}>Vehicle</label>
@@ -649,12 +726,16 @@ export function ContractGenerator({
               <FileDown size={14} />
             )}
             {generating
-              ? editContractNumber
-                ? "Updating…"
-                : "Generating…"
-              : editContractNumber
-                ? `Update ${editContractNumber}`
-                : "Generate Contract"}
+              ? oneOffMode
+                ? "Generating PDF…"
+                : editContractNumber
+                  ? "Updating…"
+                  : "Generating…"
+              : oneOffMode
+                ? "Generate One-off PDF"
+                : editContractNumber
+                  ? `Update ${editContractNumber}`
+                  : "Generate Contract"}
           </button>
         </div>
       </div>

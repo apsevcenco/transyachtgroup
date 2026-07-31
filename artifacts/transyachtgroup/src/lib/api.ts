@@ -694,6 +694,30 @@ export async function generateContract(
   return res.blob();
 }
 
+export type OneOffContractGenerateRequest = Partial<
+  Omit<ContractGenerateRequest, "requestId" | "bookingId" | "editContractNumber">
+> & {
+  contractNumber?: string;
+};
+
+/** Generates a PDF without numbering, registering or saving a contract. */
+export async function generateOneOffContract(
+  req: OneOffContractGenerateRequest,
+): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/admin/contracts/generate-once`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const message =
+      data.error || `Failed to generate one-off contract (${res.status})`;
+    throw new Error(data.detail ? `${message}: ${data.detail}` : message);
+  }
+  return res.blob();
+}
+
 export interface StoredContract {
   contractNumber: string;
   issuedAt: string | null;
