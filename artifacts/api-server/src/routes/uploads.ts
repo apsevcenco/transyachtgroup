@@ -42,7 +42,13 @@ router.post("/admin/uploads/public-image", adminAuth, limiter, async (req, res) 
     res.status(201).json({ url });
   } catch (err) {
     req.log?.error?.({ err }, "Public image upload failed");
-    res.status(500).json({ error: "Failed to upload image" });
+    const storageMessage =
+      err instanceof Error && err.message
+        ? err.message.slice(0, 240)
+        : "Unknown storage error";
+    res.status(500).json({
+      error: `Storage rejected image upload: ${storageMessage}`,
+    });
   }
 });
 

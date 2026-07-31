@@ -48,7 +48,9 @@ export async function uploadBookingPhoto(buffer: Buffer, contentType: string): P
   const { error } = await storageClient().storage.from(BOOKING_PHOTO_BUCKET).upload(path, buffer, {
     contentType,
     upsert: false,
-    cacheControl: "private, max-age=3600",
+    // Supabase expects only the max-age value here, not a full Cache-Control
+    // header. It adds the header syntax itself.
+    cacheControl: "3600",
   });
   if (error) throw error;
   return { path, signedUrl: await signedBookingPhoto(path) };
@@ -65,7 +67,7 @@ export async function uploadPublicImage(
   const { error } = await storage.upload(path, buffer, {
     contentType,
     upsert: false,
-    cacheControl: "public, max-age=31536000, immutable",
+    cacheControl: "31536000",
   });
   if (error) throw error;
   return storage.getPublicUrl(path).data.publicUrl;
