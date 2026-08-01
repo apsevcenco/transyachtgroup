@@ -50,6 +50,37 @@ export interface ImageValidationResult {
   rejected: { url: string; reason: string }[];
 }
 
+const FIRST_PARTY_PDF_IMAGE_HOSTS = [
+  "transyachtgroup.com",
+  "www.transyachtgroup.com",
+] as const;
+
+function pdfImageHostAllowlist(): Set<string> | undefined {
+  const configuredHosts = (process.env.PDF_IMAGE_HOSTS || "")
+    .split(",")
+    .map((host) => host.trim().toLowerCase())
+    .filter(Boolean);
+
+  const hosts = new Set<string>([
+    ...FIRST_PARTY_PDF_IMAGE_HOSTS,
+    ...configuredHosts,
+  ]);
+  const supabaseUrl =
+    process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  if (supabaseUrl) {
+    try {
+      hosts.add(new URL(supabaseUrl).hostname.toLowerCase());
+    } catch {
+      // Invalid Supabase configuration is reported by the storage path that
+      // uses it; it must not disable the rest of the PDF image allowlist.
+    }
+  }
+
+  return hosts.size || process.env.NODE_ENV === "production"
+    ? hosts
+    : undefined;
+}
+
 /**
  * Probe each https image URL so a broken/unreachable photo never reaches the
  * PDF as a "broken image" icon. A lightweight ranged GET (`bytes=0-0`) confirms
@@ -64,6 +95,7 @@ export async function validateImageUrls(
   urls: string[],
   timeoutMs = 6000,
 ): Promise<ImageValidationResult> {
+  const hostAllowlist = pdfImageHostAllowlist();
   // Probe in parallel but collect per-index so both `valid` and `rejected`
   // stay in the original input order regardless of which probe settles first.
   const reasons = await Promise.all(
@@ -72,15 +104,6 @@ export async function validateImageUrls(
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), timeoutMs);
       try {
-        const configuredHosts = (process.env.PDF_IMAGE_HOSTS || "")
-          .split(",").map((host) => host.trim().toLowerCase()).filter(Boolean);
-        const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-        if (supabaseUrl) {
-          try { configuredHosts.push(new URL(supabaseUrl).hostname.toLowerCase()); } catch { /* invalid config is handled elsewhere */ }
-        }
-        const hostAllowlist = configuredHosts.length || process.env.NODE_ENV === "production"
-          ? new Set(configuredHosts)
-          : undefined;
         const res = await safeRemoteFetch(url, {
           method: "GET",
           signal: ctrl.signal,
