@@ -239,7 +239,7 @@
   }
 
   .cinematic-vignette {
-    box-shadow: inset 0 0 110px 34px rgba(0,0,0,0.52);
+    box-shadow: inset 0 0 150px 60px rgba(0,0,0,0.7);
   }
 
   .gold-line {
@@ -313,14 +313,14 @@
 }
 
 .hero-bg-mask {
-  mask-image: radial-gradient(ellipse 94% 82% at 50% 48%, black 54%, transparent 92%);
-  -webkit-mask-image: radial-gradient(ellipse 94% 82% at 50% 48%, black 54%, transparent 92%);
+  mask-image: radial-gradient(ellipse 74% 64% at 50% 43%, black 30%, transparent 72%);
+  -webkit-mask-image: radial-gradient(ellipse 74% 64% at 50% 43%, black 30%, transparent 72%);
 }
 
 @media (max-width: 767px) {
   .hero-bg-mask {
-    mask-image: radial-gradient(ellipse 98% 78% at 50% 48%, black 48%, transparent 94%);
-    -webkit-mask-image: radial-gradient(ellipse 98% 78% at 50% 48%, black 48%, transparent 94%);
+    mask-image: radial-gradient(ellipse 79% 64% at 50% 43%, black 30%, transparent 72%);
+    -webkit-mask-image: radial-gradient(ellipse 79% 64% at 50% 43%, black 30%, transparent 72%);
   }
 }
 
