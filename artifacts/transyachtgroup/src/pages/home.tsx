@@ -151,18 +151,18 @@ export default function Home() {
       {/* HERO */}
       <section className="relative h-screen w-full flex items-center justify-center overflow-hidden">
         <motion.div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/30 to-background z-10" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/10 to-background z-10" />
           <div className="absolute inset-0 cinematic-vignette z-20" />
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="hero-bg-mask relative w-[95vw] h-[95vh] md:w-[90vw] md:h-[82vh] max-w-[1300px] max-h-[850px]">
+            <div className="hero-bg-mask relative w-screen h-[92vh] md:w-[96vw] md:h-[90vh] max-w-[1600px] max-h-[950px]">
               {heroBackground ? (
                 <img
                   src={heroBackground}
                   alt=""
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                   {...({ fetchpriority: "high" } as any)}
                   decoding="async"
-                  style={{ objectPosition: "35% 50%" }}
+                  style={{ objectPosition: "50% 50%" }}
                 />
               ) : null}
             </div>
