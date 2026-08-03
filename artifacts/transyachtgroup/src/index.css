@@ -313,14 +313,14 @@
 }
 
 .hero-bg-mask {
-  mask-image: radial-gradient(ellipse 74% 64% at 50% 43%, black 30%, transparent 72%);
-  -webkit-mask-image: radial-gradient(ellipse 74% 64% at 50% 43%, black 30%, transparent 72%);
+  mask-image: radial-gradient(ellipse 72% 62% at 50% 42%, black 30%, transparent 72%);
+  -webkit-mask-image: radial-gradient(ellipse 72% 62% at 50% 42%, black 30%, transparent 72%);
 }
 
 @media (max-width: 767px) {
   .hero-bg-mask {
-    mask-image: radial-gradient(ellipse 79% 64% at 50% 43%, black 30%, transparent 72%);
-    -webkit-mask-image: radial-gradient(ellipse 79% 64% at 50% 43%, black 30%, transparent 72%);
+    mask-image: radial-gradient(ellipse 77% 62% at 50% 42%, black 30%, transparent 72%);
+    -webkit-mask-image: radial-gradient(ellipse 77% 62% at 50% 42%, black 30%, transparent 72%);
   }
 }
 

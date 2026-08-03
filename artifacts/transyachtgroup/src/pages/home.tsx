@@ -162,7 +162,7 @@ export default function Home() {
                   className="w-full h-full object-cover"
                   {...({ fetchpriority: "high" } as any)}
                   decoding="async"
-                  style={{ objectPosition: "35% 46%" }}
+                  style={{ objectPosition: "35% 42%" }}
                 />
               ) : null}
             </div>
