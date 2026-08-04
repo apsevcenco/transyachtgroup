@@ -61,6 +61,7 @@ interface ParsedContractRequest {
   pickupLocation: string;
   returnLocation: string;
   totalAmount: number;
+  deliveryCost: number;
   depositAmount: number;
   kmPerDay: number;
   extraKmPrice: number;
@@ -162,11 +163,14 @@ function parseContractRequest(
     return { error: "renterLicenceExpiry must cover the rental period" };
 
   const totalAmount = numOrNull(b.totalAmount);
+  const deliveryCost = numOrNull(b.deliveryCost) ?? 0;
   const depositAmount = numOrNull(b.depositAmount);
   const kmPerDay = numOrNull(b.kmPerDay);
   const extraKmPrice = numOrNull(b.extraKmPrice);
   if (totalAmount == null || totalAmount < 0)
     return { error: "totalAmount must be a non-negative number" };
+  if (deliveryCost < 0)
+    return { error: "deliveryCost must be a non-negative number" };
   if (depositAmount == null || depositAmount < 0)
     return { error: "depositAmount must be a non-negative number" };
   if (kmPerDay == null || kmPerDay < 0)
@@ -217,6 +221,7 @@ function parseContractRequest(
       pickupLocation: requiredText.pickupLocation,
       returnLocation: requiredText.returnLocation,
       totalAmount,
+      deliveryCost,
       depositAmount,
       kmPerDay,
       extraKmPrice,
@@ -363,6 +368,7 @@ router.post(
         pickupLocation: text("pickupLocation"),
         returnLocation: text("returnLocation"),
         totalAmount: optionalNumber("totalAmount"),
+        deliveryCost: optionalNumber("deliveryCost"),
         depositAmount: optionalNumber("depositAmount"),
         kmPerDay: optionalNumber("kmPerDay"),
         extraKmPrice: optionalNumber("extraKmPrice"),
@@ -548,6 +554,7 @@ router.post(
           pickupLocation: data.pickupLocation,
           returnLocation: data.returnLocation,
           totalAmount: data.totalAmount,
+          deliveryCost: data.deliveryCost,
           depositAmount: data.depositAmount,
           kmPerDay: data.kmPerDay,
           extraKmPrice: data.extraKmPrice,
@@ -588,7 +595,7 @@ router.post(
             snapshot: contractInput,
             pdfSha256,
             pdfBase64: buffer.toString("base64"),
-            templateVersion: "contract-v2-two-page",
+            templateVersion: "contract-v3-delivery-two-page",
             issuedAt: new Date(),
           };
           const [row] = data.editContractNumber

@@ -16,6 +16,11 @@ function commissionAmount(r: RentalHistoryRecord): number {
   return (r.totalAmount * r.agentCommissionPercent) / 100;
 }
 
+function customerTotal(r: RentalHistoryRecord): number | null {
+  if (r.totalAmount == null && r.deliveryCost == null) return null;
+  return (r.totalAmount ?? 0) + (r.deliveryCost ?? 0);
+}
+
 export function CrmDashboard() {
   const [vehicles, setVehicles] = useState<VehicleLite[]>([]);
   const [rentals, setRentals] = useState<RentalHistoryRecord[]>([]);
@@ -68,7 +73,7 @@ export function CrmDashboard() {
   }, [load]);
 
   const stats = useMemo(() => {
-    const totalRevenue = rentals.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
+    const totalRevenue = rentals.reduce((sum, r) => sum + (customerTotal(r) ?? 0), 0);
     const totalDaysRented = rentals.reduce((sum, r) => sum + r.totalDays, 0);
     const totalCommissionPaid = rentals.reduce((sum, r) => sum + commissionAmount(r), 0);
     const counts = new Map<string, number>();
@@ -274,7 +279,7 @@ export function CrmDashboard() {
                     {r.startDate} → {r.endDate} · {r.totalDays}d
                   </p>
                 </div>
-                <p className="text-sm text-gold shrink-0">{formatMoney(r.totalAmount)}</p>
+                <p className="text-sm text-gold shrink-0">{formatMoney(customerTotal(r))}</p>
                 <span
                   role="button"
                   onClick={(e) => {
@@ -321,7 +326,7 @@ export function CrmDashboard() {
                       {r.startDate} → {r.endDate}
                     </td>
                     <td className="px-3 py-2 text-white/70">{r.totalDays}</td>
-                    <td className="px-3 py-2 text-gold">{formatMoney(r.totalAmount)}</td>
+                    <td className="px-3 py-2 text-gold">{formatMoney(customerTotal(r))}</td>
                     <td className="px-3 py-2 text-right">
                       <button
                         onClick={(e) => {
@@ -437,7 +442,9 @@ function RentalDetailModal({
 
           <div>
             <p className="text-[10px] uppercase tracking-[0.2em] text-gold/60 font-medium mb-1">Financials</p>
-            <DetailRow label="Total amount" value={formatMoney(rental.totalAmount)} />
+            <DetailRow label="Vehicle rental" value={formatMoney(rental.totalAmount)} />
+            <DetailRow label="Vehicle delivery" value={formatMoney(rental.deliveryCost)} />
+            <DetailRow label="Total amount" value={formatMoney(customerTotal(rental))} />
             <DetailRow label="Deposit" value={formatMoney(rental.depositAmount)} />
             <DetailRow label="VAT" value={rental.vatPercent != null ? `${rental.vatPercent}%` : null} />
             <DetailRow

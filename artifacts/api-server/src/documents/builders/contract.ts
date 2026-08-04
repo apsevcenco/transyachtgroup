@@ -53,6 +53,7 @@ export interface ContractInput {
   pickupLocation: string;
   returnLocation: string;
   totalAmount: number | null;
+  deliveryCost: number | null;
   depositAmount: number | null;
   kmPerDay: number | null;
   extraKmPrice: number | null;
@@ -161,7 +162,7 @@ export function renderContractHtml(input: ContractInput): string {
   const totalDue =
     input.totalAmount == null || input.depositAmount == null
       ? null
-      : input.totalAmount + input.depositAmount;
+      : input.totalAmount + (input.deliveryCost ?? 0) + input.depositAmount;
   const vehicleName = stripHtml(input.vehicle.name);
 
   const HEAD = `'Porter FT', 'Wix MadeFor Display', -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`;
@@ -350,6 +351,7 @@ export function renderContractHtml(input: ContractInput): string {
     `<thead><tr><th>Item</th><th>Period</th><th class="ctr-ta-r">Amount</th></tr></thead>` +
     `<tbody>` +
     `<tr><td>Vehicle Rental</td><td>${esc(formatDateShort(input.pickupDate))} → ${esc(formatDateShort(input.returnDate))}${days == null ? "" : ` (${days} day${days === 1 ? "" : "s"})`}</td><td class="ctr-ta-r">${esc(fmtEur(input.totalAmount))}</td></tr>` +
+    `<tr><td>Vehicle Delivery</td><td>Delivery to the agreed pick-up location</td><td class="ctr-ta-r">${esc(fmtEur(input.deliveryCost ?? 0))}</td></tr>` +
     `<tr><td>Excess Mileage</td><td>Billed after return — per km over agreed allowance</td><td class="ctr-ta-r">TBD</td></tr>` +
     `<tr><td>Insurance</td><td>Included in rental</td><td class="ctr-ta-r">Included</td></tr>` +
     `<tr><td>Security Deposit (Refundable)</td><td>Held for duration of rental</td><td class="ctr-ta-r">${esc(fmtEur(input.depositAmount))}</td></tr>` +
@@ -408,7 +410,7 @@ export function renderContractHtml(input: ContractInput): string {
     `<div class="ctr-payment">` +
     `<div class="ctr-payment-h">Payment Confirmation</div>` +
     `<div class="ctr-payment-body">` +
-    `This confirms receipt of the total rental amount and security deposit detailed in Section D above.` +
+    `This confirms receipt of the total charges and security deposit detailed in Section D above.` +
     `<div class="ctr-payment-row">` +
     `<div class="ctr-payment-field"><div class="ctr-payment-l">Amount Received</div><div class="ctr-payment-blank"></div></div>` +
     `<div class="ctr-payment-field"><div class="ctr-payment-l">Method (Cash / Card / Transfer)</div><div class="ctr-payment-blank"></div></div>` +

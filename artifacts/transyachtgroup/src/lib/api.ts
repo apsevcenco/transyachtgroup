@@ -716,6 +716,7 @@ export interface ContractGenerateRequest {
   pickupLocation: string;
   returnLocation: string;
   totalAmount: number;
+  deliveryCost: number;
   depositAmount: number;
   kmPerDay: number;
   extraKmPrice: number;
@@ -791,6 +792,7 @@ export interface StoredContract {
     pickupLocation?: string;
     returnLocation?: string;
     totalAmount?: number;
+    deliveryCost?: number;
     depositAmount?: number;
     kmPerDay?: number;
     extraKmPrice?: number;

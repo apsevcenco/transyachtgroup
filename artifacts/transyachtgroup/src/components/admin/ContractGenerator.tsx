@@ -33,6 +33,7 @@ export interface ContractPrefill {
   pickupLocation?: string;
   returnLocation?: string;
   totalAmount?: number | null;
+  deliveryCost?: number | null;
   depositAmount?: number | null;
   kmPerDay?: number | null;
   extraKmPrice?: number | null;
@@ -54,6 +55,7 @@ export function buildContractPrefillFromBooking(
     pickupTime: booking.startTime || "00:00",
     returnTime: booking.endTime || "23:59",
     totalAmount: booking.totalAmount ?? null,
+    deliveryCost: booking.deliveryCost ?? null,
     depositAmount: booking.depositAmount ?? null,
     kmPerDay: booking.kmIncluded ?? null,
     extraKmPrice: booking.pricePerExtraKm ?? null,
@@ -122,6 +124,9 @@ export function ContractGenerator({
 
   const [totalAmount, setTotalAmount] = useState(
     numToStr(prefill?.totalAmount),
+  );
+  const [deliveryCost, setDeliveryCost] = useState(
+    numToStr(prefill?.deliveryCost),
   );
   const [depositAmount, setDepositAmount] = useState(
     numToStr(prefill?.depositAmount),
@@ -206,6 +211,7 @@ export function ContractGenerator({
     if (p.pickupLocation) setPickupLocation(p.pickupLocation);
     if (p.returnLocation) setReturnLocation(p.returnLocation);
     if (p.totalAmount != null) setTotalAmount(numToStr(p.totalAmount));
+    if (p.deliveryCost != null) setDeliveryCost(numToStr(p.deliveryCost));
     if (p.depositAmount != null) setDepositAmount(numToStr(p.depositAmount));
     if (p.kmPerDay != null) setKmPerDay(numToStr(p.kmPerDay));
     if (p.extraKmPrice != null) setExtraKmPrice(numToStr(p.extraKmPrice));
@@ -305,6 +311,9 @@ export function ContractGenerator({
           contractNumber: manualContractNumber.trim(),
           vehicleId: vehicleId ?? undefined,
           totalAmount: totalAmount.trim() ? strToNum(totalAmount) : undefined,
+          deliveryCost: deliveryCost.trim()
+            ? strToNum(deliveryCost)
+            : undefined,
           depositAmount: depositAmount.trim()
             ? strToNum(depositAmount)
             : undefined,
@@ -331,6 +340,7 @@ export function ContractGenerator({
         ...commonPayload,
         vehicleId: vehicleId!,
         totalAmount: strToNum(totalAmount),
+        deliveryCost: deliveryCost.trim() ? strToNum(deliveryCost) : 0,
         depositAmount: strToNum(depositAmount),
         kmPerDay: strToNum(kmPerDay),
         extraKmPrice: strToNum(extraKmPrice),
@@ -694,11 +704,20 @@ export function ContractGenerator({
           <p className={sectionLabelClass}>Financials</p>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelClass}>Total Amount (€)</label>
+              <label className={labelClass}>Vehicle Rental (€)</label>
               <input
                 type="number"
                 value={totalAmount}
                 onChange={(e) => setTotalAmount(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Vehicle Delivery (€)</label>
+              <input
+                type="number"
+                value={deliveryCost}
+                onChange={(e) => setDeliveryCost(e.target.value)}
                 className={inputClass}
               />
             </div>

@@ -455,7 +455,7 @@ function CarBookingFormModal({
   const isOwnVehicle = (selectedVehicle?.ownership || "own") === "own";
 
   const calc = useMemo(() => {
-    const total = strToNum(totalAmount) ?? 0;
+    const rentalTotal = strToNum(totalAmount) ?? 0;
     const deposit = strToNum(depositAmount) ?? 0;
     const vat = strToNum(vatPercent) ?? 0;
     const commission = strToNum(agentCommissionPercent) ?? 0;
@@ -471,16 +471,19 @@ function CarBookingFormModal({
     const actualKm = out != null && in_ != null ? in_ - out : null;
     const extraKm = actualKm != null ? Math.max(0, actualKm - included) : null;
     const extraKmCharge = extraKm != null ? extraKm * extraPrice : 0;
+    const total = rentalTotal + delivery;
     const vatAmount = total * (vat / 100);
     const totalWithVat = total + vatAmount;
-    const agentCommissionAmount = total * (commission / 100);
-    const totalExpenses = driver + fuel + toll + delivery;
+    const agentCommissionAmount = rentalTotal * (commission / 100);
+    const totalExpenses = driver + fuel + toll;
     const netProfit =
       total - agentCommissionAmount + extraKmCharge - totalExpenses;
     const depositToReturn = Math.max(0, deposit - extraKmCharge);
 
     return {
       total,
+      rentalTotal,
+      delivery,
       vat,
       actualKm,
       extraKm,
@@ -1010,7 +1013,7 @@ function CarBookingFormModal({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={labelClass}>
-                    {t("booking_total_amount")} (€)
+                    Vehicle rental amount (€)
                   </label>
                   <input
                     type="number"
@@ -1272,7 +1275,7 @@ function CarBookingFormModal({
               </div>
 
               <p className="text-[10px] uppercase tracking-[0.2em] text-gold/60 font-medium pt-1">
-                Additional Expenses
+                Expenses &amp; Customer Charges
               </p>
 
               <div className="grid grid-cols-2 gap-3">
@@ -1307,7 +1310,7 @@ function CarBookingFormModal({
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Delivery €</label>
+                  <label className={labelClass}>Vehicle delivery €</label>
                   <input
                     type="number"
                     value={deliveryCost}
@@ -1345,6 +1348,15 @@ function CarBookingFormModal({
                   </span>
                 </div>
                 <div className="flex justify-between text-xs">
+                  <span className="text-white/40">
+                    Total payable (rental + delivery)
+                  </span>
+                  <span className="text-white">
+                    {fmtMoney(calc.rentalTotal)} + {fmtMoney(calc.delivery)} ={" "}
+                    {fmtMoney(calc.total)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs">
                   <span className="text-white/40">VAT</span>
                   <span className="text-white">
                     Total: {fmtMoney(calc.total)} + VAT ({calc.vat}%) ={" "}
@@ -1359,7 +1371,7 @@ function CarBookingFormModal({
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-white/40">
-                    Total expenses (driver + fuel + toll + delivery)
+                    Total expenses (driver + fuel + toll)
                   </span>
                   <span className="text-white">
                     {fmtMoney(calc.totalExpenses)}

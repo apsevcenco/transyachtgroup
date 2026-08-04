@@ -402,6 +402,7 @@ export default function AdminDashboard() {
             pickupLocation: snapshot.pickupLocation,
             returnLocation: snapshot.returnLocation,
             totalAmount: snapshot.totalAmount,
+            deliveryCost: snapshot.deliveryCost ?? base.deliveryCost,
             depositAmount: snapshot.depositAmount,
             kmPerDay: snapshot.kmPerDay,
             extraKmPrice: snapshot.extraKmPrice,
