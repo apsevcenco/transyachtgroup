@@ -151,8 +151,6 @@ export default function Home() {
       {/* HERO */}
       <section className="relative h-screen w-full flex items-center justify-center overflow-hidden">
         <motion.div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/30 to-background z-10" />
-          <div className="absolute inset-0 cinematic-vignette z-20" />
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="hero-bg-mask relative w-[95vw] h-[95vh] md:w-[90vw] md:h-[82vh] max-w-[1300px] max-h-[850px]">
               {heroBackground ? (
@@ -162,7 +160,7 @@ export default function Home() {
                   className="w-full h-full object-cover"
                   {...({ fetchpriority: "high" } as any)}
                   decoding="async"
-                  style={{ objectPosition: "35% 42%" }}
+                  style={{ objectPosition: "35% 12%" }}
                 />
               ) : null}
             </div>
