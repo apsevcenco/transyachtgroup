@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "@/lib/motion-shim";
-import { Ship, Car, ChevronRight, MapPin } from "lucide-react";
+import { ChevronRight, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -236,7 +236,6 @@ export default function Home() {
           {[
             {
               id: "yachts",
-              icon: Ship,
               title: siteContent.yacht_section_title || "Ocean Prestige",
               subtitle:
                 siteContent.yacht_section_subtitle || "Superyacht Collection",
@@ -254,7 +253,6 @@ export default function Home() {
             },
             {
               id: "cars",
-              icon: Car,
               title: siteContent.car_section_title || "Road Sovereign",
               subtitle: siteContent.car_section_subtitle || "Elite Automotive",
               desc:
@@ -295,9 +293,6 @@ export default function Home() {
                   variants={fadeInUp}
                   className="flex flex-col items-center"
                 >
-                  <div className="w-24 h-24 rounded-full border border-gold/20 flex items-center justify-center mb-10 group-hover:border-gold/50 group-hover:shadow-[0_0_40px_rgba(212,168,67,0.15)] transition-all duration-700">
-                    <cat.icon className="text-gold/70 w-9 h-9 group-hover:text-gold transition-colors duration-500" />
-                  </div>
                   <CmsContent
                     as="div"
                     className="uppercase tracking-[0.4em] text-gold/50 mb-4 font-light"
