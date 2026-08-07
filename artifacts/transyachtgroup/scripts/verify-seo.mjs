@@ -25,8 +25,13 @@ requiredHtmlSignals.forEach((signal) =>
   ),
 );
 assert.match(robots, /Disallow:\s*\/admin/);
-assert.match(robots, /Sitemap:\s*https:\/\/transyachtgroup\.com\/sitemap\.xml/);
+assert.match(
+  robots,
+  /Sitemap:\s*https:\/\/www\.transyachtgroup\.com\/sitemap\.xml/,
+);
 assert.match(sitemap, /<urlset[\s>]/);
+assert.match(sitemap, /<loc>https:\/\/www\.transyachtgroup\.com\//);
+assert.doesNotMatch(sitemap, /https:\/\/transyachtgroup\.com/);
 assert.match(sitemap, /\/cars\?lang=en/);
 assert.match(sitemap, /\/yachts\?lang=en/);
 assert.match(sitemap, /\/locations\/cannes\?lang=en/);

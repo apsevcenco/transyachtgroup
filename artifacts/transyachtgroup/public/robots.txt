@@ -3,4 +3,4 @@ Allow: /
 Disallow: /admin
 Disallow: /api/
 
-Sitemap: https://transyachtgroup.com/sitemap.xml
+Sitemap: https://www.transyachtgroup.com/sitemap.xml

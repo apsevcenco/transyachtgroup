@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { LANGUAGES, type LangCode } from "@/contexts/LanguageContext";
 
 export const SITE_URL = (
-  import.meta.env.VITE_SITE_URL || "https://transyachtgroup.com"
+  import.meta.env.VITE_SITE_URL || "https://www.transyachtgroup.com"
 ).replace(/\/+$/, "");
 
 type JsonLd = Record<string, unknown>;
