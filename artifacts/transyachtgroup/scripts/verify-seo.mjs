@@ -9,6 +9,7 @@ const [html, robots, sitemap] = await Promise.all([
 ]);
 
 const requiredHtmlSignals = [
+  "<h1",
   'rel="canonical"',
   'name="description"',
   'name="robots"',
