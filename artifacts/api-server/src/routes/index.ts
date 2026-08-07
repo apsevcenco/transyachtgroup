@@ -12,11 +12,13 @@ import rentalHistoryRouter from "./rental-history";
 import agentsRouter from "./agents";
 import contractsRouter from "./contracts";
 import uploadsRouter from "./uploads";
+import sitemapsRouter from "./sitemaps";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
+router.use(sitemapsRouter);
 router.use(vehiclesRouter);
 router.use(proposalsRouter);
 router.use(contentRouter);

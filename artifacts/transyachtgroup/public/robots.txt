@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /
 Disallow: /admin
+Allow: /api/vehicles-sitemap.xml
 Disallow: /api/
 
 Sitemap: https://www.transyachtgroup.com/sitemap.xml
