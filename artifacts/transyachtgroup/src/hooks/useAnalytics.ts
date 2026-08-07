@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { hasAnalyticsConsent, trackGoogleEvent } from "@/lib/googleAnalytics";
 
 const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
@@ -12,6 +13,7 @@ function getSessionId(): string {
 }
 
 function track(eventType: string, extra: Record<string, unknown> = {}) {
+  if (!hasAnalyticsConsent()) return;
   const payload = {
     sessionId: getSessionId(),
     eventType,
@@ -56,12 +58,19 @@ export function usePageView() {
 
 export function trackVehicleView(vehicleId: number | string) {
   track("vehicle_view", { vehicleId: String(vehicleId) });
+  trackGoogleEvent("select_content", {
+    content_type: "vehicle",
+    item_id: String(vehicleId),
+  });
 }
 
 export function trackFormSubmit(formName?: string) {
-  track("form_submit", { metadata: { form: formName || "contact" } });
+  const form = formName || "contact";
+  track("form_submit", { metadata: { form } });
+  trackGoogleEvent("generate_lead", { form_name: form });
 }
 
 export function trackEvent(eventType: string, metadata?: Record<string, unknown>) {
   track(eventType, { metadata });
+  trackGoogleEvent(eventType, metadata);
 }

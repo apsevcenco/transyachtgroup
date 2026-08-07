@@ -15,6 +15,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { FloatingContact } from "@/components/FloatingContact";
 import { CookieBanner } from "@/components/CookieBanner";
 import { RouteSeo } from "@/components/RouteSeo";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 
 const Home = lazy(() => import("@/pages/home"));
 const Catalog = lazy(() => import("@/pages/catalog"));
@@ -163,6 +164,7 @@ function App() {
           <TooltipProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
               <RouteSeo />
+              <GoogleAnalytics />
               <Router />
             </WouterRouter>
             <Toaster />
