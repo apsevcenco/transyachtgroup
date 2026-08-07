@@ -17,9 +17,9 @@ export function hasAnalyticsConsent(): boolean {
 
 function ensureGtag() {
   window.dataLayer = window.dataLayer || [];
-  window.gtag = window.gtag || function gtag(...args: unknown[]) {
-    window.dataLayer.push(args);
-  };
+  window.gtag = window.gtag || (function gtag() {
+    window.dataLayer.push(arguments);
+  } as (...args: unknown[]) => void);
 }
 
 export function initializeGoogleAnalytics(): void {
