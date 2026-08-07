@@ -77,7 +77,7 @@ function escapeHtml(value) {
 }
 
 function renderPage(page) {
-  const canonical = `${siteUrl}${page.path}?lang=en`;
+  const canonical = `${siteUrl}${page.path}/?lang=en`;
   const title = escapeHtml(page.title);
   const description = escapeHtml(page.description);
   let html = source
@@ -94,7 +94,7 @@ function renderPage(page) {
 
   for (const lang of [...languages, "x-default"]) {
     const targetLang = lang === "x-default" ? "en" : lang;
-    const href = `${siteUrl}${page.path}?lang=${targetLang}`;
+    const href = `${siteUrl}${page.path}/?lang=${targetLang}`;
     const pattern = new RegExp(`(<link\\s+rel="alternate"\\s+hreflang="${lang}"\\s+href=")[^"]*("\\s*\\/?>)`, "s");
     html = html.replace(pattern, `$1${href}$2`);
   }

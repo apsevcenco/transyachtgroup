@@ -42,20 +42,18 @@ assert.match(sitemap, /\/api\/vehicles-sitemap\.xml/);
 assert.match(pagesSitemap, /<urlset[\s>]/);
 assert.match(pagesSitemap, /<loc>https:\/\/www\.transyachtgroup\.com\//);
 assert.doesNotMatch(pagesSitemap, /https:\/\/transyachtgroup\.com/);
-assert.match(pagesSitemap, /\/cars\?lang=en/);
-assert.match(pagesSitemap, /\/yachts\?lang=en/);
-assert.match(pagesSitemap, /\/locations\/cannes\?lang=en/);
-assert.match(pagesSitemap, /\/services\/luxury-car-rental-cannes\?lang=en/);
-assert.match(pagesSitemap, /\/services\/yacht-charter-monaco\?lang=en/);
-assert.match(pagesSitemap, /\/services\/rolls-royce-rental-french-riviera\?lang=en/);
-assert.match(pagesSitemap, /hreflang="fr"/);
-assert.match(pagesSitemap, /hreflang="x-default"/);
+assert.match(pagesSitemap, /\/cars\/\?lang=en/);
+assert.match(pagesSitemap, /\/yachts\/\?lang=en/);
+assert.match(pagesSitemap, /\/locations\/cannes\/\?lang=en/);
+assert.match(pagesSitemap, /\/services\/luxury-car-rental-cannes\/\?lang=en/);
+assert.match(pagesSitemap, /\/services\/yacht-charter-monaco\/\?lang=en/);
+assert.match(pagesSitemap, /\/services\/rolls-royce-rental-french-riviera\/\?lang=en/);
 
 for (const [name, routeHtml, canonical] of [
-  ["cars", carsHtml, "https://www.transyachtgroup.com/cars?lang=en"],
-  ["yachts", yachtsHtml, "https://www.transyachtgroup.com/yachts?lang=en"],
-  ["about", aboutHtml, "https://www.transyachtgroup.com/about?lang=en"],
-  ["service", serviceHtml, "https://www.transyachtgroup.com/services/luxury-car-rental-cannes?lang=en"],
+  ["cars", carsHtml, "https://www.transyachtgroup.com/cars/?lang=en"],
+  ["yachts", yachtsHtml, "https://www.transyachtgroup.com/yachts/?lang=en"],
+  ["about", aboutHtml, "https://www.transyachtgroup.com/about/?lang=en"],
+  ["service", serviceHtml, "https://www.transyachtgroup.com/services/luxury-car-rental-cannes/?lang=en"],
 ]) {
   assert.ok(routeHtml.includes(`<link rel="canonical" href="${canonical}"`), `${name} canonical is incorrect`);
   assert.match(routeHtml, /<h1[^>]*>[^<]+<\/h1>/, `${name} H1 is missing`);

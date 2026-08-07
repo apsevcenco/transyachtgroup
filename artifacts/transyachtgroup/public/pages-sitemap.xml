@@ -1,124 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xhtml="http://www.w3.org/1999/xhtml">
-  <url>
-    <loc>https://www.transyachtgroup.com/?lang=en</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://www.transyachtgroup.com/?lang=en"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://www.transyachtgroup.com/?lang=fr"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://www.transyachtgroup.com/?lang=ru"/>
-    <xhtml:link rel="alternate" hreflang="ro" href="https://www.transyachtgroup.com/?lang=ro"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://www.transyachtgroup.com/?lang=ar"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.transyachtgroup.com/?lang=en"/>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://www.transyachtgroup.com/cars?lang=en</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://www.transyachtgroup.com/cars?lang=en"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://www.transyachtgroup.com/cars?lang=fr"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://www.transyachtgroup.com/cars?lang=ru"/>
-    <xhtml:link rel="alternate" hreflang="ro" href="https://www.transyachtgroup.com/cars?lang=ro"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://www.transyachtgroup.com/cars?lang=ar"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.transyachtgroup.com/cars?lang=en"/>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://www.transyachtgroup.com/yachts?lang=en</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://www.transyachtgroup.com/yachts?lang=en"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://www.transyachtgroup.com/yachts?lang=fr"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://www.transyachtgroup.com/yachts?lang=ru"/>
-    <xhtml:link rel="alternate" hreflang="ro" href="https://www.transyachtgroup.com/yachts?lang=ro"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://www.transyachtgroup.com/yachts?lang=ar"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.transyachtgroup.com/yachts?lang=en"/>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://www.transyachtgroup.com/about?lang=en</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://www.transyachtgroup.com/about?lang=en"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://www.transyachtgroup.com/about?lang=fr"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://www.transyachtgroup.com/about?lang=ru"/>
-    <xhtml:link rel="alternate" hreflang="ro" href="https://www.transyachtgroup.com/about?lang=ro"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://www.transyachtgroup.com/about?lang=ar"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.transyachtgroup.com/about?lang=en"/>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://www.transyachtgroup.com/privacy?lang=en</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  <url>
-    <loc>https://www.transyachtgroup.com/legal?lang=en</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  <url>
-    <loc>https://www.transyachtgroup.com/locations/cannes?lang=en</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.transyachtgroup.com/locations/monaco?lang=en</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.transyachtgroup.com/locations/nice?lang=en</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.transyachtgroup.com/locations/antibes?lang=en</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.transyachtgroup.com/locations/saint-tropez?lang=en</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <!-- Commercial service landing pages. Language variants are rendered from the same canonical route. -->
-  <url>
-    <loc>https://www.transyachtgroup.com/services/luxury-car-rental-cannes?lang=en</loc>
-    <changefreq>weekly</changefreq><priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.transyachtgroup.com/services/luxury-car-rental-monaco?lang=en</loc>
-    <changefreq>weekly</changefreq><priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.transyachtgroup.com/services/luxury-car-rental-nice?lang=en</loc>
-    <changefreq>weekly</changefreq><priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.transyachtgroup.com/services/luxury-car-rental-saint-tropez?lang=en</loc>
-    <changefreq>weekly</changefreq><priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.transyachtgroup.com/services/yacht-charter-cannes?lang=en</loc>
-    <changefreq>weekly</changefreq><priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.transyachtgroup.com/services/yacht-charter-monaco?lang=en</loc>
-    <changefreq>weekly</changefreq><priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.transyachtgroup.com/services/lamborghini-rental-french-riviera?lang=en</loc>
-    <changefreq>weekly</changefreq><priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.transyachtgroup.com/services/mercedes-rental-french-riviera?lang=en</loc>
-    <changefreq>weekly</changefreq><priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.transyachtgroup.com/services/ferrari-rental-french-riviera?lang=en</loc>
-    <changefreq>weekly</changefreq><priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.transyachtgroup.com/services/rolls-royce-rental-french-riviera?lang=en</loc>
-    <changefreq>weekly</changefreq><priority>0.8</priority>
-  </url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://www.transyachtgroup.com/?lang=en</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://www.transyachtgroup.com/cars/?lang=en</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://www.transyachtgroup.com/yachts/?lang=en</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://www.transyachtgroup.com/about/?lang=en</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.transyachtgroup.com/privacy/?lang=en</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>
+  <url><loc>https://www.transyachtgroup.com/legal/?lang=en</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>
+  <url><loc>https://www.transyachtgroup.com/locations/cannes/?lang=en</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/locations/monaco/?lang=en</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/locations/nice/?lang=en</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/locations/antibes/?lang=en</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/locations/saint-tropez/?lang=en</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/services/luxury-car-rental-cannes/?lang=en</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/services/luxury-car-rental-monaco/?lang=en</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/services/luxury-car-rental-nice/?lang=en</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/services/luxury-car-rental-saint-tropez/?lang=en</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/services/yacht-charter-cannes/?lang=en</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/services/yacht-charter-monaco/?lang=en</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/services/lamborghini-rental-french-riviera/?lang=en</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/services/mercedes-rental-french-riviera/?lang=en</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/services/ferrari-rental-french-riviera/?lang=en</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/services/rolls-royce-rental-french-riviera/?lang=en</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
 </urlset>

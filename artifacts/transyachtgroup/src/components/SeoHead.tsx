@@ -45,6 +45,11 @@ function upsertLink(selector: string, attributes: Record<string, string>) {
 
 export function localizedUrl(path: string, lang: LangCode) {
   const url = new URL(path || "/", `${SITE_URL}/`);
+  // The production static host resolves generated route HTML only for directory
+  // URLs. Without the trailing slash it falls back to the homepage document.
+  if (url.pathname !== "/" && !url.pathname.endsWith("/")) {
+    url.pathname = `${url.pathname}/`;
+  }
   url.searchParams.set("lang", lang);
   return url.toString();
 }
