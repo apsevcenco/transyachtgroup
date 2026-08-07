@@ -7,6 +7,23 @@ const outputDir = join(projectDir, "dist", "public");
 const source = await readFile(join(outputDir, "index.html"), "utf8");
 const siteUrl = "https://www.transyachtgroup.com";
 const languages = ["en", "fr", "ru", "ro", "ar"];
+const servicePages = [
+  ["luxury-car-rental-cannes", "Luxury Car Rental in Cannes", "Luxury car rental in Cannes with discreet delivery to hotels, villas, Port Canto and the Croisette, supported by a dedicated concierge."],
+  ["luxury-car-rental-monaco", "Luxury Car Rental in Monaco", "Luxury and supercar rental in Monaco with private delivery in Monte-Carlo, Fontvieille and Port Hercule."],
+  ["luxury-car-rental-nice", "Luxury Car Rental in Nice", "Luxury car rental in Nice with delivery to Nice Côte d’Azur Airport, hotels and private addresses across the French Riviera."],
+  ["luxury-car-rental-saint-tropez", "Luxury Car Rental in Saint-Tropez", "Luxury car and supercar rental in Saint-Tropez with private delivery to villas, hotels, the port and Pampelonne."],
+  ["yacht-charter-cannes", "Luxury Yacht Charter in Cannes", "Private luxury yacht charter in Cannes with tailored itineraries, a curated fleet and dedicated concierge support."],
+  ["yacht-charter-monaco", "Luxury Yacht Charter in Monaco", "Luxury yacht charter in Monaco with a curated selection, tailored itineraries and discreet concierge coordination."],
+  ["lamborghini-rental-french-riviera", "Lamborghini Rental on the French Riviera", "Rent a Lamborghini on the French Riviera with private delivery in Cannes, Monaco, Nice and Saint-Tropez."],
+  ["mercedes-rental-french-riviera", "Mercedes-Benz Rental on the French Riviera", "Mercedes-Benz luxury car rental on the French Riviera, with private delivery from Nice to Cannes, Monaco and Saint-Tropez."],
+  ["ferrari-rental-french-riviera", "Ferrari Rental on the French Riviera", "Ferrari rental on the French Riviera with private delivery in Cannes, Monaco, Nice and Saint-Tropez."],
+  ["rolls-royce-rental-french-riviera", "Rolls-Royce Rental on the French Riviera", "Rolls-Royce rental on the French Riviera with discreet delivery for stays, events and private travel in Cannes and Monaco."],
+].map(([slug, heading, description]) => ({
+  path: `/services/${slug}`,
+  title: `${heading} | Trans Yacht Group`,
+  description,
+  heading,
+}));
 
 const pages = [
   {
@@ -48,6 +65,7 @@ const pages = [
       heading: `Luxury Car Rental and Yacht Charter in ${label}`,
     };
   }),
+  ...servicePages,
 ];
 
 function escapeHtml(value) {

@@ -24,6 +24,7 @@ const About = lazy(() => import("@/pages/about"));
 const PrivacyPolicy = lazy(() => import("@/pages/privacy-policy"));
 const LegalNotice = lazy(() => import("@/pages/legal-notice"));
 const LocationPage = lazy(() => import("@/pages/location"));
+const ServiceLanding = lazy(() => import("@/pages/service-landing"));
 const AdminLogin = lazy(() => import("@/pages/admin/login"));
 const AdminDashboard = lazy(() => import("@/pages/admin/dashboard"));
 const AdminCarBookings = lazy(() => import("@/pages/admin/car-bookings"));
@@ -125,6 +126,9 @@ function Router() {
             <Route path="/legal" component={LegalNotice} />
             <Route path="/locations/:city">
               {(params) => <LocationPage city={params.city} />}
+            </Route>
+            <Route path="/services/:slug">
+              {(params) => <ServiceLanding slug={params.slug} />}
             </Route>
             <Route path="/admin" component={AdminLogin} />
             <Route

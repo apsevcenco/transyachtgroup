@@ -34,6 +34,19 @@ const LOCATIONS = {
 
 type LocationKey = keyof typeof LOCATIONS;
 
+const LOCATION_SERVICES: Partial<Record<LocationKey, { slug: string; label: string }[]>> = {
+  cannes: [
+    { slug: "luxury-car-rental-cannes", label: "Luxury car rental in Cannes" },
+    { slug: "yacht-charter-cannes", label: "Luxury yacht charter in Cannes" },
+  ],
+  monaco: [
+    { slug: "luxury-car-rental-monaco", label: "Luxury car rental in Monaco" },
+    { slug: "yacht-charter-monaco", label: "Luxury yacht charter in Monaco" },
+  ],
+  nice: [{ slug: "luxury-car-rental-nice", label: "Luxury car rental in Nice" }],
+  "saint-tropez": [{ slug: "luxury-car-rental-saint-tropez", label: "Luxury car rental in Saint-Tropez" }],
+};
+
 const TEXT: Record<
   LangCode,
   {
@@ -219,6 +232,20 @@ export default function LocationPage({ city }: { city: string }) {
               </span>
             </a>
           </div>
+
+          {LOCATION_SERVICES[key]?.length ? (
+            <nav aria-label={`${location.name} services`} className="mt-8 flex flex-wrap gap-3">
+              {LOCATION_SERVICES[key]!.map((service) => (
+                <a
+                  key={service.slug}
+                  href={`/services/${service.slug}?lang=${lang}`}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-sm text-white/65 transition hover:border-gold/40 hover:text-gold"
+                >
+                  {service.label} <ChevronRight size={14} />
+                </a>
+              ))}
+            </nav>
+          ) : null}
 
           <section className="mt-14 rounded-xl border border-gold/20 bg-gold/[0.04] p-8 md:p-10">
             <h2 className="mb-4 font-serif text-3xl">{text.contact}</h2>

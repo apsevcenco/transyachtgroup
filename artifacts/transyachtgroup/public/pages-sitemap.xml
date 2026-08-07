@@ -80,4 +80,45 @@
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
+  <!-- Commercial service landing pages. Language variants are rendered from the same canonical route. -->
+  <url>
+    <loc>https://www.transyachtgroup.com/services/luxury-car-rental-cannes?lang=en</loc>
+    <changefreq>weekly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.transyachtgroup.com/services/luxury-car-rental-monaco?lang=en</loc>
+    <changefreq>weekly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.transyachtgroup.com/services/luxury-car-rental-nice?lang=en</loc>
+    <changefreq>weekly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.transyachtgroup.com/services/luxury-car-rental-saint-tropez?lang=en</loc>
+    <changefreq>weekly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.transyachtgroup.com/services/yacht-charter-cannes?lang=en</loc>
+    <changefreq>weekly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.transyachtgroup.com/services/yacht-charter-monaco?lang=en</loc>
+    <changefreq>weekly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.transyachtgroup.com/services/lamborghini-rental-french-riviera?lang=en</loc>
+    <changefreq>weekly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.transyachtgroup.com/services/mercedes-rental-french-riviera?lang=en</loc>
+    <changefreq>weekly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.transyachtgroup.com/services/ferrari-rental-french-riviera?lang=en</loc>
+    <changefreq>weekly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.transyachtgroup.com/services/rolls-royce-rental-french-riviera?lang=en</loc>
+    <changefreq>weekly</changefreq><priority>0.8</priority>
+  </url>
 </urlset>

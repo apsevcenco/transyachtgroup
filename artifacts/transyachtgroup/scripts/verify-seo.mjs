@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const publicDir = new URL("../dist/public/", import.meta.url);
-const [html, robots, sitemap, pagesSitemap, carsHtml, yachtsHtml, aboutHtml] = await Promise.all([
+const [html, robots, sitemap, pagesSitemap, carsHtml, yachtsHtml, aboutHtml, serviceHtml] = await Promise.all([
   readFile(new URL("index.html", publicDir), "utf8"),
   readFile(new URL("robots.txt", publicDir), "utf8"),
   readFile(new URL("sitemap.xml", publicDir), "utf8"),
@@ -10,6 +10,7 @@ const [html, robots, sitemap, pagesSitemap, carsHtml, yachtsHtml, aboutHtml] = a
   readFile(new URL("cars/index.html", publicDir), "utf8"),
   readFile(new URL("yachts/index.html", publicDir), "utf8"),
   readFile(new URL("about/index.html", publicDir), "utf8"),
+  readFile(new URL("services/luxury-car-rental-cannes/index.html", publicDir), "utf8"),
 ]);
 
 const requiredHtmlSignals = [
@@ -44,6 +45,9 @@ assert.doesNotMatch(pagesSitemap, /https:\/\/transyachtgroup\.com/);
 assert.match(pagesSitemap, /\/cars\?lang=en/);
 assert.match(pagesSitemap, /\/yachts\?lang=en/);
 assert.match(pagesSitemap, /\/locations\/cannes\?lang=en/);
+assert.match(pagesSitemap, /\/services\/luxury-car-rental-cannes\?lang=en/);
+assert.match(pagesSitemap, /\/services\/yacht-charter-monaco\?lang=en/);
+assert.match(pagesSitemap, /\/services\/rolls-royce-rental-french-riviera\?lang=en/);
 assert.match(pagesSitemap, /hreflang="fr"/);
 assert.match(pagesSitemap, /hreflang="x-default"/);
 
@@ -51,6 +55,7 @@ for (const [name, routeHtml, canonical] of [
   ["cars", carsHtml, "https://www.transyachtgroup.com/cars?lang=en"],
   ["yachts", yachtsHtml, "https://www.transyachtgroup.com/yachts?lang=en"],
   ["about", aboutHtml, "https://www.transyachtgroup.com/about?lang=en"],
+  ["service", serviceHtml, "https://www.transyachtgroup.com/services/luxury-car-rental-cannes?lang=en"],
 ]) {
   assert.ok(routeHtml.includes(`<link rel="canonical" href="${canonical}"`), `${name} canonical is incorrect`);
   assert.match(routeHtml, /<h1[^>]*>[^<]+<\/h1>/, `${name} H1 is missing`);
