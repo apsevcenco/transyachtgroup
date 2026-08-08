@@ -38,6 +38,7 @@ export function Navbar() {
     { name: t("yachts"), href: "/yachts" },
     { name: t("cars"), href: "/cars" },
     { name: t("about_us"), href: "/about" },
+    { name: "Guides", href: "/guides/" },
     { name: t("contact"), href: "/#request", hash: "request" },
   ];
 

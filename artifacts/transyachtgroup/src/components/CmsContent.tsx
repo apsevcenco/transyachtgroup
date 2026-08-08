@@ -40,8 +40,8 @@ export function CmsContent({
   if (!html) return null;
 
   const clean = DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ["span", "p", "br", "strong", "em", "u", "s"],
-    ALLOWED_ATTR: ["style"],
+    ALLOWED_TAGS: ["span", "p", "br", "strong", "em", "u", "s", "h2", "h3", "h4", "ul", "ol", "li", "blockquote", "a"],
+    ALLOWED_ATTR: ["style", "href", "target", "rel"],
   });
 
   return (

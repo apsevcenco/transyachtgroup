@@ -45,6 +45,12 @@ const pages = [
     heading: "About Trans Yacht Group",
   },
   {
+    path: "/guides",
+    title: "French Riviera Luxury Travel Guides | Trans Yacht Group",
+    description: "Expert guides to luxury car rental, yacht charter and private travel in Cannes, Monaco, Nice and Saint-Tropez.",
+    heading: "French Riviera Luxury Travel Guides",
+  },
+  {
     path: "/privacy",
     title: "Privacy Policy | Trans Yacht Group",
     description: "Read the Trans Yacht Group privacy policy and learn how personal information is handled.",

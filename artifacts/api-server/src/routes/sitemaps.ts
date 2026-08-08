@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { vehiclesTable } from "@workspace/db/schema";
-import { asc, ne } from "drizzle-orm";
+import { guidesTable, vehiclesTable } from "@workspace/db/schema";
+import { asc, desc, eq, ne } from "drizzle-orm";
 
 const router: IRouter = Router();
 const SITE_URL = "https://www.transyachtgroup.com";
@@ -85,6 +85,41 @@ ${entries.join("\n")}
 </urlset>`);
   } catch (err) {
     req.log?.error?.({ err }, "Vehicle sitemap generation failed");
+    res.status(500).type("text/plain").send("Unable to generate sitemap");
+  }
+});
+
+router.get("/guides-sitemap.xml", async (req, res) => {
+  try {
+    const guides = await db.select({
+      slug: guidesTable.slug,
+      coverImage: guidesTable.coverImage,
+      title: guidesTable.title,
+      updatedAt: guidesTable.updatedAt,
+    }).from(guidesTable)
+      .where(eq(guidesTable.published, true))
+      .orderBy(desc(guidesTable.publishedAt));
+
+    const entries = guides.map((guide) => {
+      const path = `/guides/${guide.slug}/`;
+      const image = publicImageUrl(guide.coverImage);
+      const imageXml = image ? `\n    <image:image><image:loc>${escapeXml(image)}</image:loc><image:title>${escapeXml(guide.title)}</image:title></image:image>` : "";
+      return `  <url>
+    <loc>${SITE_URL}${path}?lang=en</loc>
+    <lastmod>${(guide.updatedAt || new Date()).toISOString()}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>${imageXml}
+  </url>`;
+    });
+
+    res.set({ "Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, max-age=300, stale-while-revalidate=3600" });
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+${entries.join("\n")}
+</urlset>`);
+  } catch (err) {
+    req.log?.error?.({ err }, "Guide sitemap generation failed");
     res.status(500).type("text/plain").send("Unable to generate sitemap");
   }
 });

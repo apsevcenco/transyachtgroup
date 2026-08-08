@@ -25,6 +25,8 @@ const PrivacyPolicy = lazy(() => import("@/pages/privacy-policy"));
 const LegalNotice = lazy(() => import("@/pages/legal-notice"));
 const LocationPage = lazy(() => import("@/pages/location"));
 const ServiceLanding = lazy(() => import("@/pages/service-landing"));
+const GuidesPage = lazy(() => import("@/pages/guides"));
+const GuideDetail = lazy(() => import("@/pages/guide-detail"));
 const AdminLogin = lazy(() => import("@/pages/admin/login"));
 const AdminDashboard = lazy(() => import("@/pages/admin/dashboard"));
 const AdminCarBookings = lazy(() => import("@/pages/admin/car-bookings"));
@@ -33,6 +35,7 @@ const AdminCrm = lazy(() => import("@/pages/admin/crm"));
 const AdminAgents = lazy(() => import("@/pages/admin/agents"));
 const AdminProposals = lazy(() => import("@/pages/admin/proposals"));
 const AdminContracts = lazy(() => import("@/pages/admin/contracts"));
+const AdminGuides = lazy(() => import("@/pages/admin/guides"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 const queryClient = new QueryClient();
@@ -130,6 +133,10 @@ function Router() {
             <Route path="/services/:slug">
               {(params) => <ServiceLanding slug={params.slug} />}
             </Route>
+            <Route path="/guides" component={GuidesPage} />
+            <Route path="/guides/:slug">
+              {(params) => <GuideDetail slug={params.slug} />}
+            </Route>
             <Route path="/admin" component={AdminLogin} />
             <Route
               path="/admin/dashboard/:section?"
@@ -144,6 +151,7 @@ function Router() {
             <Route path="/admin/agents" component={AdminAgents} />
             <Route path="/admin/proposals" component={AdminProposals} />
             <Route path="/admin/contracts" component={AdminContracts} />
+            <Route path="/admin/guides" component={AdminGuides} />
             <Route component={NotFound} />
           </Switch>
         </Suspense>

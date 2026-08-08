@@ -13,12 +13,14 @@ import agentsRouter from "./agents";
 import contractsRouter from "./contracts";
 import uploadsRouter from "./uploads";
 import sitemapsRouter from "./sitemaps";
+import guidesRouter from "./guides";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
 router.use(sitemapsRouter);
+router.use(guidesRouter);
 router.use(vehiclesRouter);
 router.use(proposalsRouter);
 router.use(contentRouter);

@@ -1,5 +1,23 @@
 const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
+export type Guide = {
+  id: number;
+  slug: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  coverImage: string | null;
+  metaTitle: string | null;
+  metaDescription: string | null;
+  translations: Record<string, Record<string, string>> | null;
+  published: boolean;
+  publishedAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type GuideInput = Pick<Guide, "slug" | "title" | "excerpt" | "content" | "coverImage" | "metaTitle" | "metaDescription" | "translations" | "published">;
+
 function getToken(): string | null {
   return localStorage.getItem("admin_token");
 }
@@ -82,6 +100,43 @@ export async function fetchFeaturedVehicles(lang?: string) {
   const res = await fetch(`${API_BASE}/vehicles/featured?lang=${l}`);
   if (!res.ok) throw new Error("Failed to fetch featured vehicles");
   return res.json();
+}
+
+export async function fetchGuides(lang?: string): Promise<Guide[]> {
+  const l = lang || getLang();
+  const res = await fetch(`${API_BASE}/guides?lang=${encodeURIComponent(l)}`);
+  if (!res.ok) throw new Error("Failed to fetch guides");
+  return res.json();
+}
+
+export async function fetchGuide(slug: string, lang?: string): Promise<Guide> {
+  const l = lang || getLang();
+  const res = await fetch(`${API_BASE}/guides/${encodeURIComponent(slug)}?lang=${encodeURIComponent(l)}`);
+  if (!res.ok) throw new Error(res.status === 404 ? "Guide not found" : "Failed to fetch guide");
+  return res.json();
+}
+
+export async function fetchAdminGuides(): Promise<Guide[]> {
+  const res = await fetch(`${API_BASE}/admin/guides`, { headers: authHeaders() });
+  if (!res.ok) throw new Error("Failed to fetch guides");
+  return res.json();
+}
+
+export async function createGuide(data: GuideInput): Promise<Guide> {
+  const res = await fetch(`${API_BASE}/admin/guides`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(data) });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "Failed to create guide");
+  return res.json();
+}
+
+export async function updateGuide(id: number, data: GuideInput): Promise<Guide> {
+  const res = await fetch(`${API_BASE}/admin/guides/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(data) });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "Failed to update guide");
+  return res.json();
+}
+
+export async function deleteGuide(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/admin/guides/${id}`, { method: "DELETE", headers: authHeaders() });
+  if (!res.ok) throw new Error("Failed to delete guide");
 }
 
 export async function createVehicle(data: {
@@ -442,7 +497,7 @@ export async function uploadPrivateBookingPhoto(file: File): Promise<string> {
 
 export async function uploadAdminPublicImage(
   file: File,
-  scope: "vehicles" | "content-bg" | "content-office",
+  scope: "vehicles" | "content-bg" | "content-office" | "guides",
 ): Promise<string> {
   const res = await fetch(`${API_BASE}/admin/uploads/public-image`, {
     method: "POST",

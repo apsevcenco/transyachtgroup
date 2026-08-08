@@ -4,6 +4,7 @@
   <url><loc>https://www.transyachtgroup.com/cars/?lang=en</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
   <url><loc>https://www.transyachtgroup.com/yachts/?lang=en</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
   <url><loc>https://www.transyachtgroup.com/about/?lang=en</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.transyachtgroup.com/guides/?lang=en</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.transyachtgroup.com/privacy/?lang=en</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>
   <url><loc>https://www.transyachtgroup.com/legal/?lang=en</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>
   <url><loc>https://www.transyachtgroup.com/locations/cannes/?lang=en</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>

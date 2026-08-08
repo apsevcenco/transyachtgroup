@@ -59,7 +59,7 @@ export async function uploadBookingPhoto(buffer: Buffer, contentType: string): P
 export async function uploadPublicImage(
   buffer: Buffer,
   contentType: string,
-  scope: "vehicles" | "content-bg" | "content-office",
+  scope: "vehicles" | "content-bg" | "content-office" | "guides",
 ): Promise<string> {
   const extension = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
   const path = `${scope}/${new Date().getUTCFullYear()}/${crypto.randomUUID()}.${extension}`;

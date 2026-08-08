@@ -49,6 +49,26 @@ export const siteContentTable = pgTable("site_content", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const guidesTable = pgTable(
+  "guides",
+  {
+    id: serial("id").primaryKey(),
+    slug: varchar("slug", { length: 160 }).notNull().unique(),
+    title: text("title").notNull(),
+    excerpt: text("excerpt").notNull(),
+    content: text("content").notNull(),
+    coverImage: text("cover_image"),
+    metaTitle: text("meta_title"),
+    metaDescription: text("meta_description"),
+    translations: jsonb("translations").default({}),
+    published: boolean("published").notNull().default(false),
+    publishedAt: timestamp("published_at"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [index("guides_published_at_idx").on(table.published, table.publishedAt)],
+);
+
 export const adminSessionsTable = pgTable("admin_sessions", {
   id: serial("id").primaryKey(),
   token: varchar("token", { length: 64 }).notNull().unique(),
@@ -346,3 +366,11 @@ export const insertSiteContentSchema = createInsertSchema(
 ).omit({ id: true, updatedAt: true });
 export type InsertSiteContent = z.infer<typeof insertSiteContentSchema>;
 export type SiteContent = typeof siteContentTable.$inferSelect;
+
+export const insertGuideSchema = createInsertSchema(guidesTable).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertGuide = z.infer<typeof insertGuideSchema>;
+export type Guide = typeof guidesTable.$inferSelect;

@@ -192,6 +192,7 @@ export function RouteSeo() {
   const isVehicle = path.startsWith("/vehicle/");
   const isLocation = path.startsWith("/locations/");
   const isService = path.startsWith("/services/");
+  const isGuide = path === "/guides" || path.startsWith("/guides/");
   const key =
     path === "/cars"
       ? "cars"
@@ -206,7 +207,7 @@ export function RouteSeo() {
               : "home";
   const copy = COPY[lang][key];
 
-  if (isVehicle || isLocation || isService) return null;
+  if (isVehicle || isLocation || isService || isGuide) return null;
   if (isAdmin) {
     return (
       <SeoHead

@@ -724,6 +724,11 @@ export default function AdminDashboard() {
       go: () => setLocation("/admin/dashboard/content"),
     },
     {
+      label: "Guides & Articles",
+      icon: "G",
+      go: () => setLocation("/admin/guides"),
+    },
+    {
       label: "Requests",
       icon: "📩",
       go: () => setLocation("/admin/dashboard/requests"),
@@ -898,6 +903,13 @@ export default function AdminDashboard() {
                   </span>
                 </button>
               ))}
+              <button
+                onClick={() => setLocation("/admin/guides")}
+                className="w-full min-h-[44px] flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-left text-white/45 hover:text-white/75 hover:bg-white/[0.04] border border-transparent transition-colors"
+              >
+                <span className="w-6 text-center text-base">G</span>
+                <span className="text-[11px] uppercase tracking-[0.12em]">Guides & Articles</span>
+              </button>
             </nav>
           </aside>
 
