@@ -7,7 +7,7 @@ import { signBookingPhotos } from "../lib/privateStorage";
 
 const router: IRouter = Router();
 
-router.use(adminAuth);
+router.use("/rental-history", adminAuth);
 
 // GET /rental-history — list completed rentals, optionally filtered by
 // vehicleId, category (car/yacht), and/or a date range over [start, end]

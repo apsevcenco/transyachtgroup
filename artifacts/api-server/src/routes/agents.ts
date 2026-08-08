@@ -6,7 +6,7 @@ import { adminAuth } from "../middleware/auth";
 
 const router: IRouter = Router();
 
-router.use(adminAuth);
+router.use("/agents", adminAuth);
 
 // GET /agents — list all agents
 router.get("/agents", async (_req, res) => {

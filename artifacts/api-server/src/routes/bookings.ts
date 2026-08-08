@@ -84,7 +84,10 @@ function conflictMessage(
 
 const router: IRouter = Router();
 
-router.use(adminAuth);
+// Scope authentication to this router's own URL space. A global middleware
+// here would turn every unknown API route registered after this router into
+// a misleading 401 instead of allowing Express to continue to the next router.
+router.use("/bookings", adminAuth);
 
 function plainText(value: unknown): string | null {
   if (value == null) return null;
