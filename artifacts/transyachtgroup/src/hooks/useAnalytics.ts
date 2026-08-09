@@ -46,6 +46,8 @@ export function usePageView() {
   const pathname = window.location.pathname;
 
   useEffect(() => {
+    const guideMatch = pathname.match(/^\/guides\/([^/?]+)/);
+    if (guideMatch) sessionStorage.setItem("_tyg_guide_attribution", guideMatch[1]);
     startTime.current = Date.now();
     track("page_view");
 
@@ -66,8 +68,9 @@ export function trackVehicleView(vehicleId: number | string) {
 
 export function trackFormSubmit(formName?: string) {
   const form = formName || "contact";
-  track("form_submit", { metadata: { form } });
-  trackGoogleEvent("generate_lead", { form_name: form });
+  const guide = sessionStorage.getItem("_tyg_guide_attribution");
+  track("form_submit", { metadata: { form, attributionGuide: guide } });
+  trackGoogleEvent("generate_lead", { form_name: form, content_guide: guide || undefined });
 }
 
 export function trackEvent(eventType: string, metadata?: Record<string, unknown>) {

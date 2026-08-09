@@ -12,7 +12,7 @@ const analyticsLimiter = rateLimit({
   standardHeaders: "draft-8",
   legacyHeaders: false,
 });
-const allowedEvents = new Set(["page_view", "form_submit", "vehicle_view", "click", "session_end"]);
+const allowedEvents = new Set(["page_view", "page_leave", "form_submit", "vehicle_view", "click", "session_end"]);
 const short = (value: unknown, max: number): string | null =>
   typeof value === "string" && value.length > 0 && value.length <= max ? value : null;
 

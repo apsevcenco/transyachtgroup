@@ -61,12 +61,23 @@ export const guidesTable = pgTable(
     metaTitle: text("meta_title"),
     metaDescription: text("meta_description"),
     translations: jsonb("translations").default({}),
+    primaryKeyword: text("primary_keyword"),
+    contentCluster: text("content_cluster"),
+    targetPage: text("target_page"),
+    scheduledAt: timestamp("scheduled_at"),
+    seoScore: integer("seo_score"),
+    seoAudit: jsonb("seo_audit").default({}),
+    searchMetrics: jsonb("search_metrics").default({}),
     published: boolean("published").notNull().default(false),
     publishedAt: timestamp("published_at"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
-  (table) => [index("guides_published_at_idx").on(table.published, table.publishedAt)],
+  (table) => [
+    index("guides_published_at_idx").on(table.published, table.publishedAt),
+    index("guides_schedule_idx").on(table.scheduledAt),
+    index("guides_cluster_idx").on(table.contentCluster),
+  ],
 );
 
 export const adminSessionsTable = pgTable("admin_sessions", {

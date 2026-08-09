@@ -10,13 +10,29 @@ export type Guide = {
   metaTitle: string | null;
   metaDescription: string | null;
   translations: Record<string, Record<string, string>> | null;
+  primaryKeyword: string | null;
+  contentCluster: string | null;
+  targetPage: string | null;
+  scheduledAt: string | null;
+  seoScore: number | null;
+  seoAudit: SeoAuditResult | null;
+  searchMetrics: { clicks?: number; impressions?: number; ctr?: number; position?: number; source?: string; importedAt?: string } | null;
   published: boolean;
   publishedAt: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 };
 
-export type GuideInput = Pick<Guide, "slug" | "title" | "excerpt" | "content" | "coverImage" | "metaTitle" | "metaDescription" | "translations" | "published">;
+export type GuideInput = Pick<Guide, "slug" | "title" | "excerpt" | "content" | "coverImage" | "metaTitle" | "metaDescription" | "translations" | "primaryKeyword" | "contentCluster" | "targetPage" | "scheduledAt" | "published">;
+
+export type SeoAuditResult = {
+  score: number;
+  issues: Array<{ code: string; severity: "error" | "warning" | "info"; message: string; points: number }>;
+  stats: Record<string, number>;
+  cannibalization: Array<{ id: number; title: string; slug: string; similarity: number }>;
+};
+
+export type GeneratedGuideDraft = Omit<GuideInput, "slug" | "coverImage" | "published">;
 
 function getToken(): string | null {
   return localStorage.getItem("admin_token");
@@ -119,6 +135,68 @@ export async function fetchGuide(slug: string, lang?: string): Promise<Guide> {
 export async function fetchAdminGuides(): Promise<Guide[]> {
   const res = await fetch(`${API_BASE}/admin/guides`, { headers: authHeaders() });
   if (!res.ok) throw new Error("Failed to fetch guides");
+  return res.json();
+}
+
+export async function fetchGuideSeoContext(): Promise<{
+  vehicles: Array<{ id: number; name: string; category: string; description: string; specs: Record<string, unknown> }>;
+  guides: Array<Pick<Guide, "id" | "title" | "slug" | "primaryKeyword" | "contentCluster" | "targetPage">>;
+  corePages: string[];
+}> {
+  const res = await fetch(`${API_BASE}/admin/guides/context`, { headers: authHeaders() });
+  if (!res.ok) throw new Error("Failed to load SEO context");
+  return res.json();
+}
+
+export async function auditGuideSeo(data: GuideInput, excludeId?: number): Promise<SeoAuditResult> {
+  const res = await fetch(`${API_BASE}/admin/guides/audit`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify({ ...data, excludeId }) });
+  if (!res.ok) throw new Error("SEO audit failed");
+  return res.json();
+}
+
+export async function fetchGuideSeoOverview(): Promise<Array<Guide & { localMetrics: { views: number; leads: number; clicks: number }; opportunity: string | null }>> {
+  const res = await fetch(`${API_BASE}/admin/guides/overview`, { headers: authHeaders() });
+  if (!res.ok) throw new Error("Failed to load SEO overview");
+  return res.json();
+}
+
+export type SeoPlanItem = { week: number; topic: string; keyword: string; cluster: string; targetPage: string; service: string; city: string; intent: string; reason: string };
+export async function generateGuideSeoPlan(): Promise<SeoPlanItem[]> {
+  const res = await fetch(`${API_BASE}/admin/guides/plan`, { method: "POST", headers: authHeaders() });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "SEO plan generation failed");
+  return (await res.json()).items;
+}
+
+export async function importGuideSearchMetrics(rows: Array<Record<string, unknown>>): Promise<{ updated: number }> {
+  const res = await fetch(`${API_BASE}/admin/guides/search-metrics`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify({ rows }) });
+  if (!res.ok) throw new Error("Search metrics import failed");
+  return res.json();
+}
+
+export async function refreshGuideWithAi(id: number, context: Record<string, unknown>): Promise<GeneratedGuideDraft> {
+  const res = await fetch(`${API_BASE}/admin/guides/${id}/refresh`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(context) });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "AI refresh failed");
+  return res.json();
+}
+
+export async function generateGuideWithAi(input: {
+  topic: string;
+  service?: string;
+  city?: string;
+  keyword?: string;
+  audience?: string;
+  featuredAssets?: string;
+  internalLinks?: string;
+  tone?: string;
+  wordCount?: number;
+  notes?: string;
+}): Promise<GeneratedGuideDraft> {
+  const res = await fetch(`${API_BASE}/admin/guides/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "AI generation failed");
   return res.json();
 }
 

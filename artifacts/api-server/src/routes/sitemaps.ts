@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { guidesTable, vehiclesTable } from "@workspace/db/schema";
-import { asc, desc, eq, ne } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, lte, ne, or } from "drizzle-orm";
 
 const router: IRouter = Router();
 const SITE_URL = "https://www.transyachtgroup.com";
@@ -97,7 +97,7 @@ router.get("/guides-sitemap.xml", async (req, res) => {
       title: guidesTable.title,
       updatedAt: guidesTable.updatedAt,
     }).from(guidesTable)
-      .where(eq(guidesTable.published, true))
+      .where(or(eq(guidesTable.published, true), and(isNotNull(guidesTable.scheduledAt), lte(guidesTable.scheduledAt, new Date()))))
       .orderBy(desc(guidesTable.publishedAt));
 
     const entries = guides.map((guide) => {
