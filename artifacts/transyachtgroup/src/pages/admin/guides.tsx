@@ -9,6 +9,28 @@ import { compressImage } from "@/lib/imageCompress";
 const empty: GuideInput = { slug: "", title: "", excerpt: "", content: "<p></p>", coverImage: null, metaTitle: null, metaDescription: null, translations: {}, primaryKeyword: null, contentCluster: null, targetPage: null, scheduledAt: null, published: false };
 const slugify = (value: string) => value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 160);
 const translationLanguages = [{ code: "fr", label: "Français" }, { code: "ru", label: "Русский" }, { code: "ro", label: "Română" }, { code: "ar", label: "العربية" }] as const;
+const plainFleetText = (value: string | null | undefined) => {
+  if (!value) return "";
+  const parsed = new DOMParser().parseFromString(value, "text/html");
+  return (parsed.body.textContent || "").replace(/\s+/g, " ").trim();
+};
+const fleetSpecLabels: Record<string, string> = {
+  seats: "Seats", engine: "Engine", torque: "Torque", bodyType: "Body type", fuelType: "Fuel type",
+  topSpeed: "Top speed", drivetrain: "Drivetrain", horsepower: "Horsepower", pricePerDay: "Price per day",
+  acceleration: "Acceleration", transmission: "Transmission", length: "Length", guests: "Guests", cabins: "Cabins",
+};
+const formatFleetFacts = (vehicle: { name: string; category: string; description?: string | null; specs?: unknown }) => {
+  const name = plainFleetText(vehicle.name);
+  const description = plainFleetText(vehicle.description).replace(/[.]+$/, "");
+  const specs = vehicle.specs && typeof vehicle.specs === "object" && !Array.isArray(vehicle.specs)
+    ? vehicle.specs as Record<string, unknown>
+    : {};
+  const lines = Object.entries(specs)
+    .filter(([key, value]) => key !== "fullDescription" && key !== "unitSystem" && value !== null && value !== undefined && String(value).trim())
+    .map(([key, value]) => `${fleetSpecLabels[key] || key.replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase())}: ${String(value)}`);
+  const fullDescription = typeof specs.fullDescription === "string" ? specs.fullDescription.trim() : "";
+  return [`${name} (${vehicle.category})`, description, ...lines, fullDescription ? `Full description: ${plainFleetText(fullDescription)}` : ""].filter(Boolean).join("\n");
+};
 
 export default function AdminGuides() {
   const [, setLocation] = useLocation();
@@ -59,8 +81,8 @@ export default function AdminGuides() {
   const toggleVehicle = (id: number) => {
     const ids = selectedVehicles.includes(id) ? selectedVehicles.filter((item) => item !== id) : [...selectedVehicles, id];
     setSelectedVehicles(ids);
-    const facts = (context?.vehicles || []).filter((vehicle) => ids.includes(vehicle.id)).map((vehicle) => `${vehicle.name} (${vehicle.category}): ${vehicle.description}. Verified specs: ${JSON.stringify(vehicle.specs || {})}`).join("\n");
-    setAi((current) => ({ ...current, featuredAssets: (context?.vehicles || []).filter((vehicle) => ids.includes(vehicle.id)).map((vehicle) => vehicle.name).join(", "), notes: facts }));
+    const facts = (context?.vehicles || []).filter((vehicle) => ids.includes(vehicle.id)).map(formatFleetFacts).join("\n\n");
+    setAi((current) => ({ ...current, featuredAssets: (context?.vehicles || []).filter((vehicle) => ids.includes(vehicle.id)).map((vehicle) => plainFleetText(vehicle.name)).join(", "), notes: facts }));
   };
   const importMetrics = async () => { setBusy(true); try { const parsed = JSON.parse(metricsJson); const rows = Array.isArray(parsed) ? parsed : parsed.rows; const result = await importGuideSearchMetrics(rows); await load(); setMessage(`${result.updated} article metrics updated.`); } catch (err) { setMessage(err instanceof Error ? err.message : "Paste a valid JSON array"); } finally { setBusy(false); } };
   const makePlan = async () => { setBusy(true); try { setSeoPlan(await generateGuideSeoPlan()); setMessage("Four-week SEO plan generated from your content, metrics and fleet."); } catch (err) { setMessage(err instanceof Error ? err.message : "SEO plan failed"); } finally { setBusy(false); } };
@@ -93,7 +115,7 @@ export default function AdminGuides() {
         <label className="text-xs text-white/50 md:col-span-2">Vehicles or yachts to feature<textarea value={ai.featuredAssets} onChange={(e) => setAi({ ...ai, featuredAssets: e.target.value })} rows={2} placeholder="Example: Mercedes-Benz S500 2026 — mention only when facts are confirmed below" className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white"/></label>
         <label className="text-xs text-white/50 md:col-span-2">Approved internal links<textarea value={ai.internalLinks} onChange={(e) => setAi({ ...ai, internalLinks: e.target.value })} rows={2} placeholder="One or more site paths, separated by commas" className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white"/></label>
         <label className="text-xs text-white/50 md:col-span-2">Verified facts<textarea value={ai.notes} onChange={(e) => setAi({ ...ai, notes: e.target.value })} rows={4} placeholder="Only facts entered here may be used for prices, fleet details or special conditions." className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white"/></label>
-        {context && <div className="md:col-span-2"><p className="mb-2 text-xs text-white/50">Use verified fleet data</p><div className="max-h-44 overflow-y-auto rounded border border-white/10 bg-black/30 p-3"><div className="grid gap-2 sm:grid-cols-2">{context.vehicles.map((vehicle) => <label key={vehicle.id} className="flex items-center gap-2 text-xs text-white/65"><input type="checkbox" checked={selectedVehicles.includes(vehicle.id)} onChange={() => toggleVehicle(vehicle.id)}/><span>{vehicle.name}</span><span className="text-white/25">{vehicle.category}</span></label>)}</div></div></div>}
+        {context && <div className="md:col-span-2"><p className="mb-2 text-xs text-white/50">Use verified fleet data</p><div className="max-h-44 overflow-y-auto rounded border border-white/10 bg-black/30 p-3"><div className="grid gap-2 sm:grid-cols-2">{context.vehicles.map((vehicle) => <label key={vehicle.id} className="flex items-center gap-2 text-xs text-white/65"><input type="checkbox" checked={selectedVehicles.includes(vehicle.id)} onChange={() => toggleVehicle(vehicle.id)}/><span>{plainFleetText(vehicle.name)}</span><span className="text-white/25">{vehicle.category}</span></label>)}</div></div></div>}
         {context && <div className="md:col-span-2"><p className="mb-2 flex items-center gap-2 text-xs text-white/50"><Link2 size={13}/> Suggested internal links</p><div className="flex flex-wrap gap-2">{[...context.corePages, ...context.guides.slice(0, 8).map((guide) => `/guides/${guide.slug}/`)].map((link) => <button type="button" key={link} onClick={() => setAi((current) => ({ ...current, internalLinks: Array.from(new Set([...current.internalLinks.split(/[\s,]+/).filter(Boolean), link])).join(", ") }))} className="rounded border border-white/10 px-2 py-1 text-[10px] text-white/45 hover:border-gold/30 hover:text-gold">+ {link}</button>)}</div></div>}
       </div>
       <button disabled={busy || ai.topic.trim().length < 5} onClick={generate} className="mt-5 inline-flex items-center gap-2 rounded bg-gold px-6 py-3 text-sm font-medium text-black disabled:opacity-40"><Sparkles size={16}/>{busy ? "Generating and translating…" : "Generate AI draft"}</button>
