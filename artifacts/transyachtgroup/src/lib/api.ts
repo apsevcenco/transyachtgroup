@@ -154,6 +154,16 @@ export async function auditGuideSeo(data: GuideInput, excludeId?: number): Promi
   return res.json();
 }
 
+export async function fixGuideSeoWithAi(data: GuideInput, excludeId?: number, verifiedNotes?: string): Promise<{ draft: GuideInput; audit: SeoAuditResult }> {
+  const res = await fetch(`${API_BASE}/admin/guides/fix-seo`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ guide: data, excludeId, verifiedNotes }),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "AI SEO correction failed");
+  return res.json();
+}
+
 export async function fetchGuideSeoOverview(): Promise<Array<Guide & { localMetrics: { views: number; leads: number; clicks: number }; opportunity: string | null }>> {
   const res = await fetch(`${API_BASE}/admin/guides/overview`, { headers: authHeaders() });
   if (!res.ok) throw new Error("Failed to load SEO overview");

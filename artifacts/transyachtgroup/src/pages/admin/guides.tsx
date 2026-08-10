@@ -3,7 +3,7 @@ import { ArrowLeft, BarChart3, CalendarDays, Link2, Pencil, Plus, RefreshCw, Shi
 import { useLocation } from "wouter";
 
 import RichTextEditor from "@/components/RichTextEditor";
-import { auditGuideSeo, checkAuth, createGuide, deleteGuide, fetchAdminGuides, fetchGuideSeoContext, fetchGuideSeoOverview, generateGuideSeoPlan, generateGuideWithAi, importGuideSearchMetrics, refreshGuideWithAi, updateGuide, uploadAdminPublicImage, type Guide, type GuideInput, type SeoAuditResult, type SeoPlanItem } from "@/lib/api";
+import { auditGuideSeo, checkAuth, createGuide, deleteGuide, fetchAdminGuides, fetchGuideSeoContext, fetchGuideSeoOverview, fixGuideSeoWithAi, generateGuideSeoPlan, generateGuideWithAi, importGuideSearchMetrics, refreshGuideWithAi, updateGuide, uploadAdminPublicImage, type Guide, type GuideInput, type SeoAuditResult, type SeoPlanItem } from "@/lib/api";
 import { compressImage } from "@/lib/imageCompress";
 
 const empty: GuideInput = { slug: "", title: "", excerpt: "", content: "<p></p>", coverImage: null, metaTitle: null, metaDescription: null, translations: {}, primaryKeyword: null, contentCluster: null, targetPage: null, scheduledAt: null, published: false };
@@ -67,6 +67,17 @@ export default function AdminGuides() {
   const reset = () => { setEditing(null); setForm(empty); setSeoAudit(null); setSelectedVehicles([]); };
   const save = async () => { setBusy(true); setMessage(""); try { editing ? await updateGuide(editing, form) : await createGuide(form); await load(); reset(); setMessage("Guide saved"); } catch (err) { setMessage(err instanceof Error ? err.message : "Save failed"); } finally { setBusy(false); } };
   const remove = async (id: number) => { if (!window.confirm("Delete this guide permanently?")) return; await deleteGuide(id); await load(); if (editing === id) reset(); };
+  const discardCurrentDraft = async () => {
+    const prompt = editing ? "Delete this saved draft permanently? This cannot be undone." : "Discard this unsaved draft completely?";
+    if (!window.confirm(prompt)) return;
+    setBusy(true); setMessage("");
+    try {
+      if (editing) { await deleteGuide(editing); await load(); }
+      reset();
+      setMessage("Draft removed completely.");
+    } catch (err) { setMessage(err instanceof Error ? err.message : "Failed to remove draft"); }
+    finally { setBusy(false); }
+  };
   const upload = async (file?: File) => { if (!file) return; setBusy(true); try { const compressed = await compressImage(file, 1920, 0.85); set("coverImage", await uploadAdminPublicImage(compressed, "guides")); } catch (err) { setMessage(err instanceof Error ? err.message : "Upload failed"); } finally { setBusy(false); } };
   const generate = async () => {
     setBusy(true); setMessage("");
@@ -79,6 +90,18 @@ export default function AdminGuides() {
     finally { setBusy(false); }
   };
   const runAudit = async () => { setBusy(true); try { const result = await auditGuideSeo(form, editing || undefined); setSeoAudit(result); setMessage(`SEO audit completed: ${result.score}/100`); } catch (err) { setMessage(err instanceof Error ? err.message : "SEO audit failed"); } finally { setBusy(false); } };
+  const fixSeo = async () => {
+    if (!seoAudit?.issues.length) return;
+    const previousScore = seoAudit.score;
+    setBusy(true); setMessage("");
+    try {
+      const result = await fixGuideSeoWithAi({ ...form, published: false }, editing || undefined, ai.notes);
+      setForm((current) => ({ ...current, ...result.draft, published: false }));
+      setSeoAudit(result.audit);
+      setMessage(`AI applied the audit corrections. SEO score: ${previousScore}/100 → ${result.audit.score}/100. Review the text before saving; publication remains off.`);
+    } catch (err) { setMessage(err instanceof Error ? err.message : "AI SEO correction failed"); }
+    finally { setBusy(false); }
+  };
   const refresh = async () => { if (!editing) return; setBusy(true); try { const draft = await refreshGuideWithAi(editing, ai); setForm((current) => ({ ...current, ...draft, published: false })); setMessage("Updated AI draft is ready for review; publication was switched off."); } catch (err) { setMessage(err instanceof Error ? err.message : "AI refresh failed"); } finally { setBusy(false); } };
   const toggleVehicle = (id: number) => {
     const ids = selectedVehicles.includes(id) ? selectedVehicles.filter((item) => item !== id) : [...selectedVehicles, id];
@@ -158,7 +181,7 @@ export default function AdminGuides() {
       <div><p className="mb-2 text-xs text-white/50">Cover image</p><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => upload(e.target.files?.[0])} className="text-sm text-white/50"/>{form.coverImage && <img src={form.coverImage} alt="" className="mt-3 h-32 rounded object-cover"/>}</div>
       <label className="flex items-center gap-3 self-end text-sm"><input type="checkbox" checked={form.published} onChange={(e) => set("published", e.target.checked)} className="h-4 w-4"/> Published and visible on site</label>
     </div>
-    <div className="mt-7 flex flex-wrap gap-3"><button disabled={busy || !form.title || !form.slug || !form.excerpt || !form.content} onClick={save} className="rounded bg-gold px-6 py-3 text-sm font-medium text-black disabled:opacity-40">{busy ? "Saving…" : editing ? "Save changes" : "Create guide"}</button><button disabled={busy || !form.content} onClick={runAudit} className="inline-flex items-center gap-2 rounded border border-white/15 px-5 py-3 text-sm"><ShieldCheck size={16}/> Audit SEO</button>{editing && <button disabled={busy} onClick={refresh} className="inline-flex items-center gap-2 rounded border border-white/15 px-5 py-3 text-sm"><RefreshCw size={16}/> Refresh with AI</button>}</div>
+    <div className="mt-7 flex flex-wrap gap-3"><button disabled={busy || !form.title || !form.slug || !form.excerpt || !form.content} onClick={save} className="rounded bg-gold px-6 py-3 text-sm font-medium text-black disabled:opacity-40">{busy ? "Working…" : editing ? "Save changes" : "Create guide"}</button><button disabled={busy || !form.content} onClick={runAudit} className="inline-flex items-center gap-2 rounded border border-white/15 px-5 py-3 text-sm"><ShieldCheck size={16}/> Audit SEO</button>{seoAudit && seoAudit.issues.length > 0 && <button disabled={busy} onClick={fixSeo} className="inline-flex items-center gap-2 rounded border border-gold/35 bg-gold/5 px-5 py-3 text-sm text-gold disabled:opacity-40"><Sparkles size={16}/> Fix SEO issues with AI</button>}{editing && <button disabled={busy} onClick={refresh} className="inline-flex items-center gap-2 rounded border border-white/15 px-5 py-3 text-sm"><RefreshCw size={16}/> Refresh with AI</button>}{!form.published && (editing !== null || form.title || form.excerpt || form.content !== "<p></p>") && <button disabled={busy} onClick={discardCurrentDraft} className="inline-flex items-center gap-2 rounded border border-red-500/25 px-5 py-3 text-sm text-red-300 disabled:opacity-40"><Trash2 size={16}/> Remove draft completely</button>}</div>
     {seoAudit && <div className="mt-6 rounded-lg border border-white/10 bg-black/30 p-5"><div className="flex items-center justify-between"><div><p className="text-xs uppercase tracking-wider text-white/35">SEO readiness</p><p className={`mt-1 text-4xl font-semibold ${seoAudit.score >= 80 ? "text-emerald-400" : seoAudit.score >= 60 ? "text-gold" : "text-red-400"}`}>{seoAudit.score}/100</p></div><div className="text-right text-xs text-white/40"><p>{seoAudit.stats.wordCount || 0} words</p><p>{seoAudit.stats.internalLinks || 0} internal links</p><p>{seoAudit.stats.completeTranslations || 0}/4 translations</p></div></div><div className="mt-5 space-y-2">{seoAudit.issues.map((issue) => <div key={issue.code} className={`rounded px-3 py-2 text-xs ${issue.severity === "error" ? "bg-red-500/10 text-red-300" : "bg-gold/5 text-gold/80"}`}>{issue.message} <span className="opacity-40">−{issue.points}</span></div>)}{!seoAudit.issues.length && <p className="text-sm text-emerald-400">Ready to publish.</p>}</div>{seoAudit.cannibalization.length > 0 && <div className="mt-4 border-t border-white/10 pt-4"><p className="mb-2 text-xs uppercase text-red-300">Possible competing pages</p>{seoAudit.cannibalization.map((item) => <p key={item.id} className="text-xs text-white/50">{item.title} — {item.similarity}% overlap</p>)}</div>}</div>}
     </section>
     <section className="mt-8 rounded-xl border border-white/10 bg-white/[0.02] p-5">
