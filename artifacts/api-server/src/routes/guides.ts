@@ -67,15 +67,17 @@ async function requestOpenAiJson(instructions: string, input: string): Promise<u
   let response: Response | null = null;
   let detail = "";
   for (const model of models) {
-    response = await fetch(`${baseUrl}/responses`, {
+    response = await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model,
-        instructions,
-        input,
-        max_output_tokens: 16_000,
-        text: { format: { type: "json_object" } },
+        messages: [
+          { role: "system", content: instructions },
+          { role: "user", content: input },
+        ],
+        max_tokens: 12_000,
+        response_format: { type: "json_object" },
       }),
     });
     if (response.ok) break;
@@ -84,8 +86,8 @@ async function requestOpenAiJson(instructions: string, input: string): Promise<u
     if (!mayBeModelAccessProblem || model === models.at(-1)) throw new Error(`OPENAI_${response.status}:${detail}`);
   }
   if (!response?.ok) throw new Error(`OPENAI_REQUEST_FAILED:${detail}`);
-  const data = await response.json() as { output_text?: string; output?: Array<{ content?: Array<{ type?: string; text?: string }> }> };
-  const outputText = data.output_text || data.output?.flatMap((item) => item.content || []).find((item) => item.type === "output_text")?.text;
+  const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
+  const outputText = data.choices?.[0]?.message?.content;
   if (!outputText) throw new Error("INVALID_AI_RESPONSE");
   return extractJson(outputText);
 }
