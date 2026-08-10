@@ -61,23 +61,28 @@ async function requestOpenAiJson(instructions: string, input: string): Promise<u
   const baseUrl = (process.env.OPENAI_BASE_URL || process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
   const apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_NOT_CONFIGURED");
-  const model = process.env.OPENAI_CONTENT_MODEL || "gpt-5.6-sol";
-
-  const response = await fetch(`${baseUrl}/responses`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model,
-      instructions,
-      input,
-      max_output_tokens: 20_000,
-      text: { format: { type: "json_object" } },
-    }),
-  });
-  if (!response.ok) {
-    const detail = (await response.text()).slice(0, 500);
-    throw new Error(`OPENAI_${response.status}:${detail}`);
+  const preferredModel = process.env.OPENAI_CONTENT_MODEL || "gpt-5.6-sol";
+  const models = Array.from(new Set([preferredModel, "gpt-4o-mini"]));
+  let response: Response | null = null;
+  let detail = "";
+  for (const model of models) {
+    response = await fetch(`${baseUrl}/responses`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model,
+        instructions,
+        input,
+        max_output_tokens: 20_000,
+        text: { format: { type: "json_object" } },
+      }),
+    });
+    if (response.ok) break;
+    detail = (await response.text()).slice(0, 500);
+    const mayBeModelAccessProblem = response.status === 400 || response.status === 403 || response.status === 404;
+    if (!mayBeModelAccessProblem || model === models.at(-1)) throw new Error(`OPENAI_${response.status}:${detail}`);
   }
+  if (!response?.ok) throw new Error(`OPENAI_REQUEST_FAILED:${detail}`);
   const data = await response.json() as { output_text?: string; output?: Array<{ content?: Array<{ type?: string; text?: string }> }> };
   const outputText = data.output_text || data.output?.flatMap((item) => item.content || []).find((item) => item.type === "output_text")?.text;
   if (!outputText) throw new Error("INVALID_AI_RESPONSE");
@@ -262,9 +267,17 @@ router.post("/admin/guides/plan", adminAuth, guideAiLimiter, async (req, res) =>
     const code = err instanceof Error ? err.message : "";
     const error = code === "OPENAI_NOT_CONFIGURED"
       ? "OpenAI is not configured on the server"
+      : code.startsWith("OPENAI_401")
+        ? "OpenAI rejected the API key. Check OPENAI_API_KEY"
+        : code.startsWith("OPENAI_429")
+          ? "OpenAI quota or billing limit reached"
+          : code.startsWith("OPENAI_403")
+            ? "This OpenAI account does not have access to the configured models"
       : code === "INVALID_PLAN_RESPONSE" || code === "INVALID_AI_RESPONSE"
         ? "OpenAI returned an empty plan. Please try again"
-        : "SEO plan generation failed. Check database migration 0022 and OpenAI configuration";
+        : /column|does not exist|guides_/i.test(code)
+          ? "Database migration 0022_guides_seo_pipeline.sql has not been applied"
+          : "SEO plan generation failed. Check the backend logs for the recorded OpenAI error";
     res.status(502).json({ error });
   }
 });
