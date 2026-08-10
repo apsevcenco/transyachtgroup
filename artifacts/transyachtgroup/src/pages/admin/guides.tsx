@@ -3,7 +3,7 @@ import { ArrowLeft, BarChart3, CalendarDays, Link2, Pencil, Plus, RefreshCw, Shi
 import { useLocation } from "wouter";
 
 import RichTextEditor from "@/components/RichTextEditor";
-import { auditGuideSeo, checkAuth, createGuide, deleteGuide, fetchAdminGuides, fetchGuideSeoContext, fetchGuideSeoOverview, fetchGuideSeoPlans, fixGuideSeoWithAi, generateGuideSeoPlan, generateGuideWithAi, importGuideSearchMetrics, refreshGuideWithAi, updateGuide, updateGuideSeoPlanItem, uploadAdminPublicImage, type Guide, type GuideInput, type SeoAuditResult, type SeoContentPlan, type SeoPlanItem, type SeoPlanStatus } from "@/lib/api";
+import { auditGuideSeo, checkAuth, createGuide, deleteGuide, fetchAdminGuides, fetchGuideSeoContext, fetchGuideSeoOverview, fetchGuideSeoPlans, fixGuideSeoWithAi, generateGuideCoverWithAi, generateGuideSeoPlan, generateGuideWithAi, importGuideSearchMetrics, refreshGuideWithAi, updateGuide, updateGuideSeoPlanItem, uploadAdminPublicImage, type Guide, type GuideInput, type SeoAuditResult, type SeoContentPlan, type SeoPlanItem, type SeoPlanStatus } from "@/lib/api";
 import { compressImage } from "@/lib/imageCompress";
 
 const empty: GuideInput = { slug: "", title: "", excerpt: "", content: "<p></p>", coverImage: null, metaTitle: null, metaDescription: null, translations: {}, primaryKeyword: null, contentCluster: null, targetPage: null, scheduledAt: null, published: false };
@@ -81,13 +81,25 @@ export default function AdminGuides() {
     finally { setBusy(false); }
   };
   const upload = async (file?: File) => { if (!file) return; setBusy(true); try { const compressed = await compressImage(file, 1920, 0.85); set("coverImage", await uploadAdminPublicImage(compressed, "guides")); } catch (err) { setMessage(err instanceof Error ? err.message : "Upload failed"); } finally { setBusy(false); } };
+  const generateCover = async () => {
+    const title = form.title || ai.topic;
+    if (title.trim().length < 3) { setMessage("Enter an article topic or title before generating a cover."); return; }
+    setBusy(true); setMessage("");
+    try {
+      const url = await generateGuideCoverWithAi({ title, excerpt: form.excerpt, service: ai.service, city: ai.city });
+      set("coverImage", url);
+      setMessage("AI cover generated and saved. Review it before publishing.");
+    } catch (err) { setMessage(err instanceof Error ? err.message : "AI cover generation failed"); }
+    finally { setBusy(false); }
+  };
   const generate = async () => {
     setBusy(true); setMessage("");
     try {
       const draft = await generateGuideWithAi(ai);
-      setForm((current) => ({ ...current, ...draft, slug: slugify(draft.title), primaryKeyword: ai.keyword || ai.topic, contentCluster: `${ai.service} — ${ai.city}`, targetPage: ai.service === "Yacht charter" ? "/yachts/" : "/cars/", published: false }));
+      const { coverImageWarning, ...generated } = draft;
+      setForm((current) => ({ ...current, ...generated, slug: slugify(draft.title), primaryKeyword: ai.keyword || ai.topic, contentCluster: `${ai.service} — ${ai.city}`, targetPage: ai.service === "Yacht charter" ? "/yachts/" : "/cars/", published: false }));
       setEditing(null);
-      setMessage("AI draft and all translations are ready. Review them, add a cover image, then save as draft.");
+      setMessage(coverImageWarning || "AI draft, translations and cover are ready. Review everything, then save as draft.");
     } catch (err) { setMessage(err instanceof Error ? err.message : "AI generation failed"); }
     finally { setBusy(false); }
   };
@@ -169,8 +181,9 @@ export default function AdminGuides() {
         <label className="text-xs text-white/50 md:col-span-2">Verified facts<textarea value={ai.notes} onChange={(e) => setAi({ ...ai, notes: e.target.value })} rows={4} placeholder="Only facts entered here may be used for prices, fleet details or special conditions." className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white"/></label>
         {context && <div className="md:col-span-2"><p className="mb-2 text-xs text-white/50">Use verified fleet data</p><div className="max-h-44 overflow-y-auto rounded border border-white/10 bg-black/30 p-3"><div className="grid gap-2 sm:grid-cols-2">{context.vehicles.map((vehicle) => <label key={vehicle.id} className="flex items-center gap-2 text-xs text-white/65"><input type="checkbox" checked={selectedVehicles.includes(vehicle.id)} onChange={() => toggleVehicle(vehicle.id)}/><span>{plainFleetText(vehicle.name)}</span><span className="text-white/25">{vehicle.category}</span></label>)}</div></div></div>}
         {context && <div className="md:col-span-2"><p className="mb-2 flex items-center gap-2 text-xs text-white/50"><Link2 size={13}/> Suggested internal links</p><div className="flex flex-wrap gap-2">{[...context.corePages, ...context.guides.slice(0, 8).map((guide) => `/guides/${guide.slug}/`)].map((link) => <button type="button" key={link} onClick={() => setAi((current) => ({ ...current, internalLinks: Array.from(new Set([...current.internalLinks.split(/[\s,]+/).filter(Boolean), link])).join(", ") }))} className="rounded border border-white/10 px-2 py-1 text-[10px] text-white/45 hover:border-gold/30 hover:text-gold">+ {link}</button>)}</div></div>}
+        <div className="md:col-span-2 rounded-lg border border-gold/15 bg-black/20 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm text-white/75">Article cover image</p><p className="mt-1 text-xs text-white/35">A cover is generated automatically with a new AI draft. You can replace it with your own image or regenerate it.</p></div><div className="flex flex-wrap gap-2"><label className="cursor-pointer rounded border border-white/15 px-4 py-2 text-xs text-white/65 hover:border-gold/30 hover:text-gold">Upload cover<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => upload(event.target.files?.[0])} className="hidden"/></label><button type="button" disabled={busy || !(form.title || ai.topic)} onClick={generateCover} className="inline-flex items-center gap-2 rounded border border-gold/30 px-4 py-2 text-xs text-gold disabled:opacity-40"><Sparkles size={14}/> Generate AI cover</button></div></div>{form.coverImage && <img src={form.coverImage} alt="Article cover preview" className="mt-4 aspect-[3/2] w-full max-w-xl rounded-lg object-cover"/>}</div>
       </div>
-      <button disabled={busy || ai.topic.trim().length < 5} onClick={generate} className="mt-5 inline-flex items-center gap-2 rounded bg-gold px-6 py-3 text-sm font-medium text-black disabled:opacity-40"><Sparkles size={16}/>{busy ? "Generating and translating…" : "Generate AI draft"}</button>
+      <button disabled={busy || ai.topic.trim().length < 5} onClick={generate} className="mt-5 inline-flex items-center gap-2 rounded bg-gold px-6 py-3 text-sm font-medium text-black disabled:opacity-40"><Sparkles size={16}/>{busy ? "Generating article and cover…" : "Generate AI draft + cover"}</button>
     </section>
     <section className="rounded-xl border border-white/10 bg-white/[0.02] p-5 md:p-7"><div className="grid gap-5 md:grid-cols-2">
       <label className="text-xs text-white/50">Title<input value={form.title} onChange={(e) => { set("title", e.target.value); if (!editing) set("slug", slugify(e.target.value)); }} className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white"/></label>

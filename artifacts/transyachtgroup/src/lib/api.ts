@@ -32,7 +32,7 @@ export type SeoAuditResult = {
   cannibalization: Array<{ id: number; title: string; slug: string; similarity: number }>;
 };
 
-export type GeneratedGuideDraft = Omit<GuideInput, "slug" | "coverImage" | "published">;
+export type GeneratedGuideDraft = Omit<GuideInput, "slug" | "published"> & { coverImageWarning?: string | null };
 
 function getToken(): string | null {
   return localStorage.getItem("admin_token");
@@ -226,6 +226,16 @@ export async function generateGuideWithAi(input: {
   });
   if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "AI generation failed");
   return res.json();
+}
+
+export async function generateGuideCoverWithAi(input: { title: string; excerpt?: string; service?: string; city?: string }): Promise<string> {
+  const res = await fetch(`${API_BASE}/admin/guides/generate-cover`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "AI cover generation failed");
+  return (await res.json()).url;
 }
 
 export async function createGuide(data: GuideInput): Promise<Guide> {
