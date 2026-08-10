@@ -61,7 +61,8 @@ async function requestOpenAiJson(instructions: string, input: string): Promise<u
   const baseUrl = (process.env.OPENAI_BASE_URL || process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
   const apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_NOT_CONFIGURED");
-  const preferredModel = process.env.OPENAI_CONTENT_MODEL || "gpt-5.6-sol";
+  const configuredModel = process.env.OPENAI_CONTENT_MODEL?.trim();
+  const preferredModel = configuredModel && configuredModel !== "gpt-5.6-sol" ? configuredModel : "gpt-4o-mini";
   const models = Array.from(new Set([preferredModel, "gpt-4o-mini"]));
   let response: Response | null = null;
   let detail = "";
@@ -73,7 +74,7 @@ async function requestOpenAiJson(instructions: string, input: string): Promise<u
         model,
         instructions,
         input,
-        max_output_tokens: 20_000,
+        max_output_tokens: 16_000,
         text: { format: { type: "json_object" } },
       }),
     });
