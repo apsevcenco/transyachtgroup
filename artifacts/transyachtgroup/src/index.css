@@ -487,12 +487,12 @@ html {
   margin: 0 !important;
 }
 
-/* Shared display scale: matches the Road Sovereign catalogue heading while
-   shrinking safely on narrow screens and for long translated titles. */
+/* The live Road Sovereign CMS heading is 32px. Use that exact desktop scale
+   across guide and full vehicle titles, with a small mobile reduction. */
 .section-display-title {
-  font-size: clamp(2.25rem, 5vw, 72px) !important;
-  line-height: 1 !important;
-  letter-spacing: -0.025em !important;
+  font-size: clamp(1.75rem, 3vw, 32px) !important;
+  line-height: 1.15 !important;
+  letter-spacing: -0.015em !important;
   overflow-wrap: anywhere;
 }
 
