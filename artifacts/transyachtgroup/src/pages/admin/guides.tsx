@@ -58,6 +58,7 @@ export default function AdminGuides() {
   const [selectedVehicles, setSelectedVehicles] = useState<number[]>([]);
   const [metricsJson, setMetricsJson] = useState("");
   const [seoPlan, setSeoPlan] = useState<SeoPlanItem[]>([]);
+  const [planMessage, setPlanMessage] = useState("");
   const load = () => Promise.all([fetchAdminGuides().then(setItems), fetchGuideSeoOverview().then(setOverview)]).then(() => undefined);
   useEffect(() => { checkAuth().then((ok) => { if (ok) void Promise.all([load(), fetchGuideSeoContext().then(setContext)]); else setLocation("/admin"); }); }, [setLocation]);
   const set = <K extends keyof GuideInput>(key: K, value: GuideInput[K]) => setForm((current) => ({ ...current, [key]: value }));
@@ -85,7 +86,17 @@ export default function AdminGuides() {
     setAi((current) => ({ ...current, featuredAssets: (context?.vehicles || []).filter((vehicle) => ids.includes(vehicle.id)).map((vehicle) => plainFleetText(vehicle.name)).join(", "), notes: facts }));
   };
   const importMetrics = async () => { setBusy(true); try { const parsed = JSON.parse(metricsJson); const rows = Array.isArray(parsed) ? parsed : parsed.rows; const result = await importGuideSearchMetrics(rows); await load(); setMessage(`${result.updated} article metrics updated.`); } catch (err) { setMessage(err instanceof Error ? err.message : "Paste a valid JSON array"); } finally { setBusy(false); } };
-  const makePlan = async () => { setBusy(true); try { setSeoPlan(await generateGuideSeoPlan()); setMessage("Four-week SEO plan generated from your content, metrics and fleet."); } catch (err) { setMessage(err instanceof Error ? err.message : "SEO plan failed"); } finally { setBusy(false); } };
+  const makePlan = async () => {
+    setBusy(true); setPlanMessage("Generating the plan…"); setSeoPlan([]);
+    try {
+      const result = await generateGuideSeoPlan();
+      if (!Array.isArray(result) || !result.length) throw new Error("The server returned an empty plan. Please try again.");
+      setSeoPlan(result);
+      setPlanMessage(`${result.length} article ideas generated. Select one to fill the article form.`);
+    } catch (err) {
+      setPlanMessage(err instanceof Error ? err.message : "SEO plan generation failed");
+    } finally { setBusy(false); }
+  };
   const usePlanItem = (item: SeoPlanItem) => { setAi((current) => ({ ...current, topic: item.topic, keyword: item.keyword, service: item.service, city: item.city })); setForm((current) => ({ ...current, contentCluster: item.cluster, targetPage: item.targetPage })); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const clusters = useMemo(() => Object.entries(overview.reduce<Record<string, typeof overview>>((groups, guide) => { const key = guide.contentCluster || "Unassigned"; (groups[key] ||= []).push(guide); return groups; }, {})), [overview]);
   const scheduled = useMemo(() => overview.filter((guide) => guide.scheduledAt && new Date(guide.scheduledAt) > new Date()).sort((a, b) => String(a.scheduledAt).localeCompare(String(b.scheduledAt))), [overview]);
@@ -148,7 +159,8 @@ export default function AdminGuides() {
     {seoAudit && <div className="mt-6 rounded-lg border border-white/10 bg-black/30 p-5"><div className="flex items-center justify-between"><div><p className="text-xs uppercase tracking-wider text-white/35">SEO readiness</p><p className={`mt-1 text-4xl font-semibold ${seoAudit.score >= 80 ? "text-emerald-400" : seoAudit.score >= 60 ? "text-gold" : "text-red-400"}`}>{seoAudit.score}/100</p></div><div className="text-right text-xs text-white/40"><p>{seoAudit.stats.wordCount || 0} words</p><p>{seoAudit.stats.internalLinks || 0} internal links</p><p>{seoAudit.stats.completeTranslations || 0}/4 translations</p></div></div><div className="mt-5 space-y-2">{seoAudit.issues.map((issue) => <div key={issue.code} className={`rounded px-3 py-2 text-xs ${issue.severity === "error" ? "bg-red-500/10 text-red-300" : "bg-gold/5 text-gold/80"}`}>{issue.message} <span className="opacity-40">−{issue.points}</span></div>)}{!seoAudit.issues.length && <p className="text-sm text-emerald-400">Ready to publish.</p>}</div>{seoAudit.cannibalization.length > 0 && <div className="mt-4 border-t border-white/10 pt-4"><p className="mb-2 text-xs uppercase text-red-300">Possible competing pages</p>{seoAudit.cannibalization.map((item) => <p key={item.id} className="text-xs text-white/50">{item.title} — {item.similarity}% overlap</p>)}</div>}</div>}
     </section>
     <section className="mt-8 rounded-xl border border-white/10 bg-white/[0.02] p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-serif text-2xl">Four-week content plan</h2><p className="mt-1 text-xs text-white/35">AI plan grounded in the real fleet, existing clusters and imported search data.</p></div><button disabled={busy} onClick={makePlan} className="rounded border border-gold/30 px-4 py-2 text-xs text-gold disabled:opacity-40">Generate plan</button></div>
+      <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-serif text-2xl">Four-week content plan</h2><p className="mt-1 text-xs text-white/35">AI plan grounded in the real fleet, existing clusters and imported search data.</p></div><button type="button" disabled={busy} onClick={makePlan} className="rounded border border-gold/30 px-4 py-2 text-xs text-gold disabled:opacity-40">{busy ? "Generating…" : "Generate plan"}</button></div>
+      {planMessage && <p className={`mt-4 rounded border px-3 py-2 text-xs ${seoPlan.length ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-300" : "border-gold/20 bg-gold/5 text-gold"}`}>{planMessage}</p>}
       {seoPlan.length > 0 && <div className="mt-5 grid gap-3 md:grid-cols-2">{seoPlan.map((item, index) => <button key={`${item.topic}-${index}`} type="button" onClick={() => usePlanItem(item)} className="rounded-lg border border-white/5 bg-black/20 p-4 text-left hover:border-gold/30"><div className="flex items-center justify-between gap-3"><span className="text-xs text-gold">Week {item.week}</span><span className="text-[10px] uppercase text-white/30">{item.city} · {item.service}</span></div><p className="mt-2 text-sm text-white/75">{item.topic}</p><p className="mt-2 text-xs text-white/35">{item.keyword}</p></button>)}</div>}
     </section>
     <section className="mt-8 grid gap-5 lg:grid-cols-3">

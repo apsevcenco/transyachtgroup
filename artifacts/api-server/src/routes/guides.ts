@@ -61,7 +61,7 @@ async function requestOpenAiJson(instructions: string, input: string): Promise<u
   const baseUrl = (process.env.OPENAI_BASE_URL || process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
   const apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_NOT_CONFIGURED");
-  const model = process.env.OPENAI_CONTENT_MODEL || "gpt-5.6-terra";
+  const model = process.env.OPENAI_CONTENT_MODEL || "gpt-5.6-sol";
 
   const response = await fetch(`${baseUrl}/responses`, {
     method: "POST",
@@ -255,8 +255,18 @@ router.post("/admin/guides/plan", adminAuth, guideAiLimiter, async (req, res) =>
       `Create an eight-article plan for the next four weeks (two articles per week). Existing content and metrics: ${JSON.stringify(guides)}. Real fleet names: ${JSON.stringify(vehicles)}. Return {"items":[{"week":1,"topic":"...","keyword":"...","cluster":"...","targetPage":"/.../","service":"...","city":"...","intent":"commercial|informational","reason":"..."}]}. Use only safe internal target pages under /cars/, /yachts/, /locations/ or /services/.`,
     );
     const items = raw && typeof raw === "object" && Array.isArray((raw as { items?: unknown[] }).items) ? (raw as { items: unknown[] }).items : [];
+    if (!items.length) throw new Error("INVALID_PLAN_RESPONSE");
     res.json({ items: items.slice(0, 8) });
-  } catch (err) { req.log?.error?.({ err }, "SEO plan generation failed"); res.status(502).json({ error: "SEO plan generation failed" }); }
+  } catch (err) {
+    req.log?.error?.({ err }, "SEO plan generation failed");
+    const code = err instanceof Error ? err.message : "";
+    const error = code === "OPENAI_NOT_CONFIGURED"
+      ? "OpenAI is not configured on the server"
+      : code === "INVALID_PLAN_RESPONSE" || code === "INVALID_AI_RESPONSE"
+        ? "OpenAI returned an empty plan. Please try again"
+        : "SEO plan generation failed. Check database migration 0022 and OpenAI configuration";
+    res.status(502).json({ error });
+  }
 });
 
 router.get("/admin/guides/overview", adminAuth, async (_req, res) => {
