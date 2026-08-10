@@ -1,6 +1,5 @@
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
 import { TextStyle } from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
@@ -397,7 +396,6 @@ function useInlineEditor(content: string, onChange: (html: string) => void) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ heading: false }),
-      Underline,
       TextStyle,
       Color,
       FontFamily,
@@ -517,7 +515,6 @@ export default function RichTextEditor({
       StarterKit.configure({
         heading: inline ? false : { levels: [2, 3] },
       }),
-      Underline,
       TextStyle,
       Color,
       FontFamily,

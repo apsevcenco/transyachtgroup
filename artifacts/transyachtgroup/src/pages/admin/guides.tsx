@@ -34,6 +34,7 @@ const formatFleetFacts = (vehicle: { name: string; category: string; description
 
 export default function AdminGuides() {
   const [, setLocation] = useLocation();
+  const [authorized, setAuthorized] = useState(false);
   const [items, setItems] = useState<Guide[]>([]);
   const [form, setForm] = useState<GuideInput>(empty);
   const [editing, setEditing] = useState<number | null>(null);
@@ -60,7 +61,7 @@ export default function AdminGuides() {
   const [seoPlan, setSeoPlan] = useState<SeoPlanItem[]>([]);
   const [planMessage, setPlanMessage] = useState("");
   const load = () => Promise.all([fetchAdminGuides().then(setItems), fetchGuideSeoOverview().then(setOverview)]).then(() => undefined);
-  useEffect(() => { checkAuth().then((ok) => { if (ok) void Promise.all([load(), fetchGuideSeoContext().then(setContext)]); else setLocation("/admin"); }); }, [setLocation]);
+  useEffect(() => { checkAuth().then((ok) => { if (ok) { setAuthorized(true); void Promise.all([load(), fetchGuideSeoContext().then(setContext)]); } else setLocation("/admin"); }); }, [setLocation]);
   const set = <K extends keyof GuideInput>(key: K, value: GuideInput[K]) => setForm((current) => ({ ...current, [key]: value }));
   const edit = (guide: Guide) => { setEditing(guide.id); setForm({ slug: guide.slug, title: guide.title, excerpt: guide.excerpt, content: guide.content, coverImage: guide.coverImage, metaTitle: guide.metaTitle, metaDescription: guide.metaDescription, translations: guide.translations || {}, primaryKeyword: guide.primaryKeyword, contentCluster: guide.contentCluster, targetPage: guide.targetPage, scheduledAt: guide.scheduledAt, published: guide.published }); setSeoAudit(guide.seoAudit); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const reset = () => { setEditing(null); setForm(empty); setSeoAudit(null); setSelectedVehicles([]); };
@@ -108,6 +109,8 @@ export default function AdminGuides() {
     },
   }));
   const activeTranslation = (form.translations || {})[translationLang] || {};
+
+  if (!authorized) return <div className="min-h-screen bg-[hsl(0,0%,3%)] p-8 text-sm text-white/40">Checking administrator session…</div>;
 
   return <div className="min-h-screen bg-[hsl(0,0%,3%)] px-4 py-8 text-white sm:px-8"><div className="mx-auto max-w-6xl">
     <button onClick={() => setLocation("/admin/dashboard")} className="mb-7 flex items-center gap-2 text-sm text-white/50 hover:text-white"><ArrowLeft size={17}/> Admin dashboard</button>
