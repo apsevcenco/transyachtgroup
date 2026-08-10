@@ -491,7 +491,7 @@ function CatalogCard({
       <div className="p-6 flex-1 flex flex-col">
         <CmsContent
           as="h3"
-          className="font-porter text-xl text-white mb-1 tracking-tight"
+          className="vehicle-card-title mb-2 line-clamp-3 min-h-[3.9rem] text-balance font-porter text-base leading-[1.3] tracking-[-0.01em] text-white sm:text-[1.05rem]"
           html={item.name}
         />
 

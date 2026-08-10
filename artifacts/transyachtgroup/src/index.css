@@ -475,3 +475,14 @@ html {
   line-height: 1.5;
   color: rgba(255, 255, 255, 0.82);
 }
+
+/* Older CMS vehicle names may carry their own inline font size. Keep every
+   public fleet card typographically consistent even for those records. */
+.vehicle-card-title :where(span, p, div, strong, em, u, s) {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  letter-spacing: inherit !important;
+  line-height: inherit !important;
+  margin: 0 !important;
+}
