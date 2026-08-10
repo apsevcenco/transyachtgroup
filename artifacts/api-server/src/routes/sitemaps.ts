@@ -95,6 +95,7 @@ router.get("/guides-sitemap.xml", async (req, res) => {
       slug: guidesTable.slug,
       coverImage: guidesTable.coverImage,
       title: guidesTable.title,
+      translations: guidesTable.translations,
       updatedAt: guidesTable.updatedAt,
     }).from(guidesTable)
       .where(or(eq(guidesTable.published, true), and(isNotNull(guidesTable.scheduledAt), lte(guidesTable.scheduledAt, new Date()))))
@@ -103,18 +104,42 @@ router.get("/guides-sitemap.xml", async (req, res) => {
     const entries = guides.map((guide) => {
       const path = `/guides/${guide.slug}/`;
       const image = publicImageUrl(guide.coverImage);
-      const imageXml = image ? `\n    <image:image><image:loc>${escapeXml(image)}</image:loc><image:title>${escapeXml(guide.title)}</image:title></image:image>` : "";
-      return `  <url>
-    <loc>${SITE_URL}${path}?lang=en</loc>
-    <lastmod>${(guide.updatedAt || new Date()).toISOString()}</lastmod>
+      const translations = (guide.translations || {}) as Record<string, Record<string, string>>;
+      const availableLanguages = LANGUAGES.filter((lang) => {
+        if (lang === "en") return true;
+        const translated = translations[lang] || {};
+        return Boolean(
+          translated.title?.trim() &&
+          translated.excerpt?.trim() &&
+          translated.content?.trim() &&
+          translated.metaTitle?.trim() &&
+          translated.metaDescription?.trim()
+        );
+      });
+      const alternates = availableLanguages.map(
+        (lang) =>
+          `    <xhtml:link rel="alternate" hreflang="${lang}" href="${SITE_URL}${path}?lang=${lang}"/>`,
+      ).join("\n");
+      const lastmod = (guide.updatedAt || new Date()).toISOString();
+
+      return availableLanguages.map((lang) => {
+        const localizedTitle = lang === "en" ? guide.title : translations[lang]?.title || guide.title;
+        const imageXml = image ? `\n    <image:image><image:loc>${escapeXml(image)}</image:loc><image:title>${escapeXml(localizedTitle)}</image:title></image:image>` : "";
+        return `  <url>
+    <loc>${SITE_URL}${path}?lang=${lang}</loc>
+${alternates}
+    <xhtml:link rel="alternate" hreflang="x-default" href="${SITE_URL}${path}?lang=en"/>
+    <lastmod>${lastmod}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>${imageXml}
   </url>`;
+      }).join("\n");
     });
 
     res.set({ "Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, max-age=300, stale-while-revalidate=3600" });
     res.send(`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 ${entries.join("\n")}
 </urlset>`);
