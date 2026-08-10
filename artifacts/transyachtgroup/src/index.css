@@ -504,3 +504,26 @@ html {
   line-height: inherit !important;
   margin: 0 !important;
 }
+
+/* Article links must remain unmistakable even when the typography plugin is
+   unavailable or CMS markup inherits the surrounding paragraph colour. */
+.guide-content a {
+  color: hsl(var(--gold)) !important;
+  font-weight: 600 !important;
+  text-decoration-line: underline !important;
+  text-decoration-color: hsl(var(--gold) / 0.7) !important;
+  text-decoration-thickness: 1px !important;
+  text-underline-offset: 4px !important;
+  transition: color 180ms ease, text-decoration-color 180ms ease;
+}
+
+.guide-content a:hover {
+  color: hsl(var(--gold-light)) !important;
+  text-decoration-color: hsl(var(--gold-light)) !important;
+}
+
+.guide-content a:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid hsl(var(--gold));
+  outline-offset: 3px;
+}
