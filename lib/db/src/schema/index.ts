@@ -80,6 +80,18 @@ export const guidesTable = pgTable(
   ],
 );
 
+export const seoContentPlansTable = pgTable(
+  "seo_content_plans",
+  {
+    id: serial("id").primaryKey(),
+    title: text("title").notNull(),
+    items: jsonb("items").notNull().default([]),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [index("seo_content_plans_updated_idx").on(table.updatedAt)],
+);
+
 export const adminSessionsTable = pgTable("admin_sessions", {
   id: serial("id").primaryKey(),
   token: varchar("token", { length: 64 }).notNull().unique(),

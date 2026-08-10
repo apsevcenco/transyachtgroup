@@ -3,7 +3,7 @@ import { ArrowLeft, BarChart3, CalendarDays, Link2, Pencil, Plus, RefreshCw, Shi
 import { useLocation } from "wouter";
 
 import RichTextEditor from "@/components/RichTextEditor";
-import { auditGuideSeo, checkAuth, createGuide, deleteGuide, fetchAdminGuides, fetchGuideSeoContext, fetchGuideSeoOverview, fixGuideSeoWithAi, generateGuideSeoPlan, generateGuideWithAi, importGuideSearchMetrics, refreshGuideWithAi, updateGuide, uploadAdminPublicImage, type Guide, type GuideInput, type SeoAuditResult, type SeoPlanItem } from "@/lib/api";
+import { auditGuideSeo, checkAuth, createGuide, deleteGuide, fetchAdminGuides, fetchGuideSeoContext, fetchGuideSeoOverview, fetchGuideSeoPlans, fixGuideSeoWithAi, generateGuideSeoPlan, generateGuideWithAi, importGuideSearchMetrics, refreshGuideWithAi, updateGuide, updateGuideSeoPlanItem, uploadAdminPublicImage, type Guide, type GuideInput, type SeoAuditResult, type SeoContentPlan, type SeoPlanItem, type SeoPlanStatus } from "@/lib/api";
 import { compressImage } from "@/lib/imageCompress";
 
 const empty: GuideInput = { slug: "", title: "", excerpt: "", content: "<p></p>", coverImage: null, metaTitle: null, metaDescription: null, translations: {}, primaryKeyword: null, contentCluster: null, targetPage: null, scheduledAt: null, published: false };
@@ -59,8 +59,10 @@ export default function AdminGuides() {
   const [selectedVehicles, setSelectedVehicles] = useState<number[]>([]);
   const [metricsJson, setMetricsJson] = useState("");
   const [seoPlan, setSeoPlan] = useState<SeoPlanItem[]>([]);
+  const [savedPlans, setSavedPlans] = useState<SeoContentPlan[]>([]);
+  const [activePlanId, setActivePlanId] = useState<number | null>(null);
   const [planMessage, setPlanMessage] = useState("");
-  const load = () => Promise.all([fetchAdminGuides().then(setItems), fetchGuideSeoOverview().then(setOverview)]).then(() => undefined);
+  const load = () => Promise.all([fetchAdminGuides().then(setItems), fetchGuideSeoOverview().then(setOverview), fetchGuideSeoPlans().then((plans) => { setSavedPlans(plans); setActivePlanId((current) => { const selected = plans.find((plan) => plan.id === current) || plans[0]; setSeoPlan(selected?.items || []); return selected?.id || null; }); }).catch(() => { setSavedPlans([]); setSeoPlan([]); })]).then(() => undefined);
   useEffect(() => { checkAuth().then((ok) => { if (ok) { setAuthorized(true); void Promise.all([load(), fetchGuideSeoContext().then(setContext)]); } else setLocation("/admin"); }); }, [setLocation]);
   const set = <K extends keyof GuideInput>(key: K, value: GuideInput[K]) => setForm((current) => ({ ...current, [key]: value }));
   const edit = (guide: Guide) => { setEditing(guide.id); setForm({ slug: guide.slug, title: guide.title, excerpt: guide.excerpt, content: guide.content, coverImage: guide.coverImage, metaTitle: guide.metaTitle, metaDescription: guide.metaDescription, translations: guide.translations || {}, primaryKeyword: guide.primaryKeyword, contentCluster: guide.contentCluster, targetPage: guide.targetPage, scheduledAt: guide.scheduledAt, published: guide.published }); setSeoAudit(guide.seoAudit); window.scrollTo({ top: 0, behavior: "smooth" }); };
@@ -114,12 +116,24 @@ export default function AdminGuides() {
     setBusy(true); setPlanMessage("Generating the plan…"); setSeoPlan([]);
     try {
       const result = await generateGuideSeoPlan();
-      if (!Array.isArray(result) || !result.length) throw new Error("The server returned an empty plan. Please try again.");
-      setSeoPlan(result);
-      setPlanMessage(`${result.length} article ideas generated. Select one to fill the article form.`);
+      if (!Array.isArray(result.items) || !result.items.length) throw new Error("The server returned an empty plan. Please try again.");
+      setSeoPlan(result.items);
+      setSavedPlans((current) => [result, ...current.filter((plan) => plan.id !== result.id)]);
+      setActivePlanId(result.id);
+      setPlanMessage(`${result.items.length} article ideas generated and saved. Select one to fill the article form.`);
     } catch (err) {
       setPlanMessage(err instanceof Error ? err.message : "SEO plan generation failed");
     } finally { setBusy(false); }
+  };
+  const changePlanStatus = async (planId: number, itemIndex: number, status: SeoPlanStatus) => {
+    setBusy(true); setPlanMessage("");
+    try {
+      const updated = await updateGuideSeoPlanItem(planId, itemIndex, status);
+      setSavedPlans((current) => current.map((plan) => plan.id === updated.id ? updated : plan));
+      if (activePlanId === updated.id) setSeoPlan(updated.items);
+      setPlanMessage("Plan progress saved.");
+    } catch (err) { setPlanMessage(err instanceof Error ? err.message : "Failed to update plan"); }
+    finally { setBusy(false); }
   };
   const usePlanItem = (item: SeoPlanItem) => { setAi((current) => ({ ...current, topic: item.topic, keyword: item.keyword, service: item.service, city: item.city })); setForm((current) => ({ ...current, contentCluster: item.cluster, targetPage: item.targetPage })); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const clusters = useMemo(() => Object.entries(overview.reduce<Record<string, typeof overview>>((groups, guide) => { const key = guide.contentCluster || "Unassigned"; (groups[key] ||= []).push(guide); return groups; }, {})), [overview]);
@@ -132,6 +146,7 @@ export default function AdminGuides() {
     },
   }));
   const activeTranslation = (form.translations || {})[translationLang] || {};
+  const activeSavedPlan = savedPlans.find((plan) => plan.id === activePlanId) || null;
 
   if (!authorized) return <div className="min-h-screen bg-[hsl(0,0%,3%)] p-8 text-sm text-white/40">Checking administrator session…</div>;
 
@@ -186,8 +201,9 @@ export default function AdminGuides() {
     </section>
     <section className="mt-8 rounded-xl border border-white/10 bg-white/[0.02] p-5">
       <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-serif text-2xl">Four-week content plan</h2><p className="mt-1 text-xs text-white/35">AI plan grounded in the real fleet, existing clusters and imported search data.</p></div><button type="button" disabled={busy} onClick={makePlan} className="rounded border border-gold/30 px-4 py-2 text-xs text-gold disabled:opacity-40">{busy ? "Generating…" : "Generate plan"}</button></div>
+      {savedPlans.length > 0 && <div className="mt-4 flex flex-wrap items-center gap-3"><label className="text-xs text-white/45">Saved plan<select value={activePlanId || ""} onChange={(event) => { const id = Number(event.target.value); const plan = savedPlans.find((item) => item.id === id); setActivePlanId(id); setSeoPlan(plan?.items || []); }} className="ml-2 rounded border border-white/10 bg-black/50 px-3 py-2 text-white"><option value="" disabled>Select a plan</option>{savedPlans.map((plan) => <option key={plan.id} value={plan.id}>{plan.title}</option>)}</select></label>{activeSavedPlan && <span className="text-[10px] text-white/30">Saved {activeSavedPlan.updatedAt ? new Date(activeSavedPlan.updatedAt).toLocaleString() : ""}</span>}</div>}
       {planMessage && <p className={`mt-4 rounded border px-3 py-2 text-xs ${seoPlan.length ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-300" : "border-gold/20 bg-gold/5 text-gold"}`}>{planMessage}</p>}
-      {seoPlan.length > 0 && <div className="mt-5 grid gap-3 md:grid-cols-2">{seoPlan.map((item, index) => <button key={`${item.topic}-${index}`} type="button" onClick={() => usePlanItem(item)} className="rounded-lg border border-white/5 bg-black/20 p-4 text-left hover:border-gold/30"><div className="flex items-center justify-between gap-3"><span className="text-xs text-gold">Week {item.week}</span><span className="text-[10px] uppercase text-white/30">{item.city} · {item.service}</span></div><p className="mt-2 text-sm text-white/75">{item.topic}</p><p className="mt-2 text-xs text-white/35">{item.keyword}</p></button>)}</div>}
+      {seoPlan.length > 0 && <div className="mt-5 grid gap-3 md:grid-cols-2">{seoPlan.map((item, index) => <div key={`${item.topic}-${index}`} className="rounded-lg border border-white/5 bg-black/20 p-4"><button type="button" onClick={() => usePlanItem(item)} className="w-full text-left hover:text-gold"><div className="flex items-center justify-between gap-3"><span className="text-xs text-gold">Week {item.week}</span><span className="text-[10px] uppercase text-white/30">{item.city} · {item.service}</span></div><p className="mt-2 text-sm text-white/75">{item.topic}</p><p className="mt-2 text-xs text-white/35">{item.keyword}</p></button><div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3"><span className="text-[10px] uppercase text-white/30">Progress</span><select disabled={busy || !activePlanId} value={item.status || "planned"} onChange={(event) => { if (activePlanId) void changePlanStatus(activePlanId, index, event.target.value as SeoPlanStatus); }} className="rounded border border-white/10 bg-black/50 px-2 py-1 text-[11px] text-white"><option value="planned">Planned</option><option value="drafting">Drafting</option><option value="ready">Ready</option><option value="published">Published</option><option value="skipped">Skipped</option></select></div></div>)}</div>}
     </section>
     <section className="mt-8 grid gap-5 lg:grid-cols-3">
       <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5 lg:col-span-2"><div className="mb-4 flex items-center gap-2"><BarChart3 className="text-gold" size={18}/><h2 className="font-serif text-2xl">SEO performance</h2></div><div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-xs"><thead className="text-white/35"><tr><th className="pb-3">Article</th><th>Score</th><th>Views</th><th>Leads</th><th>GSC clicks</th><th>Position</th><th>Next action</th></tr></thead><tbody>{overview.map((guide) => <tr key={guide.id} className="border-t border-white/5"><td className="py-3 pr-4 text-white/70">{guide.title}</td><td>{guide.seoScore ?? "—"}</td><td>{guide.localMetrics.views}</td><td>{guide.localMetrics.leads}</td><td>{guide.searchMetrics?.clicks ?? "—"}</td><td>{guide.searchMetrics?.position ?? "—"}</td><td className="max-w-[180px] py-3 text-gold/60">{guide.opportunity || "Monitor"}</td></tr>)}</tbody></table></div></div>

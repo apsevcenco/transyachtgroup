@@ -170,11 +170,29 @@ export async function fetchGuideSeoOverview(): Promise<Array<Guide & { localMetr
   return res.json();
 }
 
-export type SeoPlanItem = { week: number; topic: string; keyword: string; cluster: string; targetPage: string; service: string; city: string; intent: string; reason: string };
-export async function generateGuideSeoPlan(): Promise<SeoPlanItem[]> {
+export type SeoPlanStatus = "planned" | "drafting" | "ready" | "published" | "skipped";
+export type SeoPlanItem = { week: number; topic: string; keyword: string; cluster: string; targetPage: string; service: string; city: string; intent: string; reason: string; status: SeoPlanStatus };
+export type SeoContentPlan = { id: number; title: string; items: SeoPlanItem[]; createdAt: string | null; updatedAt: string | null };
+export async function generateGuideSeoPlan(): Promise<SeoContentPlan> {
   const res = await fetch(`${API_BASE}/admin/guides/plan`, { method: "POST", headers: authHeaders() });
   if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "SEO plan generation failed");
-  return (await res.json()).items;
+  return res.json();
+}
+
+export async function fetchGuideSeoPlans(): Promise<SeoContentPlan[]> {
+  const res = await fetch(`${API_BASE}/admin/guides/plans`, { headers: authHeaders() });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "Failed to load saved SEO plans");
+  return res.json();
+}
+
+export async function updateGuideSeoPlanItem(planId: number, itemIndex: number, status: SeoPlanStatus): Promise<SeoContentPlan> {
+  const res = await fetch(`${API_BASE}/admin/guides/plans/${planId}/items/${itemIndex}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "Failed to update SEO plan");
+  return res.json();
 }
 
 export async function importGuideSearchMetrics(rows: Array<Record<string, unknown>>): Promise<{ updated: number }> {
