@@ -26,7 +26,7 @@ export default function GuidesPage() {
     <Navbar />
     <main className="px-5 pb-24 pt-40"><div className="mx-auto max-w-6xl">
       <div className="mb-7 flex items-center gap-3 text-gold/70"><BookOpen size={18}/><span className="font-porter text-[10px] uppercase tracking-[0.3em]">Trans Yacht Group Journal</span></div>
-      <h1 className="max-w-4xl text-balance font-serif text-3xl leading-[1.12] sm:text-4xl md:text-5xl lg:text-[3.5rem]">{copy.title}</h1>
+      <h1 className="section-display-title max-w-5xl text-balance font-serif text-white">{copy.title}</h1>
       <p className="mt-7 max-w-3xl text-base font-light leading-7 text-white/60 sm:text-lg sm:leading-8">{copy.intro}</p>
       {loading ? <p className="mt-16 text-white/35">{copy.loading}</p> : guides.length === 0 ? <p className="mt-16 text-white/35">{copy.empty}</p> : <section className="mt-14 grid gap-7 md:grid-cols-2 lg:grid-cols-3">{guides.map((guide) => <article key={guide.id} className="flex h-full flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
         {guide.coverImage && <a href={`/guides/${guide.slug}/?lang=${lang}`}><img src={guide.coverImage} alt="" className="aspect-[16/10] w-full object-cover" loading="lazy"/></a>}

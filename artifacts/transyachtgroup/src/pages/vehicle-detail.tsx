@@ -573,10 +573,7 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
 
               <CmsContent
                 as="h1"
-                className="text-white mb-3 tracking-tight leading-[1.1]"
-                style={{
-                  fontSize: "56px",
-                }}
+                className="section-display-title mb-3 max-w-5xl text-balance break-words font-serif text-white"
                 html={vehicle.name}
               />
 

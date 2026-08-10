@@ -486,3 +486,21 @@ html {
   line-height: inherit !important;
   margin: 0 !important;
 }
+
+/* Shared display scale: matches the Road Sovereign catalogue heading while
+   shrinking safely on narrow screens and for long translated titles. */
+.section-display-title {
+  font-size: clamp(2.25rem, 5vw, 72px) !important;
+  line-height: 1 !important;
+  letter-spacing: -0.025em !important;
+  overflow-wrap: anywhere;
+}
+
+.section-display-title :where(span, p, div, strong, em, u, s) {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  letter-spacing: inherit !important;
+  line-height: inherit !important;
+  margin: 0 !important;
+}
