@@ -202,7 +202,7 @@ export default function LocationPage({ city }: { city: string }) {
               {text.service}
             </p>
           </div>
-          <h1 className="max-w-4xl font-serif text-4xl leading-tight md:text-7xl">
+          <h1 className="section-display-title max-w-4xl">
             {title}
           </h1>
           <div className="my-10 h-px w-28 bg-gold/50" />
@@ -216,7 +216,7 @@ export default function LocationPage({ city }: { city: string }) {
               className="group rounded-xl border border-white/10 bg-white/[0.02] p-7 transition hover:border-gold/40"
             >
               <Car className="mb-5 text-gold" />
-              <span className="flex items-center justify-between font-serif text-2xl">
+              <span className="flex items-center justify-between font-serif text-lg leading-snug sm:text-xl">
                 {text.cars}
                 <ChevronRight className="transition group-hover:translate-x-1" />
               </span>
@@ -226,7 +226,7 @@ export default function LocationPage({ city }: { city: string }) {
               className="group rounded-xl border border-white/10 bg-white/[0.02] p-7 transition hover:border-gold/40"
             >
               <Ship className="mb-5 text-gold" />
-              <span className="flex items-center justify-between font-serif text-2xl">
+              <span className="flex items-center justify-between font-serif text-lg leading-snug sm:text-xl">
                 {text.yachts}
                 <ChevronRight className="transition group-hover:translate-x-1" />
               </span>
@@ -248,7 +248,7 @@ export default function LocationPage({ city }: { city: string }) {
           ) : null}
 
           <section className="mt-14 rounded-xl border border-gold/20 bg-gold/[0.04] p-8 md:p-10">
-            <h2 className="mb-4 font-serif text-3xl">{text.contact}</h2>
+            <h2 className="mb-4 font-serif text-2xl sm:text-3xl">{text.contact}</h2>
             <p className="mb-7 max-w-2xl font-light leading-7 text-white/55">
               {text.concierge}
             </p>

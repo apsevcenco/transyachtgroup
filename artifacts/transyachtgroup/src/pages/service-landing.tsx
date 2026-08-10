@@ -5,6 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { SeoHead, SITE_URL } from "@/components/SeoHead";
 import { useLanguage, type LangCode } from "@/contexts/LanguageContext";
 import { fetchVehicles } from "@/lib/api";
+import { stripCmsText } from "@/lib/utils";
 
 type Landing = {
   slug: string;
@@ -122,7 +123,7 @@ export default function ServiceLanding({ slug }: { slug: string }) {
   }, [lang, page]);
 
   const matches = useMemo(() => {
-    const filtered = page?.brand ? vehicles.filter((v) => String(v.name || "").toLowerCase().includes(page.brand!.toLowerCase())) : vehicles;
+    const filtered = page?.brand ? vehicles.filter((v) => stripCmsText(v.name).toLowerCase().includes(page.brand!.toLowerCase())) : vehicles;
     return filtered.slice(0, 6);
   }, [page, vehicles]);
 
@@ -142,7 +143,7 @@ export default function ServiceLanding({ slug }: { slug: string }) {
       <main className="px-5 pb-24 pt-36 md:pt-44">
         <article className="mx-auto max-w-6xl">
           <div className="mb-7 flex items-center gap-3 text-gold/70"><Icon size={18} /><span className="font-porter text-[10px] uppercase tracking-[0.3em]">{page.eyebrow}</span></div>
-          <h1 className="max-w-5xl font-serif text-4xl leading-tight md:text-7xl">{page.title}</h1>
+          <h1 className="section-display-title max-w-5xl">{page.title}</h1>
           <div className="my-9 h-px w-28 bg-gold/60" />
           <p className="max-w-3xl text-lg font-light leading-8 text-white/70">{page.intro}</p>
           <p className="mt-6 max-w-3xl font-light leading-7 text-white/50">{page.details}</p>
@@ -151,11 +152,49 @@ export default function ServiceLanding({ slug }: { slug: string }) {
             {[<MapPin />, <ShieldCheck />, <Clock3 />].map((icon, index) => <div key={index} className="rounded-xl border border-white/10 bg-white/[0.02] p-6"><span className="mb-5 block text-gold">{icon}</span><p className="font-light leading-7 text-white/65">{text[`step${index + 1}`]}</p></div>)}
           </section>
 
-          {matches.length > 0 && <section className="mt-20"><h2 className="mb-8 font-serif text-3xl md:text-5xl">{text.collection}</h2><div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{matches.map((vehicle) => <a key={vehicle.id} href={`/vehicle/${vehicle.id}?lang=${lang}`} className="group overflow-hidden rounded-xl border border-white/10 bg-white/[0.02] transition hover:border-gold/40"><div className="aspect-[4/3] overflow-hidden bg-white/5"><img src={vehicle.image} alt={vehicle.name} loading="lazy" className="h-full w-full object-cover transition duration-700 group-hover:scale-105" /></div><div className="flex items-center justify-between p-5"><h3 className="font-serif text-xl">{vehicle.name}</h3><ChevronRight className="text-gold" size={18} /></div></a>)}</div></section>}
+          {matches.length > 0 && (
+            <section className="mt-20">
+              <h2 className="mb-8 font-serif text-2xl leading-tight sm:text-3xl">{text.collection}</h2>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {matches.map((vehicle) => {
+                  const vehicleName = stripCmsText(vehicle.name) || (page.kind === "yacht" ? "Yacht" : "Vehicle");
+                  const vehicleDescription = stripCmsText(vehicle.description);
 
-          <section className="mt-20 grid gap-10 border-y border-white/10 py-12 md:grid-cols-2"><div><h2 className="mb-5 font-serif text-3xl">{text.faq}</h2>{faq.map((item) => <div key={item.q} className="mb-6"><h3 className="mb-2 text-sm font-medium text-gold">{item.q}</h3><p className="font-light leading-7 text-white/55">{item.a}</p></div>)}</div><div><h2 className="mb-5 font-serif text-3xl">{text.related}</h2><div className="space-y-3">{page.related.map((relatedSlug) => { const related = LANDINGS.find((item) => item.slug === relatedSlug)!; return <a key={relatedSlug} href={`/services/${relatedSlug}/?lang=${lang}`} className="flex items-center justify-between border-b border-white/10 py-3 text-white/70 transition hover:text-gold"><span>{related.title}</span><ChevronRight size={16} /></a>; })}</div></div></section>
+                  return (
+                    <a
+                      key={vehicle.id}
+                      href={`/vehicle/${vehicle.id}/?lang=${lang}`}
+                      className="group flex h-full flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.02] transition hover:border-gold/40"
+                    >
+                      <div className="aspect-[4/3] overflow-hidden bg-white/5">
+                        <img
+                          src={vehicle.image}
+                          alt={vehicleName}
+                          loading="lazy"
+                          className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                        />
+                      </div>
+                      <div className="flex flex-1 items-start justify-between gap-4 p-5 sm:p-6">
+                        <div className="min-w-0">
+                          <h3 className="font-serif text-base leading-snug sm:text-lg">{vehicleName}</h3>
+                          {vehicleDescription ? (
+                            <p className="mt-2 line-clamp-2 text-sm font-light leading-6 text-white/45">
+                              {vehicleDescription}
+                            </p>
+                          ) : null}
+                        </div>
+                        <ChevronRight className="mt-1 shrink-0 text-gold" size={18} />
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
-          <section className="mt-14 rounded-xl border border-gold/20 bg-gold/[0.04] p-8 md:flex md:items-center md:justify-between md:p-10"><div><h2 className="font-serif text-3xl">{text.request}</h2><p className="mt-3 text-sm text-white/50">{text.process}</p></div><div className="mt-7 flex flex-wrap gap-3 md:mt-0"><a href={`/${page.kind === "yacht" ? "yachts" : "cars"}/?lang=${lang}`} className="rounded border border-white/20 px-5 py-3 text-xs uppercase tracking-wider">{text.catalog}</a><a href={`/?lang=${lang}#request`} className="rounded bg-gold px-5 py-3 text-xs uppercase tracking-wider text-black">{text.request}</a></div></section>
+          <section className="mt-20 grid gap-10 border-y border-white/10 py-12 md:grid-cols-2"><div><h2 className="mb-5 font-serif text-2xl sm:text-3xl">{text.faq}</h2>{faq.map((item) => <div key={item.q} className="mb-6"><h3 className="mb-2 text-sm font-medium text-gold">{item.q}</h3><p className="font-light leading-7 text-white/55">{item.a}</p></div>)}</div><div><h2 className="mb-5 font-serif text-2xl sm:text-3xl">{text.related}</h2><div className="space-y-3">{page.related.map((relatedSlug) => { const related = LANDINGS.find((item) => item.slug === relatedSlug)!; return <a key={relatedSlug} href={`/services/${relatedSlug}/?lang=${lang}`} className="flex items-center justify-between border-b border-white/10 py-3 text-white/70 transition hover:text-gold"><span>{related.title}</span><ChevronRight size={16} /></a>; })}</div></div></section>
+
+          <section className="mt-14 rounded-xl border border-gold/20 bg-gold/[0.04] p-8 md:flex md:items-center md:justify-between md:p-10"><div><h2 className="font-serif text-2xl sm:text-3xl">{text.request}</h2><p className="mt-3 text-sm text-white/50">{text.process}</p></div><div className="mt-7 flex flex-wrap gap-3 md:mt-0"><a href={`/${page.kind === "yacht" ? "yachts" : "cars"}/?lang=${lang}`} className="rounded border border-white/20 px-5 py-3 text-xs uppercase tracking-wider">{text.catalog}</a><a href={`/?lang=${lang}#request`} className="rounded bg-gold px-5 py-3 text-xs uppercase tracking-wider text-black">{text.request}</a></div></section>
         </article>
       </main>
     </div>
