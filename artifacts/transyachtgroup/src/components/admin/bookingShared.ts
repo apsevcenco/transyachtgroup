@@ -10,6 +10,8 @@ export interface VehicleLite {
   agentId?: number | null;
   pricePerDay?: number | null;
   pricePerMonth?: number | null;
+  kmIncludedPerDay?: number | null;
+  pricePerExtraKm?: number | null;
 }
 
 // The admin vehicle form derives `image` from `images[0]` when unset, but not
@@ -64,6 +66,20 @@ export function strToNum(s: string): number | null {
   if (trimmed === "") return null;
   const n = parseInt(trimmed, 10);
   return isNaN(n) ? null : n;
+}
+
+/** Rental convention: equal dates are one day; otherwise count date boundaries. */
+export function rentalDayCount(startDate: string, endDate: string): number {
+  const start = new Date(`${startDate}T00:00:00Z`);
+  const end = new Date(`${endDate}T00:00:00Z`);
+  if (
+    Number.isNaN(start.getTime()) ||
+    Number.isNaN(end.getTime()) ||
+    end < start
+  ) {
+    return 0;
+  }
+  return Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000));
 }
 
 export interface EditTarget {

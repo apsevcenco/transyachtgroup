@@ -34,3 +34,17 @@ export function rentalDayCount(startDate: string, endDate: string): number {
     return 0;
   return Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000));
 }
+
+export function rentalMileageSummary(
+  startDate: string,
+  endDate: string,
+  kmPerDay: number,
+  odometerOut: number,
+  odometerIn: number,
+) {
+  const days = rentalDayCount(startDate, endDate);
+  const includedKm = Math.max(0, kmPerDay) * days;
+  const actualKm = Math.max(0, odometerIn - odometerOut);
+  const extraKm = Math.max(0, actualKm - includedKm);
+  return { days, includedKm, actualKm, extraKm };
+}

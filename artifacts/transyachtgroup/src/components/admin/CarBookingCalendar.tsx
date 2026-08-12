@@ -36,6 +36,7 @@ import {
   toISODate,
   numToStr,
   strToNum,
+  rentalDayCount,
   vehiclePhotos,
   type VehicleLite,
   type EditTarget,
@@ -121,6 +122,8 @@ export function CarBookingCalendar({
           agentId: x.agentId ?? null,
           pricePerDay: strToNum(String(x.specs?.pricePerDay ?? "")),
           pricePerMonth: strToNum(String(x.specs?.pricePerMonth ?? "")),
+          kmIncludedPerDay: strToNum(String(x.specs?.kmIncluded ?? "")),
+          pricePerExtraKm: strToNum(String(x.specs?.extraPricePerKm ?? "")),
         })),
       );
       setBookings(b);
@@ -317,10 +320,10 @@ function CarBookingFormModal({
     editingBooking?.contractStatus || "not_signed",
   );
   const [kmIncluded, setKmIncluded] = useState(
-    numToStr(editingBooking?.kmIncluded),
+    numToStr(editingBooking?.kmIncluded ?? selectedVehicle?.kmIncludedPerDay),
   );
   const [pricePerExtraKm, setPricePerExtraKm] = useState(
-    numToStr(editingBooking?.pricePerExtraKm),
+    numToStr(editingBooking?.pricePerExtraKm ?? selectedVehicle?.pricePerExtraKm),
   );
   const [agentName, setAgentName] = useState(editingBooking?.agentName || "");
   const [agentPhone, setAgentPhone] = useState(
@@ -453,13 +456,18 @@ function CarBookingFormModal({
     BLOCKING_STATUSES.includes(c.status),
   );
   const isOwnVehicle = (selectedVehicle?.ownership || "own") === "own";
+  const rentalDays = useMemo(
+    () => rentalDayCount(startDate, endDate),
+    [startDate, endDate],
+  );
 
   const calc = useMemo(() => {
     const rentalTotal = strToNum(totalAmount) ?? 0;
     const deposit = strToNum(depositAmount) ?? 0;
     const vat = strToNum(vatPercent) ?? 0;
     const commission = strToNum(agentCommissionPercent) ?? 0;
-    const included = strToNum(kmIncluded) ?? 0;
+    const includedPerDay = strToNum(kmIncluded) ?? 0;
+    const includedTotal = includedPerDay * rentalDays;
     const extraPrice = strToNum(pricePerExtraKm) ?? 0;
     const out = strToNum(odometerOut);
     const in_ = strToNum(odometerIn);
@@ -468,8 +476,8 @@ function CarBookingFormModal({
     const toll = strToNum(tollCost) ?? 0;
     const delivery = strToNum(deliveryCost) ?? 0;
 
-    const actualKm = out != null && in_ != null ? in_ - out : null;
-    const extraKm = actualKm != null ? Math.max(0, actualKm - included) : null;
+    const actualKm = out != null && in_ != null && in_ >= out ? in_ - out : null;
+    const extraKm = actualKm != null ? Math.max(0, actualKm - includedTotal) : null;
     const extraKmCharge = extraKm != null ? extraKm * extraPrice : 0;
     const total = rentalTotal + delivery;
     const vatAmount = total * (vat / 100);
@@ -486,6 +494,8 @@ function CarBookingFormModal({
       delivery,
       vat,
       actualKm,
+      includedPerDay,
+      includedTotal,
       extraKm,
       extraKmCharge,
       vatAmount,
@@ -501,6 +511,7 @@ function CarBookingFormModal({
     vatPercent,
     agentCommissionPercent,
     kmIncluded,
+    rentalDays,
     pricePerExtraKm,
     odometerOut,
     odometerIn,
@@ -543,19 +554,13 @@ function CarBookingFormModal({
     if (editingBooking) return;
     setPricePerDayInput(numToStr(selectedVehicle?.pricePerDay));
     setPricePerMonthInput(numToStr(selectedVehicle?.pricePerMonth));
+    setKmIncluded(numToStr(selectedVehicle?.kmIncludedPerDay));
+    setPricePerExtraKm(numToStr(selectedVehicle?.pricePerExtraKm));
   }, [selectedVehicle?.id, editingBooking]);
 
   const rentalCalc = useMemo(() => {
-    const start = startDate ? new Date(`${startDate}T00:00:00`) : null;
-    const end = endDate ? new Date(`${endDate}T00:00:00`) : null;
     // Full 24-hour periods only — e.g. June 8 to June 12 is 4 days, not 5.
-    const days =
-      start && end && end >= start
-        ? Math.max(
-            1,
-            Math.floor((end.getTime() - start.getTime()) / 86400000),
-          )
-        : 0;
+    const days = rentalDays;
     // 30-day months, rounded up — matches how monthly car rental rates are
     // quoted in practice (no calendar-month edge cases to reason about).
     const months = days > 0 ? Math.max(1, Math.ceil(days / 30)) : 0;
@@ -565,8 +570,7 @@ function CarBookingFormModal({
       rentalPeriodType === "daily" ? days * dayRate : months * monthRate;
     return { days, months, dayRate, monthRate, autoTotal };
   }, [
-    startDate,
-    endDate,
+    rentalDays,
     rentalPeriodType,
     pricePerDayInput,
     pricePerMonthInput,
@@ -637,6 +641,16 @@ function CarBookingFormModal({
     }
     if (`${endDate} ${endTime}` <= `${startDate} ${startTime}`) {
       setError("Rental end must be after rental start");
+      return;
+    }
+    const parsedOdometerOut = strToNum(odometerOut);
+    const parsedOdometerIn = strToNum(odometerIn);
+    if (
+      parsedOdometerOut != null &&
+      parsedOdometerIn != null &&
+      parsedOdometerIn < parsedOdometerOut
+    ) {
+      setError("Odometer in must not be lower than odometer out");
       return;
     }
     if (blockingConflicts.length > 0) {
@@ -1064,7 +1078,7 @@ function CarBookingFormModal({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={labelClass}>{t("spec_km_included")}</label>
+                  <label className={labelClass}>{t("spec_km_included")} / day</label>
                   <input
                     type="number"
                     value={kmIncluded}
@@ -1325,6 +1339,13 @@ function CarBookingFormModal({
                 <p className="text-[10px] uppercase tracking-[0.2em] text-gold/60 font-medium mb-1.5">
                   Calculations
                 </p>
+                <div className="flex justify-between gap-4 text-xs">
+                  <span className="text-white/40">Included allowance</span>
+                  <span className="text-right text-white">
+                    {calc.includedTotal.toLocaleString()} km ({rentalDays}{" "}
+                    {rentalDays === 1 ? "day" : "days"} × {calc.includedPerDay.toLocaleString()} km)
+                  </span>
+                </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-white/40">Actual km</span>
                   <span className="text-white">

@@ -8,7 +8,11 @@ import {
 } from "@workspace/db/schema";
 import { eq, and, gte, lte, inArray, ne, sql } from "drizzle-orm";
 import { adminAuth } from "../middleware/auth";
-import { bookingDateTime, isValidTime } from "../lib/bookingIntervals";
+import {
+  bookingDateTime,
+  isValidTime,
+  rentalDayCount,
+} from "../lib/bookingIntervals";
 import ical from "node-ical";
 import { safeRemoteFetch } from "../lib/safeRemoteFetch";
 import {
@@ -17,17 +21,34 @@ import {
   uploadBookingPhoto,
 } from "../lib/privateStorage";
 
-function totalDaysInclusive(startDate: string, endDate: string): number {
-  const start = new Date(startDate + "T00:00:00");
-  const end = new Date(endDate + "T00:00:00");
-  return Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
-}
-
 // Vehicle names can carry rich-text markup from the admin's CMS editor
 // (e.g. "<p><span style=...>McLaren</span></p>") — strip it for the plain
 // snapshot stored in rental_history.
 function stripHtmlTags(s: string): string {
   return s.replace(/<[^>]*>/g, "").trim();
+}
+
+function bookingMileageError(data: {
+  kmIncluded?: number | null;
+  pricePerExtraKm?: number | null;
+  odometerOut?: number | null;
+  odometerIn?: number | null;
+}): string | null {
+  if (data.kmIncluded != null && data.kmIncluded < 0)
+    return "kmIncluded must be non-negative";
+  if (data.pricePerExtraKm != null && data.pricePerExtraKm < 0)
+    return "pricePerExtraKm must be non-negative";
+  if (data.odometerOut != null && data.odometerOut < 0)
+    return "odometerOut must be non-negative";
+  if (data.odometerIn != null && data.odometerIn < 0)
+    return "odometerIn must be non-negative";
+  if (
+    data.odometerOut != null &&
+    data.odometerIn != null &&
+    data.odometerIn < data.odometerOut
+  )
+    return "odometerIn must not be lower than odometerOut";
+  return null;
 }
 
 // Statuses that represent a real commercial commitment — an overlapping
@@ -262,6 +283,11 @@ router.post("/bookings", async (req, res) => {
       res.status(400).json({ error: "endDate must not be before startDate" });
       return;
     }
+    const mileageError = bookingMileageError(parsed.data);
+    if (mileageError) {
+      res.status(400).json({ error: mileageError });
+      return;
+    }
     const startTime = parsed.data.startTime || "00:00";
     const endTime = parsed.data.endTime || "23:59";
     if (!isValidTime(startTime) || !isValidTime(endTime)) {
@@ -318,6 +344,11 @@ router.put("/bookings/:id", async (req, res) => {
     }
     if (parsed.data.endDate < parsed.data.startDate) {
       res.status(400).json({ error: "endDate must not be before startDate" });
+      return;
+    }
+    const mileageError = bookingMileageError(parsed.data);
+    if (mileageError) {
+      res.status(400).json({ error: mileageError });
       return;
     }
     const startTime = parsed.data.startTime || "00:00";
@@ -394,7 +425,7 @@ router.put("/bookings/:id", async (req, res) => {
           vehicleImage: vehicle?.image ?? null,
           startDate: updated.startDate,
           endDate: updated.endDate,
-          totalDays: totalDaysInclusive(updated.startDate, updated.endDate),
+          totalDays: rentalDayCount(updated.startDate, updated.endDate),
           rentalPeriodType: updated.rentalPeriodType,
           totalAmount: updated.totalAmount,
           depositAmount: updated.depositAmount,
