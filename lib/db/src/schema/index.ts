@@ -39,7 +39,29 @@ export const vehiclesTable = pgTable("vehicles", {
     onDelete: "set null",
   }),
   createdAt: timestamp("created_at").defaultNow(),
+  deletedAt: timestamp("deleted_at"),
+  deletedBy: text("deleted_by"),
 });
+
+export const vehicleDeletionLogTable = pgTable(
+  "vehicle_deletion_log",
+  {
+    id: serial("id").primaryKey(),
+    vehicleId: integer("vehicle_id"),
+    vehicleName: text("vehicle_name").notNull(),
+    vehicleCategory: varchar("vehicle_category", { length: 10 }).notNull(),
+    action: varchar("action", { length: 20 }).notNull(),
+    actor: text("actor").notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    snapshot: jsonb("snapshot").notNull().default({}),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("vehicle_deletion_log_vehicle_idx").on(table.vehicleId),
+    index("vehicle_deletion_log_created_idx").on(table.createdAt),
+  ],
+);
 
 export const siteContentTable = pgTable("site_content", {
   id: serial("id").primaryKey(),
@@ -352,7 +374,7 @@ export const insertVehicleSchema = createInsertSchema(vehiclesTable, {
   // .optional() only — the column is NOT NULL at the DB level (default
   // "own"), so it may be omitted but never explicitly nulled.
   ownership: z.enum(["own", "agent"]).optional(),
-}).omit({ id: true, createdAt: true });
+}).omit({ id: true, createdAt: true, deletedAt: true, deletedBy: true });
 export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
 export type Vehicle = typeof vehiclesTable.$inferSelect;
 

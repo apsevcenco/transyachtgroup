@@ -38,6 +38,8 @@ export async function adminAuth(req: Request, res: Response, next: NextFunction)
       });
     }
 
+    (req as Request & { adminSessionId?: number }).adminSessionId = session.id;
+
     return next();
   } catch (err) {
     logger.error({ err }, "Admin authorization failed");

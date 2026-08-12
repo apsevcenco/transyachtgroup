@@ -8,6 +8,12 @@ import {
   createVehicle,
   updateVehicle,
   deleteVehicle,
+  fetchVehicleTrash,
+  fetchVehicleDeletionLog,
+  restoreVehicle,
+  permanentlyDeleteVehicle,
+  type DeletedVehicle,
+  type VehicleDeletionLog,
   updateContent,
   fetchRequests,
   updateRequest,
@@ -25,6 +31,8 @@ import {
   ChevronRight,
   ChevronDown,
   SlidersHorizontal,
+  Trash2,
+  RotateCcw,
 } from "lucide-react";
 import RichTextEditor, {
   SharedToolbarGroup,
@@ -91,7 +99,8 @@ type Tab =
   | "crm"
   | "agents"
   | "proposals"
-  | "contracts";
+  | "contracts"
+  | "trash";
 
 type AnalyticsStats = {
   overview: {
@@ -424,7 +433,8 @@ export default function AdminDashboard() {
     } else if (
       mobileSection === "content" ||
       mobileSection === "requests" ||
-      mobileSection === "analytics"
+      mobileSection === "analytics" ||
+      mobileSection === "trash"
     ) {
       setTab(mobileSection as Tab);
     }
@@ -687,6 +697,8 @@ export default function AdminDashboard() {
       {tab === "proposals" && <ProposalsDashboard />}
 
       {tab === "contracts" && <ContractGenerator prefill={contractPrefill} />}
+
+      {tab === "trash" && <VehicleTrash onChanged={loadData} />}
     </>
   );
 
@@ -724,6 +736,11 @@ export default function AdminDashboard() {
       go: () => setLocation("/admin/dashboard/content"),
     },
     {
+      label: "Fleet Trash & Deletion Log",
+      icon: "Trash",
+      go: () => setLocation("/admin/dashboard/trash"),
+    },
+    {
       label: "Guides & Articles",
       icon: "G",
       go: () => setLocation("/admin/guides"),
@@ -741,6 +758,7 @@ export default function AdminDashboard() {
   ];
 
   const DESKTOP_NAV_ITEMS: { key: Tab; label: string; icon: string }[] = [
+    { key: "trash", label: "Fleet Trash & Log", icon: "Trash" },
     { key: "cars", label: `Cars (${cars.length})`, icon: "🚗" },
     { key: "yachts", label: `Yachts (${yachts.length})`, icon: "🛥" },
     { key: "car-bookings", label: "Car Bookings", icon: "📅" },
@@ -917,6 +935,117 @@ export default function AdminDashboard() {
         </div>
       </div>
     </div>
+  );
+}
+
+function VehicleTrash({ onChanged }: { onChanged: () => Promise<void> }) {
+  const [deleted, setDeleted] = useState<DeletedVehicle[]>([]);
+  const [log, setLog] = useState<VehicleDeletionLog[]>([]);
+  const [loadingTrash, setLoadingTrash] = useState(true);
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [error, setError] = useState("");
+
+  const reload = useCallback(async () => {
+    setLoadingTrash(true);
+    setError("");
+    try {
+      const [trashRows, logRows] = await Promise.all([
+        fetchVehicleTrash(),
+        fetchVehicleDeletionLog(),
+      ]);
+      setDeleted(trashRows);
+      setLog(logRows);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load trash");
+    } finally {
+      setLoadingTrash(false);
+    }
+  }, []);
+
+  useEffect(() => { void reload(); }, [reload]);
+
+  const restore = async (vehicle: DeletedVehicle) => {
+    setBusyId(vehicle.id);
+    try {
+      await restoreVehicle(vehicle.id);
+      await Promise.all([reload(), onChanged()]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Restore failed");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const removeForever = async (vehicle: DeletedVehicle) => {
+    const confirmation = window.prompt(
+      `Permanent deletion cannot be undone and may remove linked data. Type the exact name to continue:\n\n${stripTags(vehicle.name)}`,
+    );
+    if (confirmation !== vehicle.name && confirmation !== stripTags(vehicle.name)) {
+      if (confirmation !== null) setError("Permanent deletion cancelled: the name did not match.");
+      return;
+    }
+    setBusyId(vehicle.id);
+    try {
+      await permanentlyDeleteVehicle(vehicle.id, vehicle.name);
+      await Promise.all([reload(), onChanged()]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Permanent deletion failed");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const actionLabel: Record<VehicleDeletionLog["action"], string> = {
+    trashed: "Moved to trash",
+    restored: "Restored",
+    permanently_deleted: "Permanently deleted",
+  };
+
+  return (
+    <section className="space-y-8">
+      <div>
+        <p className="text-[10px] uppercase tracking-[0.25em] text-gold/70">Fleet safety</p>
+        <h2 className="mt-2 font-serif text-3xl text-white">Trash & deletion log</h2>
+        <p className="mt-2 max-w-2xl text-sm text-white/40">Deleted cars and yachts stay here until restored or permanently removed. Every action is recorded with its time and administrator session.</p>
+      </div>
+
+      {error && <div className="rounded border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</div>}
+
+      <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-sm uppercase tracking-[0.15em] text-white/70">In trash ({deleted.length})</h3>
+          <button onClick={() => void reload()} className="text-xs text-gold/70 hover:text-gold">Refresh</button>
+        </div>
+        {loadingTrash ? <p className="py-8 text-center text-sm text-white/30">Loading…</p> : deleted.length === 0 ? <p className="py-8 text-center text-sm text-white/30">Trash is empty.</p> : (
+          <div className="space-y-3">
+            {deleted.map((vehicle) => (
+              <div key={vehicle.id} className="flex flex-col gap-4 rounded-lg border border-white/[0.06] bg-black/20 p-4 sm:flex-row sm:items-center">
+                <img src={cleanImageUrl(vehicle.image)} alt="" className="h-16 w-24 rounded object-cover" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm text-white/80">{stripTags(vehicle.name)}</p>
+                  <p className="mt-1 text-xs text-white/30">{vehicle.category === "yacht" ? "Yacht" : "Car"} · deleted {new Date(vehicle.deletedAt).toLocaleString()}</p>
+                </div>
+                <div className="flex gap-2">
+                  <button disabled={busyId === vehicle.id} onClick={() => void restore(vehicle)} className="inline-flex items-center gap-2 rounded border border-emerald-400/20 px-3 py-2 text-xs text-emerald-300 disabled:opacity-40"><RotateCcw size={14}/> Restore</button>
+                  <button disabled={busyId === vehicle.id} onClick={() => void removeForever(vehicle)} className="inline-flex items-center gap-2 rounded border border-red-400/20 px-3 py-2 text-xs text-red-300 disabled:opacity-40"><Trash2 size={14}/> Delete forever</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-5">
+        <h3 className="mb-4 text-sm uppercase tracking-[0.15em] text-white/70">Deletion history</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] text-left text-xs">
+            <thead className="border-b border-white/[0.07] text-white/30"><tr><th className="pb-3 font-normal">Date</th><th className="pb-3 font-normal">Item</th><th className="pb-3 font-normal">Action</th><th className="pb-3 font-normal">Administrator</th><th className="pb-3 font-normal">IP</th></tr></thead>
+            <tbody>{log.map((entry) => <tr key={entry.id} className="border-b border-white/[0.04] text-white/55"><td className="py-3 pr-4">{new Date(entry.createdAt).toLocaleString()}</td><td className="py-3 pr-4">{stripTags(entry.vehicleName)} <span className="text-white/25">#{entry.vehicleId}</span></td><td className="py-3 pr-4">{actionLabel[entry.action]}</td><td className="py-3 pr-4">{entry.actor}</td><td className="py-3">{entry.ipAddress || "—"}</td></tr>)}</tbody>
+          </table>
+          {!loadingTrash && log.length === 0 && <p className="py-8 text-center text-sm text-white/30">No deletion actions recorded yet.</p>}
+        </div>
+      </div>
+    </section>
   );
 }
 
