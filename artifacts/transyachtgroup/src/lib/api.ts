@@ -857,6 +857,7 @@ export async function generateAdminProposal(
   id: number,
   opts: {
     lang?: "en" | "ru";
+    pricingMode?: "daily" | "monthly" | "transfer";
     template?: "minimal" | "classic" | "premium";
     contact?: AdminProposalContact;
     rentalDates?: AdminProposalRentalDates;

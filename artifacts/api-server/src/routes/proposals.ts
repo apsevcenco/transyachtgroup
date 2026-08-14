@@ -268,6 +268,14 @@ router.post(
       const template = normalizeTemplate(req.body?.template);
       const rentalDates = parseRentalDates(req.body);
       const transferDetails = parseTransferDetails(req.body);
+      const pricingMode = req.body?.pricingMode;
+      if (pricingMode === "transfer" && !transferDetails) {
+        res.status(400).json({
+          error:
+            "Transfer proposal requires from, to, date, time, passengers and price",
+        });
+        return;
+      }
       const whiteLabel = req.body?.whiteLabel === true;
 
       const images = Array.isArray(vehicle.images)
@@ -303,11 +311,12 @@ router.post(
           .trim()
           .replace(/\s+/g, "-")
           .slice(0, 80) || "proposal";
+      const documentLabel = transferDetails ? "transfer-offer" : "proposal";
 
       res.setHeader("Content-Type", doc.contentType);
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename="proposal-${safeName}.pdf"`,
+        `attachment; filename="${documentLabel}-${safeName}.pdf"`,
       );
       res.setHeader("Content-Length", doc.buffer.length);
       res.send(doc.buffer);

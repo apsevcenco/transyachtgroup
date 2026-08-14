@@ -188,6 +188,16 @@ export function ProposalsDashboard() {
     selectedVehicle?.specs.pricePerThreeDays,
   );
 
+  const transferComplete =
+    transferFrom.trim().length > 0 &&
+    transferTo.trim().length > 0 &&
+    transferDate.length > 0 &&
+    transferTime.length > 0 &&
+    Number.isInteger(Number(transferPassengers)) &&
+    Number(transferPassengers) > 0 &&
+    Number.isFinite(Number(transferPrice)) &&
+    Number(transferPrice) > 0;
+
   // Reset availability state whenever the vehicle or date range changes, and
   // re-check automatically once a full range is picked (debounced).
   useEffect(() => {
@@ -231,25 +241,19 @@ export function ProposalsDashboard() {
       if (pricingMode === "transfer") {
         const passengers = parseInt(transferPassengers, 10);
         const price = parseFloat(transferPrice);
-        if (
-          transferFrom.trim() &&
-          transferTo.trim() &&
-          transferDate &&
-          transferTime &&
-          Number.isFinite(passengers) &&
-          passengers > 0 &&
-          Number.isFinite(price) &&
-          price > 0
-        ) {
-          transferDetails = {
-            from: transferFrom.trim(),
-            to: transferTo.trim(),
-            date: transferDate,
-            time: transferTime,
-            passengers,
-            price,
-          };
+        if (!transferComplete) {
+          throw new Error(
+            "Complete all transfer fields: from, to, date, time, passengers and price.",
+          );
         }
+        transferDetails = {
+          from: transferFrom.trim(),
+          to: transferTo.trim(),
+          date: transferDate,
+          time: transferTime,
+          passengers,
+          price,
+        };
       } else {
         const rate = parseFloat(
           pricingMode === "monthly" ? pricePerMonth : pricePerDay,
@@ -280,6 +284,7 @@ export function ProposalsDashboard() {
 
       const blob = await generateAdminProposal(selectedVehicle.id, {
         lang,
+        pricingMode,
         rentalDates,
         transferDetails,
         whiteLabel: branding === "whiteLabel",
@@ -287,7 +292,9 @@ export function ProposalsDashboard() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${safeFileName(selectedVehicle.name)}-proposal.pdf`;
+      a.download = `${safeFileName(selectedVehicle.name)}-${
+        pricingMode === "transfer" ? "transfer-offer" : "proposal"
+      }.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -460,7 +467,7 @@ export function ProposalsDashboard() {
             <div>
               <label className="block text-[10px] uppercase tracking-wide text-white/40 mb-1">
                 {pricingMode === "transfer"
-                  ? "Transfer details (optional — shown on the cover once set)"
+                  ? "Transfer details (all fields are required)"
                   : "Rental quote (optional — shown on the cover once dates and a rate are set)"}
               </label>
 
@@ -861,6 +868,7 @@ export function ProposalsDashboard() {
             )}
 
             <button
+              type="button"
               onClick={handleGenerate}
               disabled={!selectedVehicle || generating}
               className="w-full flex items-center justify-center gap-2 min-h-[44px] bg-[hsl(43,67%,55%)] text-black rounded-md text-xs uppercase tracking-[0.2em] font-medium hover:bg-[hsl(43,67%,60%)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
