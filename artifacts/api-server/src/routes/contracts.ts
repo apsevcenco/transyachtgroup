@@ -655,7 +655,8 @@ router.post(
             snapshot: contractInput,
             pdfSha256,
             pdfBase64: buffer.toString("base64"),
-            templateVersion: "contract-v4-additional-driver-two-page",
+            // contracts.template_version is VARCHAR(30).
+            templateVersion: "contract-v4-second-driver",
             issuedAt: new Date(),
           };
           const [row] = data.editContractNumber
@@ -714,7 +715,19 @@ router.post(
       res.send(buffer);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      logger.error({ err: msg }, "contract PDF error");
+      // Drizzle query errors can include every bound parameter, including the
+      // renter's personal data and the complete base64 PDF. Never send or log
+      // that raw message.
+      logger.error(
+        {
+          errorName: err instanceof Error ? err.name : "UnknownError",
+          errorCode:
+            typeof err === "object" && err && "code" in err
+              ? String(err.code)
+              : undefined,
+        },
+        "contract PDF error",
+      );
       const layoutError = msg.startsWith("PDF layout validation failed");
       const schemaError =
         /column .* does not exist|permission denied|must be owner/i.test(msg);
@@ -724,7 +737,11 @@ router.post(
           : schemaError
             ? "Contract database schema is not ready"
             : "Failed to generate contract PDF",
-        detail: msg,
+        detail: layoutError
+          ? "The fixed two-page layout overflowed."
+          : schemaError
+            ? "Apply the pending contracts database migration."
+            : undefined,
       });
     }
   },
