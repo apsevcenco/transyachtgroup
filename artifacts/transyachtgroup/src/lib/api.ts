@@ -172,9 +172,14 @@ export async function fetchGuideSeoOverview(): Promise<Array<Guide & { localMetr
 
 export type SeoPlanStatus = "planned" | "drafting" | "ready" | "published" | "skipped";
 export type SeoPlanItem = { week: number; topic: string; keyword: string; cluster: string; targetPage: string; service: string; city: string; intent: string; reason: string; status: SeoPlanStatus };
-export type SeoContentPlan = { id: number; title: string; items: SeoPlanItem[]; createdAt: string | null; updatedAt: string | null };
-export async function generateGuideSeoPlan(): Promise<SeoContentPlan> {
-  const res = await fetch(`${API_BASE}/admin/guides/plan`, { method: "POST", headers: authHeaders() });
+export type SeoPlanStrategy = { direction: string; region: string; season: string; priorityServices: string; priorityFleet: string; keywords: string };
+export type SeoContentPlan = { id: number; title: string; strategy?: Partial<SeoPlanStrategy> | null; items: SeoPlanItem[]; createdAt: string | null; updatedAt: string | null };
+export async function generateGuideSeoPlan(strategy: SeoPlanStrategy): Promise<SeoContentPlan> {
+  const res = await fetch(`${API_BASE}/admin/guides/plan`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ strategy }),
+  });
   if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "SEO plan generation failed");
   return res.json();
 }

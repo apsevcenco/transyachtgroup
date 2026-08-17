@@ -107,6 +107,7 @@ export const seoContentPlansTable = pgTable(
   {
     id: serial("id").primaryKey(),
     title: text("title").notNull(),
+    strategy: jsonb("strategy").notNull().default({}),
     items: jsonb("items").notNull().default([]),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
