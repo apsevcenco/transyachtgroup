@@ -933,6 +933,11 @@ export interface ContractGenerateRequest {
   renterLicenceIssuedBy: string;
   renterPhone: string;
   renterEmail: string;
+  additionalDriverName?: string;
+  additionalDriverDob?: string;
+  additionalDriverLicence?: string;
+  additionalDriverLicenceExpiry?: string;
+  additionalDriverLicenceIssuedBy?: string;
   pickupDate: string;
   returnDate: string;
   pickupTime: string;
@@ -1007,6 +1012,13 @@ export interface StoredContract {
       licenceIssuedBy?: string;
       phone?: string;
       email?: string;
+    };
+    additionalDriver?: {
+      name?: string;
+      dob?: string;
+      licence?: string;
+      licenceExpiry?: string;
+      licenceIssuedBy?: string;
     };
     vehicle?: { name?: string };
     pickupDate?: string;

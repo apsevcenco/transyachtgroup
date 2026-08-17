@@ -26,6 +26,11 @@ export interface ContractPrefill {
   renterLicenceIssuedBy?: string;
   renterPhone?: string;
   renterEmail?: string;
+  additionalDriverName?: string;
+  additionalDriverDob?: string;
+  additionalDriverLicence?: string;
+  additionalDriverLicenceExpiry?: string;
+  additionalDriverLicenceIssuedBy?: string;
   pickupDate?: string;
   returnDate?: string;
   pickupTime?: string;
@@ -110,6 +115,16 @@ export function ContractGenerator({
   const [renterLicenceIssuedBy, setRenterLicenceIssuedBy] = useState("");
   const [renterPhone, setRenterPhone] = useState(prefill?.renterPhone || "");
   const [renterEmail, setRenterEmail] = useState("");
+  const [additionalDriverEnabled, setAdditionalDriverEnabled] = useState(
+    !!prefill?.additionalDriverName,
+  );
+  const [additionalDriverName, setAdditionalDriverName] = useState("");
+  const [additionalDriverDob, setAdditionalDriverDob] = useState("");
+  const [additionalDriverLicence, setAdditionalDriverLicence] = useState("");
+  const [additionalDriverLicenceExpiry, setAdditionalDriverLicenceExpiry] =
+    useState("");
+  const [additionalDriverLicenceIssuedBy, setAdditionalDriverLicenceIssuedBy] =
+    useState("");
 
   const [pickupDate, setPickupDate] = useState(prefill?.pickupDate || "");
   const [returnDate, setReturnDate] = useState(prefill?.returnDate || "");
@@ -204,6 +219,25 @@ export function ContractGenerator({
       setRenterLicenceIssuedBy(p.renterLicenceIssuedBy);
     if (p.renterPhone) setRenterPhone(p.renterPhone);
     if (p.renterEmail) setRenterEmail(p.renterEmail);
+    if (p.additionalDriverName) {
+      setAdditionalDriverEnabled(true);
+      setAdditionalDriverName(p.additionalDriverName);
+      setAdditionalDriverDob(p.additionalDriverDob || "");
+      setAdditionalDriverLicence(p.additionalDriverLicence || "");
+      setAdditionalDriverLicenceExpiry(
+        p.additionalDriverLicenceExpiry || "",
+      );
+      setAdditionalDriverLicenceIssuedBy(
+        p.additionalDriverLicenceIssuedBy || "",
+      );
+    } else {
+      setAdditionalDriverEnabled(false);
+      setAdditionalDriverName("");
+      setAdditionalDriverDob("");
+      setAdditionalDriverLicence("");
+      setAdditionalDriverLicenceExpiry("");
+      setAdditionalDriverLicenceIssuedBy("");
+    }
     if (p.pickupDate) setPickupDate(p.pickupDate);
     if (p.returnDate) setReturnDate(p.returnDate);
     if (p.pickupTime) setPickupTime(p.pickupTime);
@@ -268,6 +302,12 @@ export function ContractGenerator({
     kmPerDay.trim() !== "" &&
     extraKmPrice.trim() !== "" &&
     !!representativeName.trim() &&
+    (!additionalDriverEnabled ||
+      (!!additionalDriverName.trim() &&
+        !!additionalDriverDob &&
+        !!additionalDriverLicence.trim() &&
+        !!additionalDriverLicenceExpiry &&
+        !!additionalDriverLicenceIssuedBy.trim())) &&
     `${returnDate}T${returnTime}` >= `${pickupDate}T${pickupTime}`;
   const oneOffFormValid =
     !pickupDate ||
@@ -297,6 +337,21 @@ export function ContractGenerator({
         renterLicenceIssuedBy: renterLicenceIssuedBy.trim(),
         renterPhone: renterPhone.trim(),
         renterEmail: renterEmail.trim(),
+        additionalDriverName: additionalDriverEnabled
+          ? additionalDriverName.trim()
+          : undefined,
+        additionalDriverDob: additionalDriverEnabled
+          ? additionalDriverDob
+          : undefined,
+        additionalDriverLicence: additionalDriverEnabled
+          ? additionalDriverLicence.trim()
+          : undefined,
+        additionalDriverLicenceExpiry: additionalDriverEnabled
+          ? additionalDriverLicenceExpiry
+          : undefined,
+        additionalDriverLicenceIssuedBy: additionalDriverEnabled
+          ? additionalDriverLicenceIssuedBy.trim()
+          : undefined,
         pickupDate,
         returnDate,
         pickupTime,
@@ -629,6 +684,82 @@ export function ContractGenerator({
               />
             </div>
           </div>
+        </div>
+
+        {/* Optional additional authorised driver */}
+        <div className="border-t border-white/[0.06] pt-4">
+          <label className="flex min-h-[44px] cursor-pointer items-center justify-between gap-4">
+            <span>
+              <span className={sectionLabelClass}>Second Driver</span>
+              <span className="block text-xs text-white/35">
+                Optional. Enable only when another person is authorised to drive.
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={additionalDriverEnabled}
+              onChange={(e) => setAdditionalDriverEnabled(e.target.checked)}
+              className="h-5 w-5 accent-gold"
+            />
+          </label>
+
+          {additionalDriverEnabled && (
+            <div className="mt-4 space-y-3 rounded-lg border border-gold/15 bg-gold/[0.03] p-4">
+              <div>
+                <label className={labelClass}>Full Name</label>
+                <input
+                  type="text"
+                  value={additionalDriverName}
+                  onChange={(e) => setAdditionalDriverName(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass}>Date of Birth</label>
+                  <input
+                    type="date"
+                    value={additionalDriverDob}
+                    onChange={(e) => setAdditionalDriverDob(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Driving Licence No.</label>
+                  <input
+                    type="text"
+                    value={additionalDriverLicence}
+                    onChange={(e) => setAdditionalDriverLicence(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass}>Licence Expiry</label>
+                  <input
+                    type="date"
+                    value={additionalDriverLicenceExpiry}
+                    onChange={(e) =>
+                      setAdditionalDriverLicenceExpiry(e.target.value)
+                    }
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Licence Issued By</label>
+                  <input
+                    type="text"
+                    value={additionalDriverLicenceIssuedBy}
+                    onChange={(e) =>
+                      setAdditionalDriverLicenceIssuedBy(e.target.value)
+                    }
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Rental Period */}

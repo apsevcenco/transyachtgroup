@@ -54,6 +54,11 @@ interface ParsedContractRequest {
   renterLicenceIssuedBy: string;
   renterPhone: string;
   renterEmail: string;
+  additionalDriverName: string | null;
+  additionalDriverDob: string | null;
+  additionalDriverLicence: string | null;
+  additionalDriverLicenceExpiry: string | null;
+  additionalDriverLicenceIssuedBy: string | null;
   pickupDate: string;
   returnDate: string;
   pickupTime: string;
@@ -162,6 +167,27 @@ function parseContractRequest(
   if (renterLicenceExpiry < returnDate)
     return { error: "renterLicenceExpiry must cover the rental period" };
 
+  const additionalDriverFields = {
+    additionalDriverName: str(b.additionalDriverName),
+    additionalDriverDob: str(b.additionalDriverDob),
+    additionalDriverLicence: str(b.additionalDriverLicence),
+    additionalDriverLicenceExpiry: str(b.additionalDriverLicenceExpiry),
+    additionalDriverLicenceIssuedBy: str(b.additionalDriverLicenceIssuedBy),
+  };
+  const hasAdditionalDriver = Object.values(additionalDriverFields).some(Boolean);
+  if (hasAdditionalDriver) {
+    for (const [key, value] of Object.entries(additionalDriverFields)) {
+      if (!value) return { error: `${key} is required when a second driver is enabled` };
+      if (value.length > 200) return { error: `${key} must be at most 200 characters` };
+    }
+    if (!isRealIsoDate(additionalDriverFields.additionalDriverDob))
+      return { error: "additionalDriverDob must be a real date in YYYY-MM-DD format" };
+    if (!isRealIsoDate(additionalDriverFields.additionalDriverLicenceExpiry))
+      return { error: "additionalDriverLicenceExpiry must be a real date in YYYY-MM-DD format" };
+    if (additionalDriverFields.additionalDriverLicenceExpiry < returnDate)
+      return { error: "additionalDriverLicenceExpiry must cover the rental period" };
+  }
+
   const totalAmount = numOrNull(b.totalAmount);
   const deliveryCost = numOrNull(b.deliveryCost) ?? 0;
   const depositAmount = numOrNull(b.depositAmount);
@@ -214,6 +240,21 @@ function parseContractRequest(
       renterLicenceIssuedBy: requiredText.renterLicenceIssuedBy,
       renterPhone: requiredText.renterPhone,
       renterEmail: requiredText.renterEmail,
+      additionalDriverName: hasAdditionalDriver
+        ? additionalDriverFields.additionalDriverName
+        : null,
+      additionalDriverDob: hasAdditionalDriver
+        ? additionalDriverFields.additionalDriverDob
+        : null,
+      additionalDriverLicence: hasAdditionalDriver
+        ? additionalDriverFields.additionalDriverLicence
+        : null,
+      additionalDriverLicenceExpiry: hasAdditionalDriver
+        ? additionalDriverFields.additionalDriverLicenceExpiry
+        : null,
+      additionalDriverLicenceIssuedBy: hasAdditionalDriver
+        ? additionalDriverFields.additionalDriverLicenceIssuedBy
+        : null,
       pickupDate,
       returnDate,
       pickupTime,
@@ -337,6 +378,7 @@ router.post(
       }
 
       const specs = (vehicle?.specs as Record<string, string>) || {};
+      const additionalDriverName = text("additionalDriverName", 200);
       const contractInput: ContractInput = {
         contractNumber: text("contractNumber", 100),
         dateOfIssue: todayInParis().iso,
@@ -353,6 +395,15 @@ router.post(
           phone: text("renterPhone", 200),
           email: renterEmail,
         },
+        additionalDriver: additionalDriverName
+          ? {
+              name: additionalDriverName,
+              dob: optionalDate("additionalDriverDob"),
+              licence: text("additionalDriverLicence", 200),
+              licenceExpiry: optionalDate("additionalDriverLicenceExpiry"),
+              licenceIssuedBy: text("additionalDriverLicenceIssuedBy", 200),
+            }
+          : undefined,
         vehicle: {
           name: vehicle ? stripHtml(vehicle.name) : "",
           category: stripHtml(specs.bodyType),
@@ -539,6 +590,15 @@ router.post(
             phone: data.renterPhone,
             email: data.renterEmail,
           },
+          additionalDriver: data.additionalDriverName
+            ? {
+                name: data.additionalDriverName,
+                dob: data.additionalDriverDob || "",
+                licence: data.additionalDriverLicence || "",
+                licenceExpiry: data.additionalDriverLicenceExpiry || "",
+                licenceIssuedBy: data.additionalDriverLicenceIssuedBy || "",
+              }
+            : undefined,
           vehicle: {
             name: vehicleName,
             category: stripHtml(specs.bodyType),
@@ -595,7 +655,7 @@ router.post(
             snapshot: contractInput,
             pdfSha256,
             pdfBase64: buffer.toString("base64"),
-            templateVersion: "contract-v3-delivery-two-page",
+            templateVersion: "contract-v4-additional-driver-two-page",
             issuedAt: new Date(),
           };
           const [row] = data.editContractNumber

@@ -404,6 +404,13 @@ export default function AdminDashboard() {
             renterLicenceIssuedBy: snapshot.renter?.licenceIssuedBy,
             renterPhone: snapshot.renter?.phone,
             renterEmail: snapshot.renter?.email,
+            additionalDriverName: snapshot.additionalDriver?.name,
+            additionalDriverDob: snapshot.additionalDriver?.dob,
+            additionalDriverLicence: snapshot.additionalDriver?.licence,
+            additionalDriverLicenceExpiry:
+              snapshot.additionalDriver?.licenceExpiry,
+            additionalDriverLicenceIssuedBy:
+              snapshot.additionalDriver?.licenceIssuedBy,
             pickupDate: snapshot.pickupDate,
             returnDate: snapshot.returnDate,
             pickupTime: snapshot.pickupTime || base.pickupTime,

@@ -31,6 +31,14 @@ export interface ContractRenter {
   email: string;
 }
 
+export interface ContractAdditionalDriver {
+  name: string;
+  dob: string;
+  licence: string;
+  licenceExpiry: string;
+  licenceIssuedBy: string;
+}
+
 export interface ContractVehicle {
   name: string;
   category?: string;
@@ -45,6 +53,7 @@ export interface ContractInput {
   /** ISO date — defaults to today if omitted. */
   dateOfIssue?: string;
   renter: ContractRenter;
+  additionalDriver?: ContractAdditionalDriver;
   vehicle: ContractVehicle;
   pickupDate: string; // ISO date
   returnDate: string; // ISO date
@@ -247,6 +256,9 @@ export function renderContractHtml(input: ContractInput): string {
     .ctr-two-col .ctr-kv-l { width: 42%; }
     .ctr-two-col table.ctr-kv td { padding: 1.45mm 2.5mm; font-size: 8.4px; }
     .ctr-two-col .ctr-sec-h { padding: 1.7mm 2.5mm; }
+    .ctr-page-1.ctr-has-additional table.ctr-kv td { padding-top: 1.15mm; padding-bottom: 1.15mm; font-size: 8.1px; }
+    .ctr-page-1.ctr-has-additional .ctr-sec { margin-bottom: 2.7mm; }
+    .ctr-page-1.ctr-has-additional .ctr-pickup { margin-bottom: 3.5mm; }
     .ctr-page-2 .ctr-header { margin-bottom: 3.5mm; }
     .ctr-page-2 .ctr-cond-body { padding-top: 2.4mm; }
     .ctr-page-2 .ctr-cond-item { font-size: 8.35px; line-height: 1.42; margin-bottom: 1.25mm; }
@@ -284,6 +296,17 @@ export function renderContractHtml(input: ContractInput): string {
 
   const pickupHtml = `<div class="ctr-pickup"><span class="l">Pick-up Location</span>${esc(input.pickupLocation)}</div>`;
 
+  const additionalDriverRows = input.additionalDriver
+    ? kv(
+        "Additional Driver",
+        `${esc(input.additionalDriver.name)} — Born ${esc(formatDate(input.additionalDriver.dob))}`,
+      ) +
+      kv(
+        "Additional Licence",
+        `${esc(input.additionalDriver.licence)} — Expires ${esc(formatDate(input.additionalDriver.licenceExpiry))} — Issued by ${esc(input.additionalDriver.licenceIssuedBy)}`,
+      )
+    : "";
+
   const renterSection =
     `<div class="ctr-sec">` +
     `<div class="ctr-sec-h">A. Renter Details</div>` +
@@ -302,6 +325,7 @@ export function renderContractHtml(input: ContractInput): string {
     ) +
     kv("Phone", esc(input.renter.phone)) +
     kv("Email", esc(input.renter.email)) +
+    additionalDriverRows +
     `</tbody></table>` +
     `</div>`;
 
@@ -359,11 +383,20 @@ export function renderContractHtml(input: ContractInput): string {
     `</tbody></table>` +
     `</div>`;
 
+  const conditions = KEY_CONDITIONS.map((condition) =>
+    condition.title === "AUTHORISED DRIVER" && input.additionalDriver
+      ? {
+          ...condition,
+          body: `Only the named Renter and additional authorised driver ${stripHtml(input.additionalDriver.name)} may operate the Vehicle.`,
+        }
+      : condition,
+  );
+
   const conditionsSection =
     `<div class="ctr-sec">` +
     `<div class="ctr-sec-h">Key Conditions of Hire</div>` +
     `<div class="ctr-cond-body">` +
-    KEY_CONDITIONS.map(
+    conditions.map(
       (c, i) =>
         `<div class="ctr-cond-item"><b>${i + 1}. ${esc(c.title)}:</b> ${esc(c.body)}</div>`,
     ).join("") +
@@ -371,7 +404,7 @@ export function renderContractHtml(input: ContractInput): string {
     `</div>`;
 
   const page1 =
-    `<section class="ctr-page">` +
+    `<section class="ctr-page ctr-page-1${input.additionalDriver ? " ctr-has-additional" : ""}">` +
     headerHtml +
     `<div class="ctr-doc-title">Vehicle Rental Agreement</div>` +
     metaHtml +
