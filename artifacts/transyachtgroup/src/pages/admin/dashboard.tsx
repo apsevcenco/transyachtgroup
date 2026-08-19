@@ -1100,6 +1100,16 @@ function CatalogSection({
   >("all");
   const [brandFilter, setBrandFilter] = useState<string>("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const vehicleFormRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!editingVehicle) return;
+    const frame = window.requestAnimationFrame(() => {
+      vehicleFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      vehicleFormRef.current?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [editingVehicle?.id]);
 
   const vehicleBrand = (v: Vehicle): string =>
     stripTags(v.name).trim().split(/\s+/)[0] || "";
@@ -1255,14 +1265,16 @@ function CatalogSection({
       )}
 
       {(showNewForm || editingVehicle) && (
-        <VehicleForm
-          key={`${category}-${editingVehicle?.id ?? "new"}`}
-          vehicle={editingVehicle}
-          category={category}
-          saving={saving}
-          onSave={onSave}
-          onCancel={onCancel}
-        />
+        <div ref={vehicleFormRef} tabIndex={-1} className="scroll-mt-6 outline-none">
+          <VehicleForm
+            key={`${category}-${editingVehicle?.id ?? "new"}`}
+            vehicle={editingVehicle}
+            category={category}
+            saving={saving}
+            onSave={onSave}
+            onCancel={onCancel}
+          />
+        </div>
       )}
 
       <div className="space-y-3">
