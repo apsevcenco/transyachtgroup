@@ -115,6 +115,44 @@ export const seoContentPlansTable = pgTable(
   (table) => [index("seo_content_plans_updated_idx").on(table.updatedAt)],
 );
 
+export const seoCompetitorsTable = pgTable("seo_competitors", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  baseUrl: text("base_url").notNull().unique(),
+  notes: text("notes"),
+  active: boolean("active").notNull().default(true),
+  lastScannedAt: timestamp("last_scanned_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const seoCompetitorSnapshotsTable = pgTable("seo_competitor_snapshots", {
+  id: serial("id").primaryKey(),
+  competitorId: integer("competitor_id").notNull(),
+  pageUrl: text("page_url").notNull(),
+  title: text("title"),
+  metaDescription: text("meta_description"),
+  h1: text("h1"),
+  contentHash: varchar("content_hash", { length: 64 }).notNull(),
+  summary: jsonb("summary").notNull().default({}),
+  changed: boolean("changed").notNull().default(false),
+  scannedAt: timestamp("scanned_at").defaultNow(),
+}, (table) => [index("seo_competitor_snapshots_lookup_idx").on(table.competitorId, table.scannedAt)]);
+
+export const seoOpportunitiesTable = pgTable("seo_opportunities", {
+  id: serial("id").primaryKey(),
+  competitorId: integer("competitor_id"),
+  title: text("title").notNull(),
+  rationale: text("rationale").notNull(),
+  keyword: text("keyword"),
+  targetPage: text("target_page"),
+  priority: varchar("priority", { length: 20 }).notNull().default("medium"),
+  status: varchar("status", { length: 20 }).notNull().default("new"),
+  context: jsonb("context").notNull().default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [index("seo_opportunities_status_idx").on(table.status, table.createdAt)]);
+
 export const adminSessionsTable = pgTable("admin_sessions", {
   id: serial("id").primaryKey(),
   token: varchar("token", { length: 64 }).notNull().unique(),

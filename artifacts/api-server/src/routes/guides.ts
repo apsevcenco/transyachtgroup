@@ -1,12 +1,14 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import { Router, type IRouter } from "express";
 import { and, desc, eq, isNotNull, lte, or } from "drizzle-orm";
 import rateLimit from "express-rate-limit";
 
 import { db } from "@workspace/db";
-import { analyticsEventsTable, guidesTable, seoContentPlansTable, vehiclesTable } from "@workspace/db/schema";
+import { analyticsEventsTable, guidesTable, seoCompetitorsTable, seoCompetitorSnapshotsTable, seoContentPlansTable, seoOpportunitiesTable, vehiclesTable } from "@workspace/db/schema";
 import { adminAuth } from "../middleware/auth";
 import { auditGuide, type SeoAuditInput } from "../lib/guideSeoAudit";
 import { uploadPublicImage } from "../lib/privateStorage";
+import { safeRemoteFetch } from "../lib/safeRemoteFetch";
 
 const router: IRouter = Router();
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -114,6 +116,65 @@ function cleanSeoPlanItems(value: unknown): SeoPlanItem[] {
         ? text(item, "status", 20) as SeoPlanItem["status"] : "planned",
     }];
   });
+}
+
+function htmlField(html: string, pattern: RegExp): string {
+  return plainLabel(pattern.exec(html)?.[1] || "").slice(0, 500);
+}
+
+async function scanSeoCompetitor(competitor: typeof seoCompetitorsTable.$inferSelect) {
+  const base = new URL(competitor.baseUrl);
+  const allowedHosts = new Set([base.hostname.toLowerCase()]);
+  const robotsUrl = new URL("/robots.txt", base).toString();
+  const robotsResponse = await safeRemoteFetch(robotsUrl, {
+    headers: { "User-Agent": "TransYachtGroup-SEO-Intelligence/1.0" },
+  }, { allowedHosts });
+  if (robotsResponse.ok) {
+    const robots = (await robotsResponse.text()).slice(0, 100_000);
+    const wildcard = robots.split(/user-agent\s*:/i).find((block) => block.trim().startsWith("*")) || "";
+    if (/disallow\s*:\s*\/\s*(?:#.*)?$/im.test(wildcard)) throw new Error("Competitor robots.txt disallows crawling");
+  }
+  const response = await safeRemoteFetch(base.toString(), {
+    headers: { "User-Agent": "TransYachtGroup-SEO-Intelligence/1.0", Accept: "text/html" },
+  }, { allowedHosts });
+  if (!response.ok) throw new Error(`Competitor returned HTTP ${response.status}`);
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.toLowerCase().includes("text/html")) throw new Error("Competitor page is not HTML");
+  const declaredLength = Number(response.headers.get("content-length") || 0);
+  if (declaredLength > 1_500_000) throw new Error("Competitor page is too large");
+  const html = await response.text();
+  if (html.length > 1_500_000) throw new Error("Competitor page is too large");
+  const visibleText = plainLabel(html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ")).slice(0, 30_000);
+  const links = [...html.matchAll(/<a\b[^>]*href=["']([^"']+)["']/gi)].flatMap((match) => {
+    try {
+      const url = new URL(match[1], base);
+      return url.hostname === base.hostname && url.protocol === "https:" ? [url.pathname] : [];
+    } catch { return []; }
+  });
+  const contentHash = createHash("sha256").update(visibleText).digest("hex");
+  const [previous] = await db.select().from(seoCompetitorSnapshotsTable)
+    .where(eq(seoCompetitorSnapshotsTable.competitorId, competitor.id))
+    .orderBy(desc(seoCompetitorSnapshotsTable.scannedAt)).limit(1);
+  const [snapshot] = await db.insert(seoCompetitorSnapshotsTable).values({
+    competitorId: competitor.id,
+    pageUrl: base.toString(),
+    title: htmlField(html, /<title[^>]*>([\s\S]*?)<\/title>/i),
+    metaDescription: htmlField(html, /<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["']/i),
+    h1: htmlField(html, /<h1[^>]*>([\s\S]*?)<\/h1>/i),
+    contentHash,
+    changed: Boolean(previous && previous.contentHash !== contentHash),
+    summary: { sample: visibleText.slice(0, 8_000), internalPaths: [...new Set(links)].slice(0, 100) },
+  }).returning();
+  await db.update(seoCompetitorsTable).set({ lastScannedAt: new Date(), updatedAt: new Date() })
+    .where(eq(seoCompetitorsTable.id, competitor.id));
+  return snapshot;
+}
+
+function cronAuthorized(header: string | undefined): boolean {
+  const secret = process.env.SEO_INTELLIGENCE_CRON_SECRET || "";
+  const supplied = header?.startsWith("Bearer ") ? header.slice(7) : "";
+  if (!secret || secret.length !== supplied.length) return false;
+  return timingSafeEqual(Buffer.from(secret), Buffer.from(supplied));
 }
 
 function cleanGeneratedCopy(value: unknown): GeneratedCopy {
@@ -412,6 +473,115 @@ router.get("/guides/:slug", async (req, res) => {
     req.log?.error?.({ err }, "Guide fetch failed");
     res.status(500).json({ error: "Internal server error" });
   }
+});
+
+router.get("/admin/seo-intelligence", adminAuth, async (req, res) => {
+  try {
+    const [competitors, snapshots, opportunities] = await Promise.all([
+      db.select().from(seoCompetitorsTable).orderBy(desc(seoCompetitorsTable.updatedAt)),
+      db.select().from(seoCompetitorSnapshotsTable).orderBy(desc(seoCompetitorSnapshotsTable.scannedAt)).limit(50),
+      db.select().from(seoOpportunitiesTable).orderBy(desc(seoOpportunitiesTable.createdAt)).limit(100),
+    ]);
+    res.json({ competitors, snapshots, opportunities });
+  } catch (err) {
+    req.log?.error?.({ err }, "SEO intelligence fetch failed");
+    res.status(500).json({ error: "Apply database migration 0026_seo_intelligence.sql" });
+  }
+});
+
+router.post("/admin/seo-intelligence/competitors", adminAuth, async (req, res) => {
+  try {
+    const name = typeof req.body?.name === "string" ? req.body.name.trim().slice(0, 200) : "";
+    const notes = typeof req.body?.notes === "string" ? req.body.notes.trim().slice(0, 2_000) : "";
+    const checked = new URL(typeof req.body?.baseUrl === "string" ? req.body.baseUrl.trim() : "");
+    if (!name || checked.protocol !== "https:" || checked.username || checked.password || checked.port) {
+      return void res.status(400).json({ error: "Enter a name and a public HTTPS competitor URL" });
+    }
+    checked.hash = ""; checked.search = ""; checked.pathname = "/";
+    const [row] = await db.insert(seoCompetitorsTable).values({ name, baseUrl: checked.toString(), notes: notes || null }).returning();
+    res.status(201).json(row);
+  } catch (err) {
+    req.log?.error?.({ err }, "SEO competitor create failed");
+    res.status(400).json({ error: "Competitor already exists or the URL is invalid" });
+  }
+});
+
+router.patch("/admin/seo-intelligence/competitors/:id", adminAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) return void res.status(400).json({ error: "Invalid competitor" });
+  const [row] = await db.update(seoCompetitorsTable).set({ active: Boolean(req.body?.active), updatedAt: new Date() })
+    .where(eq(seoCompetitorsTable.id, id)).returning();
+  if (!row) return void res.status(404).json({ error: "Competitor not found" });
+  res.json(row);
+});
+
+router.post("/admin/seo-intelligence/competitors/:id/scan", adminAuth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const [competitor] = await db.select().from(seoCompetitorsTable).where(eq(seoCompetitorsTable.id, id)).limit(1);
+    if (!competitor) return void res.status(404).json({ error: "Competitor not found" });
+    res.status(201).json(await scanSeoCompetitor(competitor));
+  } catch (err) {
+    req.log?.warn?.({ errorName: err instanceof Error ? err.name : "UnknownError" }, "SEO competitor scan failed");
+    res.status(422).json({ error: err instanceof Error ? err.message : "Competitor scan failed" });
+  }
+});
+
+router.post("/admin/seo-intelligence/analyze", adminAuth, guideAiLimiter, async (req, res) => {
+  try {
+    const [snapshots, guides, vehicles] = await Promise.all([
+      db.select().from(seoCompetitorSnapshotsTable).orderBy(desc(seoCompetitorSnapshotsTable.scannedAt)).limit(30),
+      db.select({ title: guidesTable.title, primaryKeyword: guidesTable.primaryKeyword, targetPage: guidesTable.targetPage }).from(guidesTable),
+      db.select({ name: vehiclesTable.name, category: vehiclesTable.category }).from(vehiclesTable).where(eq(vehiclesTable.visible, true)),
+    ]);
+    if (!snapshots.length) return void res.status(400).json({ error: "Scan at least one competitor first" });
+    const raw = await requestOpenAiJson(
+      "You are an SEO market analyst for Trans Yacht Group. Use competitor data only as market signals. Never copy their wording, invent rankings, prices or facts. Return valid JSON only. Recommend original, people-first content tied to the real Trans Yacht Group fleet.",
+      `COMPETITOR SNAPSHOTS=${JSON.stringify(snapshots)}\nEXISTING TYG CONTENT=${JSON.stringify(guides)}\nREAL TYG FLEET=${JSON.stringify(vehicles)}\nReturn {"items":[{"title":"...","rationale":"...","keyword":"...","targetPage":"/.../","priority":"high|medium|low","competitorId":1,"context":{"region":"...","service":"..."}}]}. Return at most 10 non-duplicative opportunities and only existing or safely proposed internal paths.`,
+    );
+    const rawItems = raw && typeof raw === "object" && Array.isArray((raw as { items?: unknown[] }).items) ? (raw as { items: unknown[] }).items : [];
+    const created: Array<typeof seoOpportunitiesTable.$inferSelect> = [];
+    for (const entry of rawItems.slice(0, 10)) {
+      if (!entry || typeof entry !== "object") continue;
+      const item = entry as Record<string, unknown>;
+      const title = String(item.title || "").trim().slice(0, 300);
+      const rationale = String(item.rationale || "").trim().slice(0, 2_000);
+      if (!title || !rationale) continue;
+      const priority = ["high", "medium", "low"].includes(String(item.priority)) ? String(item.priority) : "medium";
+      const [row] = await db.insert(seoOpportunitiesTable).values({
+        competitorId: Number.isInteger(Number(item.competitorId)) ? Number(item.competitorId) : null,
+        title, rationale, priority,
+        keyword: String(item.keyword || "").trim().slice(0, 300) || null,
+        targetPage: String(item.targetPage || "").trim().slice(0, 500) || null,
+        context: item.context && typeof item.context === "object" ? item.context : {},
+      }).returning();
+      created.push(row);
+    }
+    res.status(201).json(created);
+  } catch (err) {
+    req.log?.error?.({ errorName: err instanceof Error ? err.name : "UnknownError" }, "SEO intelligence analysis failed");
+    res.status(502).json({ error: "SEO intelligence analysis failed" });
+  }
+});
+
+router.patch("/admin/seo-intelligence/opportunities/:id", adminAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  const status = String(req.body?.status || "");
+  if (!Number.isInteger(id) || !["new", "planned", "ignored"].includes(status)) return void res.status(400).json({ error: "Invalid opportunity update" });
+  const [row] = await db.update(seoOpportunitiesTable).set({ status, updatedAt: new Date() }).where(eq(seoOpportunitiesTable.id, id)).returning();
+  if (!row) return void res.status(404).json({ error: "Opportunity not found" });
+  res.json(row);
+});
+
+router.post("/internal/seo-intelligence/daily", async (req, res) => {
+  if (!cronAuthorized(req.header("authorization"))) return void res.status(401).json({ error: "Unauthorized" });
+  const competitors = await db.select().from(seoCompetitorsTable).where(eq(seoCompetitorsTable.active, true)).limit(20);
+  const results = [];
+  for (const competitor of competitors) {
+    try { results.push({ id: competitor.id, ok: true, snapshot: await scanSeoCompetitor(competitor) }); }
+    catch (err) { results.push({ id: competitor.id, ok: false, error: err instanceof Error ? err.message : "Scan failed" }); }
+  }
+  res.json({ scanned: results.length, results });
 });
 
 router.get("/admin/guides", adminAuth, async (_req, res) => {

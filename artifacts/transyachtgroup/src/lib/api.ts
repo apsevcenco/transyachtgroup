@@ -200,6 +200,41 @@ export async function updateGuideSeoPlanItem(planId: number, itemIndex: number, 
   return res.json();
 }
 
+export type SeoCompetitor = { id: number; name: string; baseUrl: string; notes: string | null; active: boolean; lastScannedAt: string | null };
+export type SeoCompetitorSnapshot = { id: number; competitorId: number; pageUrl: string; title: string | null; h1: string | null; changed: boolean; scannedAt: string | null };
+export type SeoOpportunity = { id: number; competitorId: number | null; title: string; rationale: string; keyword: string | null; targetPage: string | null; priority: "high" | "medium" | "low"; status: "new" | "planned" | "ignored"; context: Record<string, unknown>; createdAt: string | null };
+export type SeoIntelligence = { competitors: SeoCompetitor[]; snapshots: SeoCompetitorSnapshot[]; opportunities: SeoOpportunity[] };
+export async function fetchSeoIntelligence(): Promise<SeoIntelligence> {
+  const res = await fetch(`${API_BASE}/admin/seo-intelligence`, { headers: authHeaders() });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "Failed to load SEO intelligence");
+  return res.json();
+}
+export async function createSeoCompetitor(input: { name: string; baseUrl: string; notes?: string }): Promise<SeoCompetitor> {
+  const res = await fetch(`${API_BASE}/admin/seo-intelligence/competitors`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(input) });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "Failed to add competitor");
+  return res.json();
+}
+export async function setSeoCompetitorActive(id: number, active: boolean): Promise<SeoCompetitor> {
+  const res = await fetch(`${API_BASE}/admin/seo-intelligence/competitors/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify({ active }) });
+  if (!res.ok) throw new Error("Failed to update competitor");
+  return res.json();
+}
+export async function scanSeoCompetitor(id: number): Promise<SeoCompetitorSnapshot> {
+  const res = await fetch(`${API_BASE}/admin/seo-intelligence/competitors/${id}/scan`, { method: "POST", headers: authHeaders() });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "Competitor scan failed");
+  return res.json();
+}
+export async function analyzeSeoIntelligence(): Promise<SeoOpportunity[]> {
+  const res = await fetch(`${API_BASE}/admin/seo-intelligence/analyze`, { method: "POST", headers: authHeaders() });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "SEO intelligence analysis failed");
+  return res.json();
+}
+export async function updateSeoOpportunity(id: number, status: SeoOpportunity["status"]): Promise<SeoOpportunity> {
+  const res = await fetch(`${API_BASE}/admin/seo-intelligence/opportunities/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify({ status }) });
+  if (!res.ok) throw new Error("Failed to update SEO opportunity");
+  return res.json();
+}
+
 export async function importGuideSearchMetrics(rows: Array<Record<string, unknown>>): Promise<{ updated: number }> {
   const res = await fetch(`${API_BASE}/admin/guides/search-metrics`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify({ rows }) });
   if (!res.ok) throw new Error("Search metrics import failed");
