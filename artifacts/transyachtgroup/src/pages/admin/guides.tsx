@@ -170,6 +170,30 @@ export default function AdminGuides() {
     catch (err) { setIntelligenceMessage(err instanceof Error ? err.message : "Competitor scan failed"); }
     finally { setIntelligenceBusy(false); }
   };
+  const scanAllCompetitorsNow = async () => {
+    const activeCompetitors = intelligence.competitors.filter((competitor) => competitor.active);
+    if (!activeCompetitors.length) {
+      setIntelligenceMessage("There are no active competitors to scan.");
+      return;
+    }
+    setIntelligenceBusy(true);
+    let scanned = 0;
+    let changed = 0;
+    let failed = 0;
+    for (const [index, competitor] of activeCompetitors.entries()) {
+      setIntelligenceMessage(`Scanning ${index + 1}/${activeCompetitors.length}: ${competitor.name}…`);
+      try {
+        const result = await scanSeoCompetitor(competitor.id);
+        scanned += 1;
+        if (result.changed) changed += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+    await loadIntelligence();
+    setIntelligenceMessage(`Scan all complete: ${scanned} scanned, ${changed} changed, ${failed} failed.`);
+    setIntelligenceBusy(false);
+  };
   const analyzeCompetitors = async () => {
     setIntelligenceBusy(true); setIntelligenceMessage("AI is comparing signals with your fleet and existing guides…");
     try { const opportunities = await analyzeSeoIntelligence(); await loadIntelligence(); setIntelligenceMessage(`${opportunities.length} original SEO opportunities prepared. Nothing was published.`); }
@@ -252,7 +276,7 @@ export default function AdminGuides() {
     {seoAudit && <div className="mt-6 rounded-lg border border-white/10 bg-black/30 p-5"><div className="flex items-center justify-between"><div><p className="text-xs uppercase tracking-wider text-white/35">SEO readiness</p><p className={`mt-1 text-4xl font-semibold ${seoAudit.score >= 80 ? "text-emerald-400" : seoAudit.score >= 60 ? "text-gold" : "text-red-400"}`}>{seoAudit.score}/100</p></div><div className="text-right text-xs text-white/40"><p>{seoAudit.stats.wordCount || 0} words</p><p>{seoAudit.stats.internalLinks || 0} internal links</p><p>{seoAudit.stats.completeTranslations || 0}/4 translations</p></div></div><div className="mt-5 space-y-2">{seoAudit.issues.map((issue) => <div key={issue.code} className={`rounded px-3 py-2 text-xs ${issue.severity === "error" ? "bg-red-500/10 text-red-300" : "bg-gold/5 text-gold/80"}`}>{issue.message} <span className="opacity-40">−{issue.points}</span></div>)}{!seoAudit.issues.length && <p className="text-sm text-emerald-400">Ready to publish.</p>}</div>{seoAudit.cannibalization.length > 0 && <div className="mt-4 border-t border-white/10 pt-4"><p className="mb-2 text-xs uppercase text-red-300">Possible competing pages</p>{seoAudit.cannibalization.map((item) => <p key={item.id} className="text-xs text-white/50">{item.title} — {item.similarity}% overlap</p>)}</div>}</div>}
     </section>
     <section className="mt-8 rounded-xl border border-gold/20 bg-gold/[0.03] p-5 md:p-7">
-      <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-[10px] uppercase tracking-[0.22em] text-gold">SEO Intelligence</p><h2 className="mt-2 font-serif text-2xl">Competitor signals</h2><p className="mt-2 max-w-2xl text-xs leading-5 text-white/40">Tracks public homepage changes and turns them into original content opportunities grounded in your real fleet. It never copies competitor text and never publishes or changes an article automatically.</p></div><button type="button" disabled={intelligenceBusy || !intelligence.snapshots.length} onClick={analyzeCompetitors} className="inline-flex items-center gap-2 rounded border border-gold/30 px-4 py-2 text-xs text-gold disabled:opacity-40"><Sparkles size={14}/>{intelligenceBusy ? "Working…" : "Analyze signals with AI"}</button></div>
+      <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-[10px] uppercase tracking-[0.22em] text-gold">SEO Intelligence</p><h2 className="mt-2 font-serif text-2xl">Competitor signals</h2><p className="mt-2 max-w-2xl text-xs leading-5 text-white/40">Tracks public homepage changes and turns them into original content opportunities grounded in your real fleet. It never copies competitor text and never publishes or changes an article automatically.</p></div><div className="flex flex-wrap gap-2"><button type="button" disabled={intelligenceBusy || !intelligence.competitors.some((competitor) => competitor.active)} onClick={scanAllCompetitorsNow} className="inline-flex items-center gap-2 rounded border border-white/15 px-4 py-2 text-xs text-white/70 hover:border-gold/30 hover:text-gold disabled:opacity-40"><RefreshCw size={14}/>{intelligenceBusy ? "Working…" : "Scan all competitors"}</button><button type="button" disabled={intelligenceBusy || !intelligence.snapshots.length} onClick={analyzeCompetitors} className="inline-flex items-center gap-2 rounded border border-gold/30 px-4 py-2 text-xs text-gold disabled:opacity-40"><Sparkles size={14}/>{intelligenceBusy ? "Working…" : "Analyze signals with AI"}</button></div></div>
       <div className="mt-5 grid gap-3 md:grid-cols-[1fr_1.4fr_1.4fr_auto]">
         <input value={competitorForm.name} onChange={(event) => setCompetitorForm((current) => ({ ...current, name: event.target.value }))} placeholder="Competitor name" className="rounded border border-white/10 bg-black/40 px-3 py-3 text-sm text-white"/>
         <input value={competitorForm.baseUrl} onChange={(event) => setCompetitorForm((current) => ({ ...current, baseUrl: event.target.value }))} placeholder="https://competitor.example" className="rounded border border-white/10 bg-black/40 px-3 py-3 text-sm text-white"/>
