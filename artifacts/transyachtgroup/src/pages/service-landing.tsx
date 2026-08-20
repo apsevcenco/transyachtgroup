@@ -17,6 +17,9 @@ type Landing = {
   details: string;
   brand?: string;
   area?: string;
+  serviceType?: string;
+  vehicleKeywords?: string[];
+  faq?: Array<{ q: string; a: string }>;
   related: string[];
 };
 
@@ -52,6 +55,21 @@ const LANDINGS: Landing[] = [
     intro: "Arrange a luxury vehicle around your stay in Saint-Tropez, Ramatuelle or Pampelonne, with delivery planned around your arrival and accommodation.",
     details: "Seasonal demand can be high, so every model is confirmed against live availability. Our concierge can coordinate the rental with airport transfers, yacht plans and collection at the end of your stay.",
     related: ["luxury-car-rental-cannes", "lamborghini-rental-french-riviera", "ferrari-rental-french-riviera"],
+  },
+  {
+    slug: "courchevel-private-transfers", kind: "car", area: "Courchevel",
+    serviceType: "Private airport transfer to Courchevel",
+    vehicleKeywords: ["v-class", "v class", "v 300", "traffic"],
+    title: "Private Transfers to Courchevel",
+    eyebrow: "Geneva, Lyon, Chambery and Turin airports",
+    description: "Private luxury transfers to Courchevel from Geneva, Lyon, Chambery and Turin airports with executive vehicles and personal journey coordination.",
+    intro: "Travel privately to Courchevel from Geneva, Lyon, Chambery or Turin airport. We coordinate the pickup time, passenger requirements, luggage and destination before confirming your tailored transfer.",
+    details: "Executive vehicles are selected around your group and route, with Mercedes-Benz V-Class and comparable premium options subject to availability. Share your flight details, passenger count, luggage and Courchevel address to receive a clear individual quotation.",
+    faq: [
+      { q: "Which airports can the transfer start from?", a: "Transfers can be arranged from Geneva, Lyon, Chambery or Turin, subject to vehicle and driver availability for your date and time." },
+      { q: "Is the vehicle confirmed before booking?", a: "Yes. The vehicle category, pickup plan, route and final price are confirmed in your individual offer before the transfer is booked." },
+    ],
+    related: ["mercedes-rental-french-riviera", "luxury-car-rental-nice", "luxury-car-rental-monaco"],
   },
   {
     slug: "yacht-charter-cannes", kind: "yacht", area: "Cannes",
@@ -123,19 +141,23 @@ export default function ServiceLanding({ slug }: { slug: string }) {
   }, [lang, page]);
 
   const matches = useMemo(() => {
-    const filtered = page?.brand ? vehicles.filter((v) => stripCmsText(v.name).toLowerCase().includes(page.brand!.toLowerCase())) : vehicles;
+    const filtered = page?.brand
+      ? vehicles.filter((v) => stripCmsText(v.name).toLowerCase().includes(page.brand!.toLowerCase()))
+      : page?.vehicleKeywords?.length
+        ? vehicles.filter((v) => page.vehicleKeywords!.some((keyword) => stripCmsText(v.name).toLowerCase().includes(keyword)))
+        : vehicles;
     return filtered.slice(0, 6);
   }, [page, vehicles]);
 
   if (!page) return <SeoHead title="404" description="Service not found." path={`/services/${slug}`} lang={lang} robots="noindex,follow" />;
   const path = `/services/${page.slug}`;
   const Icon = page.kind === "yacht" ? Ship : Car;
-  const faq = [{ q: text.q1, a: text.a1 }, { q: text.q2, a: text.a2 }];
+  const faq = page.faq || [{ q: text.q1, a: text.a1 }, { q: text.q2, a: text.a2 }];
 
   return (
     <div className="min-h-screen bg-background text-white">
       <SeoHead title={page.title} description={page.description} path={path} lang={lang} jsonLd={[
-        { "@context": "https://schema.org", "@type": "Service", name: page.title, description: page.description, serviceType: page.kind === "yacht" ? "Luxury yacht charter" : "Luxury car rental", areaServed: page.area ? { "@type": "City", name: page.area } : "French Riviera", provider: { "@id": `${SITE_URL}/#organization` }, url: `${SITE_URL}${path}/?lang=${lang}` },
+        { "@context": "https://schema.org", "@type": "Service", name: page.title, description: page.description, serviceType: page.serviceType || (page.kind === "yacht" ? "Luxury yacht charter" : "Luxury car rental"), areaServed: page.area ? { "@type": "City", name: page.area } : "French Riviera", provider: { "@id": `${SITE_URL}/#organization` }, url: `${SITE_URL}${path}/?lang=${lang}` },
         { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faq.map((item) => ({ "@type": "Question", name: item.q, acceptedAnswer: { "@type": "Answer", text: item.a } })) },
         { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/?lang=${lang}` }, { "@type": "ListItem", position: 2, name: page.kind === "yacht" ? "Yachts" : "Cars", item: `${SITE_URL}/${page.kind === "yacht" ? "yachts" : "cars"}/?lang=${lang}` }, { "@type": "ListItem", position: 3, name: page.title }] },
       ]} />

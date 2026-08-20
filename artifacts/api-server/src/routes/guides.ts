@@ -46,6 +46,7 @@ const CORE_INTERNAL_LINKS: InternalLinkCandidate[] = [
     ["luxury-car-rental-monaco", "Luxury car rental in Monaco"],
     ["luxury-car-rental-nice", "Luxury car rental in Nice"],
     ["luxury-car-rental-saint-tropez", "Luxury car rental in Saint-Tropez"],
+    ["courchevel-private-transfers", "Private transfers to Courchevel"],
     ["yacht-charter-cannes", "Luxury yacht charter in Cannes"],
     ["yacht-charter-monaco", "Luxury yacht charter in Monaco"],
     ["lamborghini-rental-french-riviera", "Lamborghini rental on the French Riviera"],
