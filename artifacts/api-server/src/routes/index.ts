@@ -14,6 +14,7 @@ import contractsRouter from "./contracts";
 import uploadsRouter from "./uploads";
 import sitemapsRouter from "./sitemaps";
 import guidesRouter from "./guides";
+import reviewsRouter from "./reviews";
 
 const router: IRouter = Router();
 
@@ -21,6 +22,7 @@ router.use(healthRouter);
 router.use(authRouter);
 router.use(sitemapsRouter);
 router.use(guidesRouter);
+router.use(reviewsRouter);
 router.use(vehiclesRouter);
 router.use(proposalsRouter);
 router.use(contentRouter);

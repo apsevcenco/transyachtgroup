@@ -172,6 +172,30 @@ export const contactRequestsTable = pgTable("contact_requests", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const customerReviewsTable = pgTable("customer_reviews", {
+  id: serial("id").primaryKey(),
+  bookingId: integer("booking_id"),
+  clientName: text("client_name").notNull(),
+  clientEmail: text("client_email"),
+  clientPhone: text("client_phone"),
+  vehicleName: text("vehicle_name"),
+  language: varchar("language", { length: 10 }).notNull().default("en"),
+  channel: varchar("channel", { length: 20 }).notNull().default("whatsapp"),
+  status: varchar("status", { length: 20 }).notNull().default("draft"),
+  requestMessage: text("request_message"),
+  reviewUrl: text("review_url"),
+  rating: integer("rating"),
+  reviewText: text("review_text"),
+  googleReviewUrl: text("google_review_url"),
+  replyDraft: text("reply_draft"),
+  replyPublishedAt: timestamp("reply_published_at"),
+  showOnSite: boolean("show_on_site").notNull().default(false),
+  sentAt: timestamp("sent_at"),
+  receivedAt: timestamp("received_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [index("customer_reviews_status_idx").on(table.status, table.createdAt)]);
+
 export const analyticsEventsTable = pgTable("analytics_events", {
   id: serial("id").primaryKey(),
   sessionId: varchar("session_id", { length: 64 }).notNull(),

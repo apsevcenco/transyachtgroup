@@ -12,6 +12,7 @@ import { fetchFeaturedVehicles, fetchContent, submitRequest } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePageView, trackFormSubmit } from "@/hooks/useAnalytics";
 import { CmsContent } from "@/components/CmsContent";
+import { CustomerReviews } from "@/components/CustomerReviews";
 
 function GrainOverlay() {
   return (
@@ -795,6 +796,8 @@ export default function Home() {
       </section>
 
       {/* FOOTER */}
+      <CustomerReviews />
+
       <footer className="bg-black relative z-10 overflow-hidden">
         <div className="gold-line w-full opacity-30" />
         <div className="pt-20 pb-10 px-4">

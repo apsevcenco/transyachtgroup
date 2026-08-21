@@ -43,6 +43,7 @@ import { YachtBookingCalendar } from "@/components/admin/YachtBookingCalendar";
 import { CrmDashboard } from "@/components/admin/CrmDashboard";
 import { AgentsDashboard } from "@/components/admin/AgentsDashboard";
 import { ProposalsDashboard } from "@/components/admin/ProposalsDashboard";
+import { ReviewsDashboard } from "@/components/admin/ReviewsDashboard";
 import {
   ContractGenerator,
   buildContractPrefillFromBooking,
@@ -100,6 +101,7 @@ type Tab =
   | "agents"
   | "proposals"
   | "contracts"
+  | "reviews"
   | "trash";
 
 type AnalyticsStats = {
@@ -441,6 +443,7 @@ export default function AdminDashboard() {
       mobileSection === "content" ||
       mobileSection === "requests" ||
       mobileSection === "analytics" ||
+      mobileSection === "reviews" ||
       mobileSection === "trash"
     ) {
       setTab(mobileSection as Tab);
@@ -705,6 +708,8 @@ export default function AdminDashboard() {
 
       {tab === "contracts" && <ContractGenerator prefill={contractPrefill} />}
 
+      {tab === "reviews" && <ReviewsDashboard />}
+
       {tab === "trash" && <VehicleTrash onChanged={loadData} />}
     </>
   );
@@ -736,6 +741,11 @@ export default function AdminDashboard() {
       label: "Contracts",
       icon: "📝",
       go: () => setLocation("/admin/contracts"),
+    },
+    {
+      label: "Customer Reviews",
+      icon: "★",
+      go: () => setLocation("/admin/dashboard/reviews"),
     },
     {
       label: "Content / CMS",
@@ -774,6 +784,7 @@ export default function AdminDashboard() {
     { key: "agents", label: "Agents", icon: "🤝" },
     { key: "proposals", label: "Proposals", icon: "📄" },
     { key: "contracts", label: "Contracts", icon: "📝" },
+    { key: "reviews", label: "Customer Reviews", icon: "★" },
     { key: "content", label: "Site Content", icon: "✎" },
     { key: "requests", label: "Requests", icon: "📩" },
     { key: "analytics", label: "Analytics", icon: "📊" },
