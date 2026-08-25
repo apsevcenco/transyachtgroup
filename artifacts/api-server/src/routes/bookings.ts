@@ -4,6 +4,8 @@ import {
   bookingsTable,
   vehiclesTable,
   rentalHistoryTable,
+  customerReviewsTable,
+  reviewDeliverySettingsTable,
   insertBookingSchema,
 } from "@workspace/db/schema";
 import { eq, and, gte, lte, inArray, ne, sql } from "drizzle-orm";
@@ -20,12 +22,38 @@ import {
   signBookingPhotos,
   uploadBookingPhoto,
 } from "../lib/privateStorage";
+import { dispatchReviewRequest, reviewRequestCopy } from "../lib/reviewDelivery";
 
 // Vehicle names can carry rich-text markup from the admin's CMS editor
 // (e.g. "<p><span style=...>McLaren</span></p>") — strip it for the plain
 // snapshot stored in rental_history.
 function stripHtmlTags(s: string): string {
   return s.replace(/<[^>]*>/g, "").trim();
+}
+
+async function createAndSendAutomaticReviewRequest(booking: typeof bookingsTable.$inferSelect, vehicleName: string) {
+  const [settings] = await db.select().from(reviewDeliverySettingsTable).where(eq(reviewDeliverySettingsTable.id, 1)).limit(1);
+  if (!settings?.enabled || !settings.googleReviewUrl || (!settings.sendWhatsapp && !settings.sendEmail)) return;
+  if (!booking.clientName || (!booking.clientPhone && !booking.clientEmail)) return;
+  const [existing] = await db.select({ id: customerReviewsTable.id }).from(customerReviewsTable)
+    .where(eq(customerReviewsTable.bookingId, booking.id)).limit(1);
+  if (existing) return;
+  const channel = settings.sendWhatsapp && settings.sendEmail ? "both" : settings.sendWhatsapp ? "whatsapp" : "email";
+  const [created] = await db.insert(customerReviewsTable).values({
+    bookingId: booking.id,
+    clientName: booking.clientName,
+    clientEmail: booking.clientEmail,
+    clientPhone: booking.clientPhone,
+    vehicleName,
+    language: settings.defaultLanguage,
+    channel,
+    automatic: true,
+    reviewUrl: settings.googleReviewUrl,
+    requestMessage: reviewRequestCopy(booking.clientName, settings.defaultLanguage, settings.googleReviewUrl),
+    whatsappStatus: settings.sendWhatsapp ? "pending" : "not_requested",
+    emailStatus: settings.sendEmail ? "pending" : "not_requested",
+  }).returning();
+  await dispatchReviewRequest(created.id, { whatsapp: settings.sendWhatsapp, email: settings.sendEmail });
 }
 
 function bookingMileageError(data: {
@@ -464,6 +492,14 @@ router.put("/bookings/:id", async (req, res) => {
       return updated;
     });
 
+    if (booking.status === "completed") {
+      const [vehicle] = await db.select({ name: vehiclesTable.name }).from(vehiclesTable).where(eq(vehiclesTable.id, booking.vehicleId)).limit(1);
+      try {
+        await createAndSendAutomaticReviewRequest(booking, stripHtmlTags(vehicle?.name || "Vehicle"));
+      } catch (error) {
+        req.log?.error?.({ err: error, bookingId: booking.id }, "Automatic review request failed without rolling back booking completion");
+      }
+    }
     res.json(await signBookingPhotos(booking));
   } catch (err) {
     console.error("Booking update error:", err);

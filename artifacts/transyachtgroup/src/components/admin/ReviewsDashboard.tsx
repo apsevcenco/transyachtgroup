@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Copy, ExternalLink, MessageCircle, Sparkles, Trash2 } from "lucide-react";
-import { createReviewWorkflow, deleteReviewWorkflow, fetchCompletedBookingsForReviews, fetchReviewWorkflows, generateReviewReply, updateReviewWorkflow, type CompletedBookingForReview, type ReviewWorkflow } from "@/lib/api";
+import { Copy, ExternalLink, Mail, MessageCircle, Send, Sparkles, Trash2 } from "lucide-react";
+import { createReviewWorkflow, deleteReviewWorkflow, fetchCompletedBookingsForReviews, fetchReviewDeliverySettings, fetchReviewWorkflows, generateReviewReply, generateReviewRequestMessage, saveReviewDeliverySettings, sendReviewRequest, updateReviewWorkflow, type CompletedBookingForReview, type ReviewDeliverySettings, type ReviewWorkflow } from "@/lib/api";
 
 const GOOGLE_REVIEW_STORAGE = "tyg_google_review_url";
 
@@ -12,22 +12,30 @@ export function ReviewsDashboard() {
   const [language, setLanguage] = useState("en");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-  const load = async () => { const [r, b] = await Promise.all([fetchReviewWorkflows(), fetchCompletedBookingsForReviews()]); setRows(r); setBookings(b); };
+  const [channel, setChannel] = useState<"whatsapp" | "email" | "both">("both");
+  const [settings, setSettings] = useState<ReviewDeliverySettings>({ id: 1, enabled: false, googleReviewUrl: "", defaultLanguage: "en", sendWhatsapp: true, sendEmail: true });
+  const load = async () => { const [r, b, s] = await Promise.all([fetchReviewWorkflows(), fetchCompletedBookingsForReviews(), fetchReviewDeliverySettings()]); setRows(r); setBookings(b); setSettings(s); if (s.googleReviewUrl) setReviewUrl(s.googleReviewUrl); };
   useEffect(() => { void load().catch((e) => setMessage(e.message)); }, []);
   const create = async () => {
     if (!bookingId || !reviewUrl) return setMessage("Select a completed booking and add the Google review link.");
-    setBusy(true); try { localStorage.setItem(GOOGLE_REVIEW_STORAGE, reviewUrl); await createReviewWorkflow({ bookingId: Number(bookingId), reviewUrl, language, channel: "whatsapp" }); await load(); setMessage("Review request prepared."); } catch (e) { setMessage(e instanceof Error ? e.message : "Failed"); } finally { setBusy(false); }
+    setBusy(true); try { localStorage.setItem(GOOGLE_REVIEW_STORAGE, reviewUrl); await createReviewWorkflow({ bookingId: Number(bookingId), reviewUrl, language, channel }); await load(); setMessage("Review request prepared. Review the text, then send it manually or with the connected providers."); } catch (e) { setMessage(e instanceof Error ? e.message : "Failed"); } finally { setBusy(false); }
   };
   const patch = async (id: number, data: Record<string, unknown>) => { setBusy(true); try { await updateReviewWorkflow(id, data); await load(); } catch (e) { setMessage(e instanceof Error ? e.message : "Failed"); } finally { setBusy(false); } };
   return <div className="space-y-6">
     <div><h2 className="font-serif text-2xl text-white">Customer Reviews</h2><p className="text-sm text-white/45 mt-1">Request genuine Google reviews, track them and publish selected testimonials.</p></div>
     {message && <div className="border border-gold/30 bg-gold/10 px-4 py-3 text-sm text-gold">{message}</div>}
     <section className="border border-white/10 bg-white/[0.03] p-5 space-y-4">
+      <div><h3 className="text-xs uppercase tracking-[.18em] text-white/60">Automatic requests after rental completion</h3><p className="mt-2 text-xs leading-relaxed text-white/40">Email uses the generated message. Automatic WhatsApp uses your approved Meta template with client name and review link. A booking is sent only once.</p></div>
+      <div className="grid md:grid-cols-3 gap-3"><input value={settings.googleReviewUrl || ""} onChange={(e) => setSettings({ ...settings, googleReviewUrl: e.target.value })} placeholder="Google review HTTPS link" className="field"/><select value={settings.defaultLanguage} onChange={(e) => setSettings({ ...settings, defaultLanguage: e.target.value })} className="field"><option value="en">English</option><option value="fr">Français</option><option value="ru">Русский</option><option value="ro">Română</option><option value="ar">العربية</option></select><label className="btn cursor-pointer"><input type="checkbox" checked={settings.enabled} onChange={(e) => setSettings({ ...settings, enabled: e.target.checked })}/> Automation enabled</label></div>
+      <div className="flex flex-wrap gap-3"><label className="btn cursor-pointer"><input type="checkbox" checked={settings.sendWhatsapp} onChange={(e) => setSettings({ ...settings, sendWhatsapp: e.target.checked })}/> WhatsApp</label><label className="btn cursor-pointer"><input type="checkbox" checked={settings.sendEmail} onChange={(e) => setSettings({ ...settings, sendEmail: e.target.checked })}/> Email</label><button disabled={busy} onClick={async () => { setBusy(true); try { await saveReviewDeliverySettings(settings); await load(); setMessage("Automatic review settings saved."); } catch(e) { setMessage(e instanceof Error ? e.message : "Failed"); } finally { setBusy(false); } }} className="bg-gold text-black px-5 py-3 text-xs uppercase tracking-widest disabled:opacity-50">Save automation</button></div>
+    </section>
+    <section className="border border-white/10 bg-white/[0.03] p-5 space-y-4">
       <h3 className="text-xs uppercase tracking-[.18em] text-white/60">Prepare a review request</h3>
-      <div className="grid md:grid-cols-3 gap-3">
+      <div className="grid md:grid-cols-4 gap-3">
         <select value={bookingId} onChange={(e) => setBookingId(e.target.value)} className="bg-black border border-white/15 px-3 py-3 text-sm"><option value="">Completed booking…</option>{bookings.map((b) => <option key={b.id} value={b.id}>{b.clientName || "Unnamed"} — {b.vehicleName || "Vehicle"} — {b.endDate}</option>)}</select>
         <input value={reviewUrl} onChange={(e) => setReviewUrl(e.target.value)} placeholder="Google review HTTPS link" className="bg-black border border-white/15 px-3 py-3 text-sm" />
         <select value={language} onChange={(e) => setLanguage(e.target.value)} className="bg-black border border-white/15 px-3 py-3 text-sm"><option value="en">English</option><option value="fr">Français</option><option value="ru">Русский</option><option value="ro">Română</option><option value="ar">العربية</option></select>
+        <select value={channel} onChange={(e) => setChannel(e.target.value as typeof channel)} className="field"><option value="both">WhatsApp + email</option><option value="whatsapp">WhatsApp only</option><option value="email">Email only</option></select>
       </div>
       <button disabled={busy} onClick={create} className="bg-gold text-black px-5 py-3 text-xs uppercase tracking-widest disabled:opacity-50">Create request</button>
     </section>
@@ -35,10 +43,14 @@ export function ReviewsDashboard() {
       const wa = `https://wa.me/${(r.clientPhone || "").replace(/\D/g, "")}?text=${encodeURIComponent(r.requestMessage || "")}`;
       return <article key={r.id} className="border border-white/10 bg-white/[0.02] p-5 space-y-4">
         <div className="flex flex-wrap justify-between gap-3"><div><div className="text-white">{r.clientName} <span className="text-white/35">· {r.vehicleName || "—"}</span></div><div className="text-[11px] uppercase tracking-wider text-gold/70 mt-1">{r.status} · {r.language}</div></div><button onClick={async () => { if (confirm("Delete this review record?")) { await deleteReviewWorkflow(r.id); await load(); } }}><Trash2 className="w-4 h-4 text-red-400/70" /></button></div>
-        <textarea value={r.requestMessage || ""} readOnly className="w-full min-h-24 bg-black/50 border border-white/10 p-3 text-sm text-white/70" />
+        <textarea defaultValue={r.requestMessage || ""} onBlur={(e) => void patch(r.id, { requestMessage: e.target.value })} className="w-full min-h-24 bg-black/50 border border-white/10 p-3 text-sm text-white/70" />
+        <div className="text-xs text-white/40">{r.automatic ? "Automatic" : "Manual"} · WhatsApp: {r.whatsappStatus || "—"} · Email: {r.emailStatus || "—"}{r.deliveryError && <span className="block mt-1 text-red-300/80">{r.deliveryError}</span>}</div>
         <div className="flex flex-wrap gap-2">
-          <button onClick={() => { void navigator.clipboard.writeText(r.requestMessage || ""); void patch(r.id, { status: "sent" }); }} className="btn"><Copy className="w-4 h-4"/> Copy & mark sent</button>
+          <button onClick={() => { void navigator.clipboard.writeText(r.requestMessage || ""); }} className="btn"><Copy className="w-4 h-4"/> Copy</button>
           {r.clientPhone && <a href={wa} target="_blank" rel="noreferrer" onClick={() => void patch(r.id, { status: "sent" })} className="btn"><MessageCircle className="w-4 h-4"/> WhatsApp</a>}
+          {r.clientEmail && <a href={`mailto:${encodeURIComponent(r.clientEmail)}?subject=${encodeURIComponent("Your experience with Trans Yacht Group")}&body=${encodeURIComponent(r.requestMessage || "")}`} onClick={() => void patch(r.id, { status: "sent" })} className="btn"><Mail className="w-4 h-4"/> Email app</a>}
+          <button disabled={busy} onClick={async () => { setBusy(true); try { await generateReviewRequestMessage(r.id); await load(); setMessage("AI request message generated. Review it before sending."); } catch(e) { setMessage(e instanceof Error ? e.message : "Failed"); } finally { setBusy(false); } }} className="btn"><Sparkles className="w-4 h-4"/> AI rewrite</button>
+          <button disabled={busy} onClick={async () => { setBusy(true); try { await sendReviewRequest(r.id, "both"); await load(); setMessage("Delivery attempted. Check the channel statuses below."); } catch(e) { setMessage(e instanceof Error ? e.message : "Failed"); } finally { setBusy(false); } }} className="btn"><Send className="w-4 h-4"/> Send both</button>
           {r.reviewUrl && <a href={r.reviewUrl} target="_blank" rel="noreferrer" className="btn"><ExternalLink className="w-4 h-4"/> Review form</a>}
         </div>
         <div className="grid md:grid-cols-[100px_1fr] gap-3"><input type="number" min="1" max="5" defaultValue={r.rating || ""} onBlur={(e) => void patch(r.id, { rating: Number(e.target.value), status: "received" })} placeholder="Stars" className="field"/><textarea defaultValue={r.reviewText || ""} onBlur={(e) => void patch(r.id, { reviewText: e.target.value, status: "received" })} placeholder="Paste the genuine Google review here" className="field min-h-24" /></div>

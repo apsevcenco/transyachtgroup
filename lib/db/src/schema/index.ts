@@ -194,7 +194,22 @@ export const customerReviewsTable = pgTable("customer_reviews", {
   receivedAt: timestamp("received_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  automatic: boolean("automatic").notNull().default(false),
+  whatsappStatus: varchar("whatsapp_status", { length: 20 }).notNull().default("not_requested"),
+  emailStatus: varchar("email_status", { length: 20 }).notNull().default("not_requested"),
+  deliveryError: text("delivery_error"),
+  sendAttempts: integer("send_attempts").notNull().default(0),
 }, (table) => [index("customer_reviews_status_idx").on(table.status, table.createdAt)]);
+
+export const reviewDeliverySettingsTable = pgTable("review_delivery_settings", {
+  id: integer("id").primaryKey().default(1),
+  enabled: boolean("enabled").notNull().default(false),
+  googleReviewUrl: text("google_review_url"),
+  defaultLanguage: varchar("default_language", { length: 10 }).notNull().default("en"),
+  sendWhatsapp: boolean("send_whatsapp").notNull().default(true),
+  sendEmail: boolean("send_email").notNull().default(true),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 
 export const analyticsEventsTable = pgTable("analytics_events", {
   id: serial("id").primaryKey(),
