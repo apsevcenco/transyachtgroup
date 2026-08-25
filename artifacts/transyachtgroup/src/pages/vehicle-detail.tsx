@@ -21,6 +21,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { usePageView, trackVehicleView } from "@/hooks/useAnalytics";
 import { CmsContent } from "@/components/CmsContent";
 import { SeoHead, SITE_URL } from "@/components/SeoHead";
+import { vehiclePath } from "@/lib/vehicleSeo";
 
 function getCarSpecLabels(
   units: "metric" | "imperial",
@@ -202,10 +203,15 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
       setLoading(false);
       return;
     }
-    trackVehicleView(vid);
     fetchVehicle(vid, lang)
       .then((v) => {
         setVehicle(v);
+        trackVehicleView(v);
+        if (window.location.pathname.startsWith("/vehicle/")) {
+          const query = new URLSearchParams(window.location.search);
+          query.set("lang", lang);
+          window.history.replaceState(null, "", `${vehiclePath(v)}/?${query.toString()}`);
+        }
         if (v?.specs?.unitSystem) setViewUnits(v.specs.unitSystem);
         setLoading(false);
       })
@@ -390,10 +396,11 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
     stripHtmlTags(fullDescription || vehicle.description).slice(0, 300) ||
     `${seoName} available from Trans Yacht Group on the French Riviera.`;
   const seoImage = allImages[0] || vehicle.image || "/opengraph.jpg";
-  const vehicleUrl = `${SITE_URL}/vehicle/${id}?lang=${lang}`;
+  const seoPath = vehiclePath(vehicle);
+  const vehicleUrl = `${SITE_URL}${seoPath}/?lang=${lang}`;
   const productJsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
-    "@type": "Product",
+    "@type": isCar ? ["Product", "Vehicle"] : "Product",
     "@id": `${vehicleUrl}#product`,
     name: seoName,
     description: seoDescription,
@@ -427,7 +434,7 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
       <SeoHead
         title={`${seoName} ${isCar ? "Luxury Car Rental" : "Yacht Charter"}`}
         description={seoDescription}
-        path={`/vehicle/${id}`}
+        path={seoPath}
         lang={lang}
         image={seoImage}
         type="product"
@@ -449,7 +456,7 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
                 name: isCar ? t("cars") : t("yachts"),
                 item: `${SITE_URL}${backPath}?lang=${lang}`,
               },
-              { "@type": "ListItem", position: 3, name: seoName },
+              { "@type": "ListItem", position: 3, name: seoName, item: vehicleUrl },
             ],
           },
         ]}

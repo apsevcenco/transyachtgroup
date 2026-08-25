@@ -189,7 +189,9 @@ export function RouteSeo() {
   const { lang } = useLanguage();
   const path = location.split("?")[0] || "/";
   const isAdmin = path.startsWith("/admin");
-  const isVehicle = path.startsWith("/vehicle/");
+  const isVehicle =
+    path.startsWith("/vehicle/") ||
+    /^\/(?:cars|yachts)\/[^/]+-\d+\/?$/.test(path);
   const isLocation = path.startsWith("/locations/");
   const isService = path.startsWith("/services/");
   const isGuide = path === "/guides" || path.startsWith("/guides/");

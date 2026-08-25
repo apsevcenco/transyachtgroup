@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { guidesTable, vehiclesTable } from "@workspace/db/schema";
 import { and, asc, desc, eq, isNotNull, lte, ne, or } from "drizzle-orm";
+import { vehiclePath } from "../lib/vehicleSeo";
 
 const router: IRouter = Router();
 const SITE_URL = "https://www.transyachtgroup.com";
@@ -34,6 +35,7 @@ router.get("/vehicles-sitemap.xml", async (req, res) => {
       .select({
         id: vehiclesTable.id,
         name: vehiclesTable.name,
+        category: vehiclesTable.category,
         image: vehiclesTable.image,
         images: vehiclesTable.images,
         createdAt: vehiclesTable.createdAt,
@@ -43,7 +45,7 @@ router.get("/vehicles-sitemap.xml", async (req, res) => {
       .orderBy(asc(vehiclesTable.id));
 
     const entries = vehicles.map((vehicle) => {
-      const path = `/vehicle/${vehicle.id}`;
+      const path = vehiclePath(vehicle);
       const allImages = [
         vehicle.image,
         ...(Array.isArray(vehicle.images) ? vehicle.images : []),

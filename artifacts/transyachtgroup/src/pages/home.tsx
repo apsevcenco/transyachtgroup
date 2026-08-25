@@ -13,6 +13,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { usePageView, trackFormSubmit } from "@/hooks/useAnalytics";
 import { CmsContent } from "@/components/CmsContent";
 import { CustomerReviews } from "@/components/CustomerReviews";
+import { vehiclePath } from "@/lib/vehicleSeo";
 
 function GrainOverlay() {
   return (
@@ -366,14 +367,14 @@ export default function Home() {
                 key={item.id}
                 variants={fadeInUp}
                 className="relative group bg-card/50 rounded-xl overflow-hidden border border-white/[0.04] hover-glow-gold flex flex-col h-full cursor-pointer"
-                onClick={() => setLocation(`/vehicle/${item.id}`)}
+                onClick={() => setLocation(`${vehiclePath(item)}?lang=${lang}`)}
               >
                 <a
-                  href={`/vehicle/${item.id}?lang=${lang}`}
+                  href={`${vehiclePath(item)}/?lang=${lang}`}
                   aria-label={`${t("view_details")}: ${stripCmsText(item.name)}`}
                   onClick={(event) => {
                     event.preventDefault();
-                    setLocation(`/vehicle/${item.id}`);
+                    setLocation(`${vehiclePath(item)}?lang=${lang}`);
                   }}
                   className="absolute inset-0 z-[11]"
                 />

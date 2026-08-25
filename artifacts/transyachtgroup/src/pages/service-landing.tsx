@@ -6,6 +6,7 @@ import { SeoHead, SITE_URL } from "@/components/SeoHead";
 import { useLanguage, type LangCode } from "@/contexts/LanguageContext";
 import { fetchVehicles } from "@/lib/api";
 import { stripCmsText } from "@/lib/utils";
+import { vehiclePath } from "@/lib/vehicleSeo";
 
 type Landing = {
   slug: string;
@@ -185,7 +186,7 @@ export default function ServiceLanding({ slug }: { slug: string }) {
                   return (
                     <a
                       key={vehicle.id}
-                      href={`/vehicle/${vehicle.id}/?lang=${lang}`}
+                      href={`${vehiclePath(vehicle)}/?lang=${lang}`}
                       className="group flex h-full flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.02] transition hover:border-gold/40"
                     >
                       <div className="aspect-[4/3] overflow-hidden bg-white/5">

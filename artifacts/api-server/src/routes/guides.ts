@@ -5,6 +5,7 @@ import rateLimit from "express-rate-limit";
 
 import { db } from "@workspace/db";
 import { analyticsEventsTable, guidesTable, seoCompetitorsTable, seoCompetitorSnapshotsTable, seoContentPlansTable, seoOpportunitiesTable, vehiclesTable } from "@workspace/db/schema";
+import { vehiclePath } from "../lib/vehicleSeo";
 import { adminAuth } from "../middleware/auth";
 import { auditGuide, type SeoAuditInput } from "../lib/guideSeoAudit";
 import { uploadPublicImage } from "../lib/privateStorage";
@@ -230,14 +231,14 @@ function canonicalInternalHref(value: string): string | null {
 
 async function loadInternalLinkCandidates(extraLinks = "", excludeGuideId?: number): Promise<InternalLinkCandidate[]> {
   const [vehicles, guides] = await Promise.all([
-    db.select({ id: vehiclesTable.id, name: vehiclesTable.name }).from(vehiclesTable).where(eq(vehiclesTable.visible, true)).orderBy(vehiclesTable.name),
+    db.select({ id: vehiclesTable.id, name: vehiclesTable.name, category: vehiclesTable.category }).from(vehiclesTable).where(eq(vehiclesTable.visible, true)).orderBy(vehiclesTable.name),
     db.select({ id: guidesTable.id, slug: guidesTable.slug, title: guidesTable.title }).from(guidesTable)
       .where(or(eq(guidesTable.published, true), and(isNotNull(guidesTable.scheduledAt), lte(guidesTable.scheduledAt, new Date()))))
       .orderBy(desc(guidesTable.updatedAt)),
   ]);
   const candidates: InternalLinkCandidate[] = [
     ...CORE_INTERNAL_LINKS,
-    ...vehicles.map((vehicle) => ({ url: `/vehicle/${vehicle.id}/?lang=en`, label: plainLabel(vehicle.name), kind: "vehicle" as const })),
+    ...vehicles.map((vehicle) => ({ url: `${vehiclePath(vehicle)}/?lang=en`, label: plainLabel(vehicle.name), kind: "vehicle" as const })),
     ...guides.filter((guide) => guide.id !== excludeGuideId).map((guide) => ({ url: `/guides/${guide.slug}/?lang=en`, label: plainLabel(guide.title), kind: "guide" as const })),
   ];
   const preferred = new Set(extraLinks.split(/[\s,]+/).map((raw) => canonicalInternalHref(raw.trim())).filter(Boolean));

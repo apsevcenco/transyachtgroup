@@ -14,6 +14,7 @@ import { fetchVehicles, fetchContent } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePageView } from "@/hooks/useAnalytics";
 import { CmsContent } from "@/components/CmsContent";
+import { vehiclePath } from "@/lib/vehicleSeo";
 
 const ALL_CURRENCIES: { code: string; symbol: string; label: string }[] = [
   { code: "EUR", symbol: "€", label: "Euro" },
@@ -405,7 +406,7 @@ function CatalogCard({
     setCurrentIdx((prev) => (prev + 1) % allImages.length);
   };
 
-  const goToDetail = () => setLocation(`/vehicle/${item.id}`);
+  const goToDetail = () => setLocation(`${vehiclePath(item)}?lang=${lang}`);
 
   const phoneNumber = siteContent.phone_number || "";
   const whatsappNumber = siteContent.whatsapp_number || phoneNumber;
@@ -419,7 +420,7 @@ function CatalogCard({
       onClick={goToDetail}
     >
       <a
-        href={`/vehicle/${item.id}?lang=${lang}`}
+        href={`${vehiclePath(item)}/?lang=${lang}`}
         aria-label={`${t("view_details")}: ${stripHtml(item.name || "")}`}
         onClick={(event) => {
           event.preventDefault();

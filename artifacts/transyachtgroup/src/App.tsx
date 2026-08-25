@@ -16,6 +16,7 @@ import { FloatingContact } from "@/components/FloatingContact";
 import { CookieBanner } from "@/components/CookieBanner";
 import { RouteSeo } from "@/components/RouteSeo";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
+import { vehicleIdFromSlug } from "@/lib/vehicleSeo";
 
 const Home = lazy(() => import("@/pages/home"));
 const Catalog = lazy(() => import("@/pages/catalog"));
@@ -119,6 +120,12 @@ function Router() {
         <Suspense fallback={<PageFallback />}>
           <Switch>
             <Route path="/" component={Home} />
+            <Route path="/yachts/:slug">
+              {(params) => <VehicleDetail id={vehicleIdFromSlug(params.slug) || ""} />}
+            </Route>
+            <Route path="/cars/:slug">
+              {(params) => <VehicleDetail id={vehicleIdFromSlug(params.slug) || ""} />}
+            </Route>
             <Route path="/yachts">{() => <Catalog category="yacht" />}</Route>
             <Route path="/cars">{() => <Catalog category="car" />}</Route>
             <Route path="/vehicle/:id">

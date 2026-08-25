@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { hasAnalyticsConsent, trackGoogleEvent } from "@/lib/googleAnalytics";
+import { vehiclePath } from "@/lib/vehicleSeo";
 
 const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
@@ -58,11 +59,20 @@ export function usePageView() {
   }, [pathname]);
 }
 
-export function trackVehicleView(vehicleId: number | string) {
-  track("vehicle_view", { vehicleId: String(vehicleId) });
-  trackGoogleEvent("select_content", {
+export function trackVehicleView(vehicle: { id: number | string; name: string; category: string }) {
+  const vehicleId = String(vehicle.id);
+  const vehicleName = vehicle.name.replace(/<[^>]*>/g, "").trim();
+  const vehicleCategory = vehicle.category === "yacht" ? "yacht" : "car";
+  const path = vehiclePath(vehicle);
+  track("vehicle_view", {
+    vehicleId,
+    metadata: { vehicleName, vehicleCategory, vehiclePath: path },
+  });
+  trackGoogleEvent("view_item", {
+    items: [{ item_id: vehicleId, item_name: vehicleName, item_category: vehicleCategory }],
     content_type: "vehicle",
-    item_id: String(vehicleId),
+    item_id: vehicleId,
+    item_name: vehicleName,
   });
 }
 

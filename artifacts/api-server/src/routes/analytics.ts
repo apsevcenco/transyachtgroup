@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { analyticsEventsTable, contactRequestsTable } from "@workspace/db/schema";
+import { analyticsEventsTable, contactRequestsTable, vehiclesTable } from "@workspace/db/schema";
 import { desc, sql, eq, gte, lte, and, count } from "drizzle-orm";
 import { adminAuth } from "../middleware/auth";
 import rateLimit from "express-rate-limit";
@@ -158,10 +158,19 @@ router.get("/analytics/stats", adminAuth, async (req, res) => {
       langBreakdown[lang] = (langBreakdown[lang] || 0) + 1;
     }
 
+    const vehicles = await db
+      .select({ id: vehiclesTable.id, name: vehiclesTable.name })
+      .from(vehiclesTable);
+    const vehicleNames = new Map(
+      vehicles.map((vehicle) => [String(vehicle.id), String(vehicle.name ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()]),
+    );
     const vehicleViewBreakdown: Record<string, number> = {};
     for (const e of vehicleViews) {
       if (e.vehicleId) {
-        vehicleViewBreakdown[e.vehicleId] = (vehicleViewBreakdown[e.vehicleId] || 0) + 1;
+        const metadata = e.metadata && typeof e.metadata === "object" ? e.metadata as Record<string, unknown> : {};
+        const trackedName = typeof metadata.vehicleName === "string" ? metadata.vehicleName.trim() : "";
+        const label = trackedName || vehicleNames.get(e.vehicleId) || `Vehicle #${e.vehicleId}`;
+        vehicleViewBreakdown[label] = (vehicleViewBreakdown[label] || 0) + 1;
       }
     }
 
