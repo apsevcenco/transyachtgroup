@@ -69,8 +69,10 @@ export function trackVehicleView(vehicleId: number | string) {
 export function trackFormSubmit(formName?: string) {
   const form = formName || "contact";
   const guide = sessionStorage.getItem("_tyg_guide_attribution");
+  const eventParameters = { form_name: form, content_guide: guide || undefined };
   track("form_submit", { metadata: { form, attributionGuide: guide } });
-  trackGoogleEvent("generate_lead", { form_name: form, content_guide: guide || undefined });
+  trackGoogleEvent("generate_lead", eventParameters);
+  trackGoogleEvent("ads_conversion_SUBMIT_LEAD_FORM_1", eventParameters);
 }
 
 export function trackEvent(eventType: string, metadata?: Record<string, unknown>) {
