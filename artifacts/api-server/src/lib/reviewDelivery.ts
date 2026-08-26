@@ -43,10 +43,12 @@ function reviewEmailHtml(message: string) {
   const safeUrl = escapeHtml(reviewUrl);
   return `<div style="font-family:Arial,sans-serif;color:#171717;line-height:1.6;max-width:600px">
     <p>${escapeHtml(copy)}</p>
-    <p style="margin:28px 0">
-      <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#b89b5e;color:#000;text-decoration:none;font-weight:700;padding:13px 22px;border-radius:4px">Leave a Google review</a>
-    </p>
-    <p style="font-size:12px;color:#666">If the button does not open, use this link:<br><a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="color:#8a6d32;text-decoration:underline">${safeUrl}</a></p>
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin:28px 0"><tr><td bgcolor="#b89b5e" style="border-radius:4px">
+      <a href="${safeUrl}" style="display:block;color:#000000;text-decoration:none;font-family:Arial,sans-serif;font-weight:bold;padding:13px 22px">Leave a Google review</a>
+    </td></tr></table>
+    <p><a href="${safeUrl}" style="color:#8a6d32;text-decoration:underline;font-weight:bold">Click here to leave your review</a></p>
+    <p style="font-size:12px;color:#666">If the button does not open, copy and paste this address into your browser:</p>
+    <p style="font-size:12px;word-break:break-all">${safeUrl}</p>
   </div>`;
 }
 
