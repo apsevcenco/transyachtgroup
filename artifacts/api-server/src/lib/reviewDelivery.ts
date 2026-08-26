@@ -25,6 +25,31 @@ function validEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? value : "";
 }
 
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[char]!);
+}
+
+function reviewEmailHtml(message: string) {
+  const match = message.match(/https:\/\/[^\s]+/);
+  if (!match) return `<p>${escapeHtml(message)}</p>`;
+  const reviewUrl = match[0];
+  const copy = message.replace(reviewUrl, "").trim();
+  const safeUrl = escapeHtml(reviewUrl);
+  return `<div style="font-family:Arial,sans-serif;color:#171717;line-height:1.6;max-width:600px">
+    <p>${escapeHtml(copy)}</p>
+    <p style="margin:28px 0">
+      <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#b89b5e;color:#000;text-decoration:none;font-weight:700;padding:13px 22px;border-radius:4px">Leave a Google review</a>
+    </p>
+    <p style="font-size:12px;color:#666">If the button does not open, use this link:<br><a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="color:#8a6d32;text-decoration:underline">${safeUrl}</a></p>
+  </div>`;
+}
+
 async function sendEmail(to: string, name: string, message: string) {
   const key = process.env.RESEND_API_KEY;
   const from = process.env.REVIEW_EMAIL_FROM;
@@ -37,7 +62,7 @@ async function sendEmail(to: string, name: string, message: string) {
       to: [to],
       subject: "Your experience with Trans Yacht Group",
       text: message,
-      html: `<p>${message.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!)}</p>`,
+      html: reviewEmailHtml(message),
       tags: [{ name: "workflow", value: "google-review-request" }],
       headers: { "X-Entity-Ref-ID": `review-${Date.now()}-${name.length}` },
     }),
