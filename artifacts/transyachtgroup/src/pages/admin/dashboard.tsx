@@ -396,6 +396,7 @@ export default function AdminDashboard() {
             ...base,
             editContractNumber: contract.contractNumber,
             renterName: snapshot.renter?.name,
+            renterLegalEntity: snapshot.renter?.legalEntity || undefined,
             renterDob: snapshot.renter?.dob,
             renterPob: snapshot.renter?.pob,
             renterNationality: snapshot.renter?.nationality,

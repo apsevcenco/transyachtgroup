@@ -963,6 +963,7 @@ export interface ContractGenerateRequest {
   bookingId?: number | null;
   vehicleId: number;
   renterName: string;
+  renterLegalEntity?: string;
   renterDob: string;
   renterPob: string;
   renterNationality: string;
@@ -1042,6 +1043,7 @@ export interface StoredContract {
   snapshot: {
     renter?: {
       name?: string;
+      legalEntity?: string | null;
       dob?: string;
       pob?: string;
       nationality?: string;

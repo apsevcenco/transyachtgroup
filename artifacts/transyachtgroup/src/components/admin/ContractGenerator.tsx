@@ -16,6 +16,7 @@ export interface ContractPrefill {
   bookingId?: number;
   vehicleId?: number;
   renterName?: string;
+  renterLegalEntity?: string;
   renterDob?: string;
   renterPob?: string;
   renterNationality?: string;
@@ -105,6 +106,9 @@ export function ContractGenerator({
   const vehiclePickerRef = useRef<HTMLDivElement>(null);
 
   const [renterName, setRenterName] = useState(prefill?.renterName || "");
+  const [renterLegalEntity, setRenterLegalEntity] = useState(
+    prefill?.renterLegalEntity || "",
+  );
   const [renterDob, setRenterDob] = useState("");
   const [renterPob, setRenterPob] = useState("");
   const [renterNationality, setRenterNationality] = useState("");
@@ -208,6 +212,7 @@ export function ContractGenerator({
     if (p.bookingId != null) setBookingIdInput(String(p.bookingId));
     if (p.vehicleId != null) setVehicleId(p.vehicleId);
     if (p.renterName) setRenterName(p.renterName);
+    setRenterLegalEntity(p.renterLegalEntity || "");
     if (p.renterDob) setRenterDob(p.renterDob);
     if (p.renterPob) setRenterPob(p.renterPob);
     if (p.renterNationality) setRenterNationality(p.renterNationality);
@@ -327,6 +332,7 @@ export function ContractGenerator({
           ? parseInt(bookingIdInput.trim(), 10)
           : undefined,
         renterName: renterName.trim(),
+        renterLegalEntity: renterLegalEntity.trim() || undefined,
         renterDob,
         renterPob: renterPob.trim(),
         renterNationality: renterNationality.trim(),
@@ -582,6 +588,17 @@ export function ContractGenerator({
                 value={renterName}
                 onChange={(e) => setRenterName(e.target.value)}
                 className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Legal Entity (optional)</label>
+              <input
+                type="text"
+                value={renterLegalEntity}
+                onChange={(e) => setRenterLegalEntity(e.target.value)}
+                className={inputClass}
+                placeholder="Company name if the rental is for a business"
+                maxLength={300}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">

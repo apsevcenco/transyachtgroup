@@ -44,6 +44,7 @@ interface ParsedContractRequest {
   bookingId: number | null;
   vehicleId: number;
   renterName: string;
+  renterLegalEntity: string | null;
   renterDob: string;
   renterPob: string;
   renterNationality: string;
@@ -140,6 +141,9 @@ function parseContractRequest(
   }
 
   const renterDob = str(b.renterDob);
+  const renterLegalEntity = str(b.renterLegalEntity);
+  if (renterLegalEntity.length > 300)
+    return { error: "renterLegalEntity must be at most 300 characters" };
   const renterPassportExpiry = str(b.renterPassportExpiry);
   const renterLicenceExpiry = str(b.renterLicenceExpiry);
   const pickupDate = str(b.pickupDate);
@@ -230,6 +234,7 @@ function parseContractRequest(
       bookingId,
       vehicleId,
       renterName: requiredText.renterName,
+      renterLegalEntity: renterLegalEntity || null,
       renterDob,
       renterPob: requiredText.renterPob,
       renterNationality: requiredText.renterNationality,
@@ -384,6 +389,7 @@ router.post(
         dateOfIssue: todayInParis().iso,
         renter: {
           name: text("renterName", 200),
+          legalEntity: text("renterLegalEntity", 300) || null,
           dob: optionalDate("renterDob"),
           pob: text("renterPob", 200),
           nationality: text("renterNationality", 200),
@@ -579,6 +585,7 @@ router.post(
           dateOfIssue: contractDateOfIssue,
           renter: {
             name: data.renterName,
+            legalEntity: data.renterLegalEntity,
             dob: data.renterDob,
             pob: data.renterPob,
             nationality: data.renterNationality,
@@ -633,6 +640,7 @@ router.post(
             bookingId: data.bookingId,
             vehicleId: data.vehicleId,
             renterName: data.renterName,
+            renterLegalEntity: data.renterLegalEntity,
             renterDob: data.renterDob || null,
             renterPob: data.renterPob || null,
             renterNationality: data.renterNationality || null,

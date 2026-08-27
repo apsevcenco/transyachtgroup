@@ -19,6 +19,7 @@ import { stripHtml } from "./proposal";
 
 export interface ContractRenter {
   name: string;
+  legalEntity?: string | null;
   dob: string; // ISO date
   pob: string;
   nationality: string;
@@ -173,6 +174,8 @@ export function renderContractHtml(input: ContractInput): string {
       ? null
       : input.totalAmount + (input.deliveryCost ?? 0) + input.depositAmount;
   const vehicleName = stripHtml(input.vehicle.name);
+  const renterLegalEntity = stripHtml(input.renter.legalEntity || "");
+  const compactPage1 = !!input.additionalDriver || !!renterLegalEntity;
 
   const HEAD = `'Porter FT', 'Wix MadeFor Display', -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`;
   const BODY = `'Wix MadeFor Display', -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`;
@@ -312,6 +315,7 @@ export function renderContractHtml(input: ContractInput): string {
     `<div class="ctr-sec-h">A. Renter Details</div>` +
     `<table class="ctr-kv"><tbody>` +
     kv("Full Name", esc(input.renter.name)) +
+    (renterLegalEntity ? kv("Legal Entity", esc(renterLegalEntity)) : "") +
     kv("Date of Birth", esc(formatDate(input.renter.dob))) +
     kv("Place of Birth", esc(input.renter.pob)) +
     kv("Nationality", esc(input.renter.nationality)) +
@@ -404,7 +408,7 @@ export function renderContractHtml(input: ContractInput): string {
     `</div>`;
 
   const page1 =
-    `<section class="ctr-page ctr-page-1${input.additionalDriver ? " ctr-has-additional" : ""}">` +
+    `<section class="ctr-page ctr-page-1${compactPage1 ? " ctr-has-additional" : ""}">` +
     headerHtml +
     `<div class="ctr-doc-title">Vehicle Rental Agreement</div>` +
     metaHtml +

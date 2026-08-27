@@ -393,6 +393,7 @@ export const contractsTable = pgTable("contracts", {
   vehicleId: integer("vehicle_id"),
 
   renterName: text("renter_name").notNull(),
+  renterLegalEntity: text("renter_legal_entity"),
   renterDob: text("renter_dob"),
   renterPob: text("renter_pob"),
   renterNationality: text("renter_nationality"),
