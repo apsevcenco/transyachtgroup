@@ -83,7 +83,6 @@ export function GoogleAnalytics() {
           vehicle_id: getVehicleContext(),
         };
 
-        trackGoogleEvent("contact_click", parameters);
         trackGoogleEvent(isPhone ? "phone_click" : "whatsapp_click", parameters);
       } else if (href.startsWith("mailto:")) {
         trackGoogleEvent("contact_click", {
