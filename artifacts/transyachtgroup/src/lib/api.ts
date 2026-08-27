@@ -154,7 +154,7 @@ export async function auditGuideSeo(data: GuideInput, excludeId?: number): Promi
   return res.json();
 }
 
-export async function fixGuideSeoWithAi(data: GuideInput, excludeId?: number, verifiedNotes?: string): Promise<{ draft: GuideInput; audit: SeoAuditResult }> {
+export async function fixGuideSeoWithAi(data: GuideInput, excludeId?: number, verifiedNotes?: string): Promise<{ draft: GuideInput; audit: SeoAuditResult; unresolvedAutoFixes?: string[] }> {
   const res = await fetch(`${API_BASE}/admin/guides/fix-seo`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },

@@ -121,7 +121,11 @@ export default function AdminGuides() {
       const result = await fixGuideSeoWithAi({ ...form, published: false }, editing || undefined, ai.notes);
       setForm((current) => ({ ...current, ...result.draft, published: false }));
       setSeoAudit(result.audit);
-      setMessage(`AI applied the audit corrections. SEO score: ${previousScore}/100 → ${result.audit.score}/100. Review the text before saving; publication remains off.`);
+      if (result.unresolvedAutoFixes?.length) {
+        setMessage(`AI updated the draft, but some automatic SEO fixes still need attention: ${result.unresolvedAutoFixes.join(", ")}. SEO score: ${previousScore}/100 → ${result.audit.score}/100. Run Fix again or edit the highlighted fields manually; publication remains off.`);
+      } else {
+        setMessage(`AI applied the audit corrections. SEO score: ${previousScore}/100 → ${result.audit.score}/100. Review the text before saving; publication remains off.`);
+      }
     } catch (err) { setMessage(err instanceof Error ? err.message : "AI SEO correction failed"); }
     finally { setBusy(false); }
   };
