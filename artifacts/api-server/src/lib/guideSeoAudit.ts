@@ -54,7 +54,7 @@ export function auditGuide(input: SeoAuditInput, existing: Array<{ id: number; t
     if (!body.toLocaleLowerCase("en").includes(keyword)) add("keyword_body", "error", "The primary keyword is missing from the article.", 8);
     if (density > 2.5) add("keyword_stuffing", "error", `Keyword density is too high (${density}%).`, 12);
   }
-  if (bodyWords.length < 700) add("content_short", "error", `Article is too short (${bodyWords.length} words).`, 12);
+  if (bodyWords.length < 1000) add("content_short", "error", `Article is too short (${bodyWords.length} words). Target 1,000-1,500 words.`, 12);
   if (bodyWords.length > 1900) add("content_long", "warning", `Article is unusually long (${bodyWords.length} words).`, 3);
   if ((input.metaTitle || "").length < 30 || (input.metaTitle || "").length > 60) add("meta_title", "error", "SEO title should contain 30–60 characters.", 8);
   if ((input.metaDescription || "").length < 110 || (input.metaDescription || "").length > 155) add("meta_description", "error", "SEO description should contain 110–155 characters.", 8);

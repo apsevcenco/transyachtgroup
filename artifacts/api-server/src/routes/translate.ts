@@ -92,8 +92,8 @@ async function translateSegmentsGoogle(segments: string[], sourceLang: string, t
 }
 
 async function translateWithAI(text: string, sourceLang: string, targetLangs: string[]): Promise<Record<string, string>> {
-  const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  const baseURL = (process.env.OPENAI_BASE_URL || process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
+  const apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
 
   if (!baseURL || !apiKey) {
     throw new Error("AI env vars not set");
@@ -118,6 +118,9 @@ Example format:
 Text to translate:
 ${text}`;
 
+  const configuredModel = process.env.OPENAI_CONTENT_MODEL?.trim();
+  const model = configuredModel && configuredModel !== "gpt-5.6-sol" ? configuredModel : "gpt-4o-mini";
+
   const resp = await fetch(`${baseURL}/chat/completions`, {
     method: "POST",
     headers: {
@@ -125,7 +128,7 @@ ${text}`;
       "Authorization": `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model,
       messages: [
         { role: "system", content: "You are a professional translator. Return only valid JSON with plain text translations." },
         { role: "user", content: prompt },

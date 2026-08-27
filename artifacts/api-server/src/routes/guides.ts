@@ -262,6 +262,17 @@ function localizeCopyLinks(copy: GeneratedCopy, lang: string): GeneratedCopy {
   return { ...copy, content: copy.content.replace(/(href=["'][^"']*\?lang=)(?:en|fr|ru|ro|ar)(?=["'])/gi, `$1${lang}`) };
 }
 
+function visibleWordCount(html: string): number {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&[a-z#0-9]+;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .match(/[\p{L}\p{N}]+/gu)?.length || 0;
+}
+
 async function requestOpenAiJson(instructions: string, input: string): Promise<unknown> {
   const baseUrl = (process.env.OPENAI_BASE_URL || process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
   const apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
@@ -281,7 +292,7 @@ async function requestOpenAiJson(instructions: string, input: string): Promise<u
           { role: "system", content: instructions },
           { role: "user", content: input },
         ],
-        max_tokens: 12_000,
+        max_tokens: 16_000,
         response_format: { type: "json_object" },
       }),
     });
@@ -361,7 +372,14 @@ NON-NEGOTIABLE EDITORIAL RULES:
 - Keep metaTitle at most 60 characters and metaDescription at most 155 characters. Each must accurately represent the article.
 - Maintain Trans Yacht Group's premium, discreet, knowledgeable voice. Do not claim the company is the best, leading or number one.
 - Return exactly the requested JSON schema and nothing else.`;
-  const sourceRaw = await requestOpenAiJson(rules, `Create an original English SEO guide of approximately ${input.wordCount} words.
+  let source: GeneratedCopy | null = null;
+  let measuredWords = 0;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const minimumWords = Math.max(1_000, Math.min(1_500, input.wordCount - 100));
+    const maximumWords = Math.max(minimumWords + 100, Math.min(1_650, input.wordCount + 150));
+    const sourceRaw = await requestOpenAiJson(rules, `Create an original English SEO guide of ${minimumWords}-${maximumWords} visible words after HTML tags are removed.
+This is attempt ${attempt + 1}. The previous attempt measured ${measuredWords || "not applicable"} words.
+MANDATORY LENGTH: do not return fewer than ${minimumWords} visible words in content. The article must feel complete, practical and editorial, not padded.
 Topic: ${JSON.stringify(input.topic)}
 Primary search keyword: ${JSON.stringify(input.keyword || input.topic)}
 Service: ${JSON.stringify(input.service || "luxury mobility and yachting")}
@@ -372,7 +390,12 @@ Vehicles or yachts that may be mentioned only when supported by verified notes: 
 APPROVED INTERNAL LINKS: ${JSON.stringify(input.linkCandidates)}
 VERIFIED NOTES: ${JSON.stringify(input.notes || "None supplied")}
 Return exactly this object shape: {"title":"...","excerpt":"...","content":"<p>...</p>","metaTitle":"...","metaDescription":"..."}`);
-  const source = validateGeneratedLinks(cleanGeneratedCopy(sourceRaw), input.linkCandidates);
+    source = validateGeneratedLinks(cleanGeneratedCopy(sourceRaw), input.linkCandidates);
+    measuredWords = visibleWordCount(source.content);
+    if (measuredWords >= minimumWords) break;
+  }
+
+  if (!source || measuredWords < 1_000) throw new Error("AI_SEO_LENGTH_TARGET_NOT_MET");
 
   return { ...source, translations: await translateGuideCopy(source, input.linkCandidates) };
 }
@@ -647,11 +670,11 @@ Return exactly {"title":"...","excerpt":"...","content":"<p>...</p>","metaTitle"
     let currentWordCount = before.stats.wordCount || 0;
 
     // The model may interpret "fix short content" as adding only a paragraph.
-    // Audit every response and retry once with the measured result before doing
+    // Audit every response and retry with the measured result before doing
     // the comparatively expensive four-language translation.
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (let attempt = 0; attempt < 3; attempt++) {
       const lengthRequirement = requiresExpansion
-        ? `MANDATORY LENGTH: the visible English article body in content must contain 900-1,100 words after HTML tags are removed. It currently has ${currentWordCount} words. Do not return fewer than 900 words.`
+        ? `MANDATORY LENGTH: the visible English article body in content must contain 1,100-1,500 words after HTML tags are removed. It currently has ${currentWordCount} words. Do not return fewer than 1,100 words.`
         : "Preserve the current article length unless an audit issue requires changing it.";
       const source = cleanGeneratedCopy(await requestOpenAiJson(rules, `SEO AUDIT ISSUES=${JSON.stringify(remainingIssues)}
 ${lengthRequirement}
@@ -841,7 +864,7 @@ router.post("/admin/guides/generate", adminAuth, guideAiLimiter, async (req, res
     const topic = read("topic", 240);
     if (topic.length < 5) return void res.status(400).json({ error: "Enter a more specific topic" });
     const requestedWordCount = Number(value.wordCount);
-    const wordCount = Number.isFinite(requestedWordCount) ? Math.min(1_800, Math.max(700, Math.round(requestedWordCount))) : 1_100;
+    const wordCount = Number.isFinite(requestedWordCount) ? Math.min(1_500, Math.max(1_000, Math.round(requestedWordCount))) : 1_200;
     const submittedLinks = approvedInternalLinks(read("internalLinks", 2_000));
     const linkCandidates = await loadInternalLinkCandidates(submittedLinks);
     const draft = await generateGuideDraft({
@@ -868,6 +891,7 @@ router.post("/admin/guides/generate", adminAuth, guideAiLimiter, async (req, res
   } catch (err) {
     req.log?.error?.({ err }, "AI guide generation failed");
     if (err instanceof Error && err.message === "OPENAI_NOT_CONFIGURED") return void res.status(503).json({ error: "OpenAI is not configured on the server" });
+    if (err instanceof Error && err.message === "AI_SEO_LENGTH_TARGET_NOT_MET") return void res.status(502).json({ error: "OpenAI did not reach the required article length. Please try again with 1,200 or 1,500 words." });
     res.status(502).json({ error: "AI generation failed. Please try again." });
   }
 });
@@ -947,7 +971,7 @@ router.post("/admin/guides/:id/refresh", adminAuth, guideAiLimiter, async (req, 
       topic: guide.title, keyword: guide.primaryKeyword || guide.title, service: String(context.service || "Luxury travel"), city: String(context.city || "French Riviera"),
       audience: String(context.audience || "international luxury travellers"), featuredAssets: String(context.featuredAssets || ""),
       tone: String(context.tone || "premium, discreet and expert"),
-      wordCount: Math.min(1_800, Math.max(700, Number(context.wordCount) || 1_100)), notes: String(context.notes || "").slice(0, 4_000),
+      wordCount: Math.min(1_500, Math.max(1_000, Number(context.wordCount) || 1_200)), notes: String(context.notes || "").slice(0, 4_000),
       linkCandidates,
     });
     res.json({ ...draft, published: false });

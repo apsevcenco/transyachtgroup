@@ -51,7 +51,7 @@ export default function AdminGuides() {
     featuredAssets: "",
     internalLinks: "/cars/, /yachts/, /about/, /locations/cannes/, /locations/monaco/",
     tone: "Premium, discreet and expert",
-    wordCount: 1100,
+    wordCount: 1200,
     notes: "",
   });
   const [translationLang, setTranslationLang] = useState<(typeof translationLanguages)[number]["code"]>("fr");
@@ -238,7 +238,7 @@ export default function AdminGuides() {
         <label className="text-xs text-white/50">Location<input value={ai.city} onChange={(e) => setAi({ ...ai, city: e.target.value })} className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white"/></label>
         <label className="text-xs text-white/50 md:col-span-2">Target audience<input value={ai.audience} onChange={(e) => setAi({ ...ai, audience: e.target.value })} className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white"/></label>
         <label className="text-xs text-white/50">Tone<select value={ai.tone} onChange={(e) => setAi({ ...ai, tone: e.target.value })} className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white"><option>Premium, discreet and expert</option><option>Practical and authoritative</option><option>Elegant and inspirational</option><option>Concise and commercial</option></select></label>
-        <label className="text-xs text-white/50">Target length<select value={ai.wordCount} onChange={(e) => setAi({ ...ai, wordCount: Number(e.target.value) })} className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white"><option value={800}>About 800 words</option><option value={1100}>About 1,100 words</option><option value={1400}>About 1,400 words</option><option value={1700}>About 1,700 words</option></select></label>
+        <label className="text-xs text-white/50">Target length<select value={ai.wordCount} onChange={(e) => setAi({ ...ai, wordCount: Number(e.target.value) })} className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white"><option value={1000}>About 1,000 words</option><option value={1200}>About 1,200 words</option><option value={1500}>About 1,500 words</option></select></label>
         <label className="text-xs text-white/50 md:col-span-2">Vehicles or yachts to feature<textarea value={ai.featuredAssets} onChange={(e) => setAi({ ...ai, featuredAssets: e.target.value })} rows={2} placeholder="Example: Mercedes-Benz S500 2026 — mention only when facts are confirmed below" className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white"/></label>
         <label className="text-xs text-white/50 md:col-span-2">Approved internal links<textarea value={ai.internalLinks} onChange={(e) => setAi({ ...ai, internalLinks: e.target.value })} rows={2} placeholder="One or more site paths, separated by commas" className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white"/></label>
         <label className="text-xs text-white/50 md:col-span-2">Verified facts<textarea value={ai.notes} onChange={(e) => setAi({ ...ai, notes: e.target.value })} rows={4} placeholder="Only facts entered here may be used for prices, fleet details or special conditions." className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white"/></label>
