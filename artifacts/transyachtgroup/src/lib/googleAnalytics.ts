@@ -9,6 +9,21 @@ export const GOOGLE_ADS_WHATSAPP_LABEL =
 export const CONSENT_STORAGE_KEY = "cookie_consent";
 export const CONSENT_CHANGE_EVENT = "tyg:consent-change";
 
+function normalizeGoogleAdsId(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  return trimmed.startsWith("AW-") ? trimmed : `AW-${trimmed}`;
+}
+
+function resolveGoogleAdsSendTo(labelOrSendTo: string): string {
+  const label = labelOrSendTo.trim();
+  const adsId = normalizeGoogleAdsId(GOOGLE_ADS_ID);
+  if (!label) return "";
+  if (label.startsWith("AW-") && label.includes("/")) return label;
+  if (!adsId) return "";
+  return `${adsId}/${label.replace(/^\/+/, "")}`;
+}
+
 declare global {
   interface Window {
     dataLayer: unknown[];
@@ -51,8 +66,9 @@ export function initializeGoogleAnalytics(): void {
       send_page_view: false,
       anonymize_ip: true,
     });
-    if (GOOGLE_ADS_ID) {
-      window.gtag?.("config", GOOGLE_ADS_ID, {
+    const googleAdsId = normalizeGoogleAdsId(GOOGLE_ADS_ID);
+    if (googleAdsId) {
+      window.gtag?.("config", googleAdsId, {
         send_page_view: false,
       });
     }
@@ -82,10 +98,12 @@ export function trackGoogleAdsConversion(
   label: string,
   parameters: Record<string, unknown> = {},
 ): void {
-  if (!GOOGLE_ADS_ID || !label || !hasAnalyticsConsent()) return;
+  const sendTo = resolveGoogleAdsSendTo(label);
+  if (!sendTo || !hasAnalyticsConsent()) return;
   initializeGoogleAnalytics();
   window.gtag?.("event", "conversion", {
-    send_to: `${GOOGLE_ADS_ID}/${label}`,
+    send_to: sendTo,
+    event_timeout: 2_000,
     ...parameters,
   });
 }
