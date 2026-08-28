@@ -3,7 +3,10 @@ import { useLocation } from "wouter";
 
 import {
   CONSENT_CHANGE_EVENT,
+  GOOGLE_ADS_PHONE_LABEL,
+  GOOGLE_ADS_WHATSAPP_LABEL,
   initializeGoogleAnalytics,
+  trackGoogleAdsConversion,
   trackGoogleEvent,
 } from "@/lib/googleAnalytics";
 
@@ -84,6 +87,14 @@ export function GoogleAnalytics() {
         };
 
         trackGoogleEvent(isPhone ? "phone_click" : "whatsapp_click", parameters);
+        trackGoogleAdsConversion(
+          isPhone ? GOOGLE_ADS_PHONE_LABEL : GOOGLE_ADS_WHATSAPP_LABEL,
+          {
+            value: 1,
+            currency: "EUR",
+            ...parameters,
+          },
+        );
       } else if (href.startsWith("mailto:")) {
         trackGoogleEvent("contact_click", {
           method: "email",

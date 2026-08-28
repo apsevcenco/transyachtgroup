@@ -1,5 +1,10 @@
 import { useEffect, useRef } from "react";
-import { hasAnalyticsConsent, trackGoogleEvent } from "@/lib/googleAnalytics";
+import {
+  GOOGLE_ADS_FORM_LABEL,
+  hasAnalyticsConsent,
+  trackGoogleAdsConversion,
+  trackGoogleEvent,
+} from "@/lib/googleAnalytics";
 import { vehiclePath } from "@/lib/vehicleSeo";
 
 const API_BASE = import.meta.env.VITE_API_URL || "/api";
@@ -83,6 +88,11 @@ export function trackFormSubmit(formName?: string) {
   track("form_submit", { metadata: { form, attributionGuide: guide } });
   trackGoogleEvent("generate_lead", eventParameters);
   trackGoogleEvent("ads_conversion_SUBMIT_LEAD_FORM_1", eventParameters);
+  trackGoogleAdsConversion(GOOGLE_ADS_FORM_LABEL, {
+    value: 1,
+    currency: "EUR",
+    ...eventParameters,
+  });
 }
 
 export function trackEvent(eventType: string, metadata?: Record<string, unknown>) {

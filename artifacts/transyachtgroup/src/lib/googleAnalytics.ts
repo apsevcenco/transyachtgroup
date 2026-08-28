@@ -1,4 +1,11 @@
 export const GA_MEASUREMENT_ID = "G-QY13F9EB8G";
+export const GOOGLE_ADS_ID = import.meta.env.VITE_GOOGLE_ADS_ID || "";
+export const GOOGLE_ADS_FORM_LABEL =
+  import.meta.env.VITE_GOOGLE_ADS_FORM_CONVERSION_LABEL || "";
+export const GOOGLE_ADS_PHONE_LABEL =
+  import.meta.env.VITE_GOOGLE_ADS_PHONE_CONVERSION_LABEL || "";
+export const GOOGLE_ADS_WHATSAPP_LABEL =
+  import.meta.env.VITE_GOOGLE_ADS_WHATSAPP_CONVERSION_LABEL || "";
 export const CONSENT_STORAGE_KEY = "cookie_consent";
 export const CONSENT_CHANGE_EVENT = "tyg:consent-change";
 
@@ -27,9 +34,9 @@ export function initializeGoogleAnalytics(): void {
   ensureGtag();
   window.gtag?.("consent", "update", {
     analytics_storage: "granted",
-    ad_storage: "denied",
-    ad_user_data: "denied",
-    ad_personalization: "denied",
+    ad_storage: "granted",
+    ad_user_data: "granted",
+    ad_personalization: "granted",
   });
 
   if (!loaded && !document.querySelector(`script[data-ga4="${GA_MEASUREMENT_ID}"]`)) {
@@ -44,6 +51,11 @@ export function initializeGoogleAnalytics(): void {
       send_page_view: false,
       anonymize_ip: true,
     });
+    if (GOOGLE_ADS_ID) {
+      window.gtag?.("config", GOOGLE_ADS_ID, {
+        send_page_view: false,
+      });
+    }
   }
 }
 
@@ -64,4 +76,16 @@ export function trackGoogleEvent(
   if (!hasAnalyticsConsent()) return;
   initializeGoogleAnalytics();
   window.gtag?.("event", eventName, parameters);
+}
+
+export function trackGoogleAdsConversion(
+  label: string,
+  parameters: Record<string, unknown> = {},
+): void {
+  if (!GOOGLE_ADS_ID || !label || !hasAnalyticsConsent()) return;
+  initializeGoogleAnalytics();
+  window.gtag?.("event", "conversion", {
+    send_to: `${GOOGLE_ADS_ID}/${label}`,
+    ...parameters,
+  });
 }
