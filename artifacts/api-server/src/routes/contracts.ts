@@ -314,6 +314,12 @@ function isUniqueViolation(err: unknown): boolean {
   );
 }
 
+function isMissingContractLegalEntityColumn(err: unknown): boolean {
+  const code = !!err && typeof err === "object" ? (err as { code?: string }).code : undefined;
+  const message = err instanceof Error ? err.message : String(err || "");
+  return code === "42703" && /renter_legal_entity/i.test(message);
+}
+
 /**
  * Generates an unregistered PDF. This route deliberately has no idempotency,
  * numbering or database writes: closing the response discards the contract.
@@ -577,6 +583,7 @@ router.post(
       let inserted: typeof contractsTable.$inferSelect | null = null;
       let buffer: Buffer | null = null;
       let lastErr: unknown = null;
+      let usedLegacyContractSchema = false;
       for (let attempt = 0; attempt < 5 && !inserted; attempt++) {
         const contractNumber =
           data.editContractNumber ?? (await nextContractNumber(issueDate.key));
@@ -667,18 +674,32 @@ router.post(
             templateVersion: "contract-v4-second-driver",
             issuedAt: new Date(),
           };
-          const [row] = data.editContractNumber
-            ? await db
-                .update(contractsTable)
-                .set(contractRecord)
-                .where(
-                  eq(contractsTable.contractNumber, data.editContractNumber),
-                )
-                .returning()
-            : await db
-                .insert(contractsTable)
-                .values({ ...contractRecord, contractNumber })
-                .returning();
+          const writeContractRecord = async (includeLegalEntity: boolean) => {
+            const record = includeLegalEntity
+              ? contractRecord
+              : (({ renterLegalEntity: _renterLegalEntity, ...legacyRecord }) => legacyRecord)(contractRecord);
+            return data.editContractNumber
+              ? db
+                  .update(contractsTable)
+                  .set(record)
+                  .where(
+                    eq(contractsTable.contractNumber, data.editContractNumber),
+                  )
+                  .returning()
+              : db
+                  .insert(contractsTable)
+                  .values({ ...record, contractNumber })
+                  .returning();
+          };
+          let rows: Array<typeof contractsTable.$inferSelect>;
+          try {
+            rows = await writeContractRecord(true);
+          } catch (err) {
+            if (!isMissingContractLegalEntityColumn(err)) throw err;
+            usedLegacyContractSchema = true;
+            rows = await writeContractRecord(false);
+          }
+          const [row] = rows;
           inserted = row;
         } catch (err) {
           lastErr = err;
@@ -720,6 +741,9 @@ router.post(
       );
       res.setHeader("Content-Length", buffer.length);
       res.setHeader("X-Contract-Number", inserted.contractNumber);
+      if (usedLegacyContractSchema) {
+        res.setHeader("X-Contract-Warning", "Apply migration 0031_contract_legal_entity.sql");
+      }
       res.send(buffer);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -737,18 +761,23 @@ router.post(
         "contract PDF error",
       );
       const layoutError = msg.startsWith("PDF layout validation failed");
+      const legalEntitySchemaError = isMissingContractLegalEntityColumn(err);
       const schemaError =
-        /column .* does not exist|permission denied|must be owner/i.test(msg);
+        legalEntitySchemaError || /column .* does not exist|permission denied|must be owner/i.test(msg);
       res.status(layoutError ? 422 : 500).json({
         error: layoutError
           ? "Contract data does not fit the fixed two-page layout. Shorten unusually long fields."
           : schemaError
-            ? "Contract database schema is not ready"
+            ? legalEntitySchemaError
+              ? "Contract database schema is missing migration 0031_contract_legal_entity.sql"
+              : "Contract database schema is not ready"
             : "Failed to generate contract PDF",
         detail: layoutError
           ? "The fixed two-page layout overflowed."
           : schemaError
-            ? "Apply the pending contracts database migration."
+            ? legalEntitySchemaError
+              ? "Apply migration 0031_contract_legal_entity.sql on the production database."
+              : "Apply the pending contracts database migration."
             : undefined,
       });
     }
