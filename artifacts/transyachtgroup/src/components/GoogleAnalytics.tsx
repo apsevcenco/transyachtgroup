@@ -9,6 +9,7 @@ import {
   trackGoogleAdsConversion,
   trackGoogleEvent,
 } from "@/lib/googleAnalytics";
+import { trackSiteEvent } from "@/hooks/useAnalytics";
 
 const CONTACT_CLICK_DEDUPLICATION_MS = 1_000;
 
@@ -86,6 +87,9 @@ export function GoogleAnalytics() {
           vehicle_id: getVehicleContext(),
         };
 
+        trackSiteEvent(isPhone ? "phone_click" : "whatsapp_click", {
+          metadata: parameters,
+        });
         trackGoogleEvent(isPhone ? "phone_click" : "whatsapp_click", parameters);
         trackGoogleAdsConversion(
           isPhone ? GOOGLE_ADS_PHONE_LABEL : GOOGLE_ADS_WHATSAPP_LABEL,

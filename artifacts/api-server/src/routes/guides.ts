@@ -497,11 +497,22 @@ const publiclyVisible = () => or(
   and(isNotNull(guidesTable.scheduledAt), lte(guidesTable.scheduledAt, new Date())),
 )!;
 
+function effectiveGuideState(guide: typeof guidesTable.$inferSelect) {
+  const scheduledIsDue = Boolean(guide.scheduledAt && guide.scheduledAt.getTime() <= Date.now());
+  const effectivePublished = guide.published || scheduledIsDue;
+  return {
+    ...guide,
+    published: effectivePublished,
+    publishedAt: effectivePublished ? guide.publishedAt || guide.scheduledAt : guide.publishedAt,
+  };
+}
+
 function localizedGuide(guide: typeof guidesTable.$inferSelect, lang: string) {
   const translations = (guide.translations || {}) as Record<string, Record<string, string>>;
   const translated = translations[lang] || {};
+  const effective = effectiveGuideState(guide);
   return {
-    ...guide,
+    ...effective,
     title: translated.title || guide.title,
     excerpt: translated.excerpt || guide.excerpt,
     content: translated.content || guide.content,
@@ -650,7 +661,8 @@ router.post("/internal/seo-intelligence/daily", async (req, res) => {
 
 router.get("/admin/guides", adminAuth, async (_req, res) => {
   try {
-    res.json(await db.select().from(guidesTable).orderBy(desc(guidesTable.updatedAt), desc(guidesTable.id)));
+    const guides = await db.select().from(guidesTable).orderBy(desc(guidesTable.updatedAt), desc(guidesTable.id));
+    res.json(guides.map(effectiveGuideState));
   } catch { res.status(500).json({ error: "Internal server error" }); }
 });
 
@@ -878,16 +890,19 @@ router.get("/admin/guides/overview", adminAuth, async (_req, res) => {
       }
       const metadata = event.metadata && typeof event.metadata === "object" ? event.metadata as Record<string, unknown> : {};
       const attributed = typeof metadata.attributionGuide === "string" ? metadata.attributionGuide : "";
-      if (event.eventType === "form_submit" && attributed) (local[attributed] ||= { views: 0, leads: 0, clicks: 0 }).leads++;
+      if (attributed && ["form_submit", "phone_click", "whatsapp_click", "contact_click"].includes(event.eventType)) {
+        (local[attributed] ||= { views: 0, leads: 0, clicks: 0 }).leads++;
+      }
     }
     res.json(guides.map((guide) => {
+      const effective = effectiveGuideState(guide);
       const search = guide.searchMetrics && typeof guide.searchMetrics === "object" ? guide.searchMetrics as Record<string, unknown> : {};
       const position = Number(search.position) || 0;
       const impressions = Number(search.impressions) || 0;
       const ctr = Number(search.ctr) || 0;
       const ageDays = guide.updatedAt ? Math.floor((Date.now() - guide.updatedAt.getTime()) / 86_400_000) : 0;
       const opportunity = position >= 8 && position <= 30 ? "Improve page: ranking opportunity" : impressions >= 100 && ctr < 2 ? "Improve title and description: low CTR" : ageDays > 180 ? "Review and refresh stale content" : null;
-      return { ...guide, localMetrics: local[guide.slug] || { views: 0, leads: 0, clicks: 0 }, opportunity };
+      return { ...effective, localMetrics: local[guide.slug] || { views: 0, leads: 0, clicks: 0 }, opportunity };
     }));
   } catch { res.status(500).json({ error: "Failed to load SEO overview" }); }
 });
