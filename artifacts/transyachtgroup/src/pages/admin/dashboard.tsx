@@ -136,7 +136,21 @@ type AnalyticsStats = {
   };
   browserBreakdown?: Record<string, number>;
   languageBreakdown?: Record<string, number>;
+  countryBreakdown?: Record<string, number>;
+  cityBreakdown?: Record<string, number>;
   vehicleViewBreakdown?: Record<string, number>;
+  realtime?: {
+    activeUsers: number;
+    windowMinutes: number;
+    byCountry: Record<string, number>;
+    byCity: Record<string, number>;
+    recentPages: Array<{
+      page: string;
+      country: string | null;
+      city: string | null;
+      lastSeenAt: string;
+    }>;
+  };
 };
 
 const ADMIN_LANGS = [
@@ -3312,7 +3326,16 @@ function AnalyticsTab() {
     deviceBreakdown = { desktop: 0, tablet: 0, mobile: 0 },
     browserBreakdown = {},
     languageBreakdown = {},
+    countryBreakdown = {},
+    cityBreakdown = {},
     vehicleViewBreakdown = {},
+    realtime = {
+      activeUsers: 0,
+      windowMinutes: 5,
+      byCountry: {},
+      byCity: {},
+      recentPages: [],
+    },
   } = stats;
 
   const maxDailyViews = Math.max(...dailyChart.map((d) => d.views), 1);
@@ -3328,6 +3351,18 @@ function AnalyticsTab() {
     ([, a], [, b]) => b - a,
   );
   const sortedLangs = Object.entries(languageBreakdown).sort(
+    ([, a], [, b]) => b - a,
+  );
+  const sortedCountries = Object.entries(countryBreakdown).sort(
+    ([, a], [, b]) => b - a,
+  );
+  const sortedCities = Object.entries(cityBreakdown).sort(
+    ([, a], [, b]) => b - a,
+  );
+  const sortedRealtimeCountries = Object.entries(realtime.byCountry || {}).sort(
+    ([, a], [, b]) => b - a,
+  );
+  const sortedRealtimeCities = Object.entries(realtime.byCity || {}).sort(
     ([, a], [, b]) => b - a,
   );
   const sortedVehicles = Object.entries(vehicleViewBreakdown).sort(
@@ -3463,6 +3498,56 @@ function AnalyticsTab() {
             <p className={`text-2xl font-light ${m.color}`}>{m.value}</p>
           </div>
         ))}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="bg-[hsl(43,67%,55%)]/[0.08] border border-[hsl(43,67%,55%)]/20 rounded-lg p-5">
+          <h3 className="text-[10px] uppercase tracking-[0.3em] text-[hsl(43,67%,55%)]/80 font-light mb-2">
+            Live Now
+          </h3>
+          <p className="text-4xl font-light text-white mb-1">
+            {realtime.activeUsers}
+          </p>
+          <p className="text-white/35 text-xs">
+            active users in the last {realtime.windowMinutes} minutes
+          </p>
+        </div>
+
+        <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-5">
+          <h3 className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-light mb-4">
+            Live Countries
+          </h3>
+          {sortedRealtimeCountries.length > 0 ? (
+            <div className="space-y-2">
+              {sortedRealtimeCountries.slice(0, 8).map(([country, count]) => (
+                <div key={country} className="flex justify-between text-xs">
+                  <span className="text-white/60">{country}</span>
+                  <span className="text-white/30">{count}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-white/25 text-xs">No active users</p>
+          )}
+        </div>
+
+        <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-5">
+          <h3 className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-light mb-4">
+            Live Cities
+          </h3>
+          {sortedRealtimeCities.length > 0 ? (
+            <div className="space-y-2">
+              {sortedRealtimeCities.slice(0, 8).map(([city, count]) => (
+                <div key={city} className="flex justify-between text-xs">
+                  <span className="text-white/60 truncate mr-2">{city}</span>
+                  <span className="text-white/30 shrink-0">{count}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-white/25 text-xs">No active users</p>
+          )}
+        </div>
       </div>
 
       {dailyChart.length > 0 && (
@@ -3770,6 +3855,56 @@ function AnalyticsTab() {
             </div>
           ) : (
             <p className="text-white/25 text-xs">No data</p>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-5">
+          <h3 className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-light mb-4">
+            Countries
+          </h3>
+          {sortedCountries.length > 0 ? (
+            <div className="space-y-2">
+              {sortedCountries.slice(0, 12).map(([country, count]) => {
+                const total = sortedCountries.reduce((s, [, c]) => s + c, 0);
+                const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                return (
+                  <div key={country} className="flex justify-between text-xs">
+                    <span className="text-white/60">{country}</span>
+                    <span className="text-white/30">
+                      {count} ({pct}%)
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-white/25 text-xs">No location data yet</p>
+          )}
+        </div>
+
+        <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-5">
+          <h3 className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-light mb-4">
+            Cities
+          </h3>
+          {sortedCities.length > 0 ? (
+            <div className="space-y-2">
+              {sortedCities.slice(0, 12).map(([city, count]) => {
+                const total = sortedCities.reduce((s, [, c]) => s + c, 0);
+                const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                return (
+                  <div key={city} className="flex justify-between text-xs">
+                    <span className="text-white/60 truncate mr-2">{city}</span>
+                    <span className="text-white/30 shrink-0">
+                      {count} ({pct}%)
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-white/25 text-xs">No city data yet</p>
           )}
         </div>
       </div>

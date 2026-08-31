@@ -4,6 +4,7 @@ import { analyticsEventsTable, contactRequestsTable, vehiclesTable } from "@work
 import { desc, sql, eq, gte, lte, and, count } from "drizzle-orm";
 import { adminAuth } from "../middleware/auth";
 import rateLimit from "express-rate-limit";
+import crypto from "node:crypto";
 
 const router: IRouter = Router();
 const analyticsLimiter = rateLimit({
@@ -12,9 +13,23 @@ const analyticsLimiter = rateLimit({
   standardHeaders: "draft-8",
   legacyHeaders: false,
 });
-const allowedEvents = new Set(["page_view", "page_leave", "form_submit", "vehicle_view", "click", "session_end"]);
+const allowedEvents = new Set(["page_view", "page_leave", "form_submit", "vehicle_view", "click", "session_end", "phone_click", "whatsapp_click"]);
 const short = (value: unknown, max: number): string | null =>
   typeof value === "string" && value.length > 0 && value.length <= max ? value : null;
+const headerValue = (value: string | string[] | undefined): string | null =>
+  Array.isArray(value) ? value[0] || null : value || null;
+const firstForwardedIp = (value: string | string[] | undefined): string | null => {
+  const raw = headerValue(value);
+  return raw ? raw.split(",")[0]?.trim() || null : null;
+};
+const normalizeCountry = (value: unknown): string | null => {
+  const raw = short(value, 5);
+  if (!raw) return null;
+  const country = raw.trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(country) ? country : null;
+};
+const hashIp = (ip: string | null): string | null =>
+  ip ? crypto.createHash("sha256").update(ip).digest("hex") : null;
 
 router.post("/analytics/track", analyticsLimiter, async (req, res) => {
   try {
@@ -40,6 +55,10 @@ router.post("/analytics/track", analyticsLimiter, async (req, res) => {
       language: short(language, 10),
       screenWidth: screenWidth ? String(screenWidth) : null,
       screenHeight: screenHeight ? String(screenHeight) : null,
+      country: normalizeCountry(req.body?.country) || normalizeCountry(headerValue(req.headers["cf-ipcountry"])) || normalizeCountry(headerValue(req.headers["x-vercel-ip-country"])),
+      region: short(req.body?.region, 80) || short(headerValue(req.headers["x-vercel-ip-country-region"]), 80) || short(headerValue(req.headers["cf-region"]), 80),
+      city: short(req.body?.city, 120) || short(headerValue(req.headers["x-vercel-ip-city"]), 120) || short(headerValue(req.headers["cf-ipcity"]), 120),
+      ipHash: hashIp(firstForwardedIp(req.headers["x-forwarded-for"]) || req.socket.remoteAddress || null),
       vehicleId: vehicleId ? String(vehicleId) : null,
       duration: duration ? String(duration) : null,
       metadata: validMetadata,
@@ -174,6 +193,18 @@ router.get("/analytics/stats", adminAuth, async (req, res) => {
       }
     }
 
+    const countryBreakdown: Record<string, number> = {};
+    const cityBreakdown: Record<string, number> = {};
+    const sessionLocations: Record<string, boolean> = {};
+    for (const e of allEvents) {
+      if (sessionLocations[e.sessionId]) continue;
+      sessionLocations[e.sessionId] = true;
+      const country = (e.country || "Unknown").toUpperCase();
+      countryBreakdown[country] = (countryBreakdown[country] || 0) + 1;
+      const city = e.city ? `${e.city}${e.country ? `, ${e.country.toUpperCase()}` : ""}` : "Unknown";
+      cityBreakdown[city] = (cityBreakdown[city] || 0) + 1;
+    }
+
     const dailyStats: Record<string, { views: number; visitors: Set<string>; conversions: number }> = {};
     for (const e of allEvents) {
       const day = new Date(e.createdAt!).toISOString().split("T")[0];
@@ -206,6 +237,27 @@ router.get("/analytics/stats", adminAuth, async (req, res) => {
       ? Math.round((pageViews.length / uniqueSessions.size) * 100) / 100
       : 0;
 
+    const realtimeSince = new Date(Date.now() - 5 * 60 * 1000);
+    const realtimeEvents = await db
+      .select()
+      .from(analyticsEventsTable)
+      .where(gte(analyticsEventsTable.createdAt, realtimeSince))
+      .orderBy(desc(analyticsEventsTable.createdAt))
+      .limit(2000);
+
+    const realtimeSessions = new Map<string, typeof realtimeEvents[number]>();
+    for (const e of realtimeEvents) {
+      if (!realtimeSessions.has(e.sessionId)) realtimeSessions.set(e.sessionId, e);
+    }
+    const realtimeByCountry: Record<string, number> = {};
+    const realtimeByCity: Record<string, number> = {};
+    for (const e of realtimeSessions.values()) {
+      const country = (e.country || "Unknown").toUpperCase();
+      realtimeByCountry[country] = (realtimeByCountry[country] || 0) + 1;
+      const city = e.city ? `${e.city}${e.country ? `, ${e.country.toUpperCase()}` : ""}` : "Unknown";
+      realtimeByCity[city] = (realtimeByCity[city] || 0) + 1;
+    }
+
     res.json({
       overview: {
         totalPageViews: pageViews.length,
@@ -219,6 +271,18 @@ router.get("/analytics/stats", adminAuth, async (req, res) => {
         pagesPerSession,
         vehicleDetailViews: vehicleViews.length,
       },
+      realtime: {
+        activeUsers: realtimeSessions.size,
+        windowMinutes: 5,
+        byCountry: realtimeByCountry,
+        byCity: realtimeByCity,
+        recentPages: Array.from(realtimeSessions.values()).slice(0, 10).map((e) => ({
+          page: e.page,
+          country: e.country || null,
+          city: e.city || null,
+          lastSeenAt: e.createdAt,
+        })),
+      },
       dailyChart,
       hourlyBreakdown,
       pageBreakdown,
@@ -226,6 +290,8 @@ router.get("/analytics/stats", adminAuth, async (req, res) => {
       deviceBreakdown: deviceCounts,
       browserBreakdown,
       languageBreakdown: langBreakdown,
+      countryBreakdown,
+      cityBreakdown,
       vehicleViewBreakdown,
     });
   } catch (err) {
