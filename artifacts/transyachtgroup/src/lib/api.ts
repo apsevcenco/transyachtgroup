@@ -278,6 +278,24 @@ export async function generateGuideCoverWithAi(input: { title: string; excerpt?:
   return (await res.json()).url;
 }
 
+export async function translateGuideDraftWithAi(input: {
+  title: string;
+  excerpt: string;
+  content: string;
+  metaTitle?: string | null;
+  metaDescription?: string | null;
+  internalLinks?: string;
+  excludeId?: number;
+}): Promise<Record<string, Record<string, string>>> {
+  const res = await fetch(`${API_BASE}/admin/guides/translate-draft`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "AI translation failed");
+  return (await res.json()).translations;
+}
+
 export async function createGuide(data: GuideInput): Promise<Guide> {
   const res = await fetch(`${API_BASE}/admin/guides`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(data) });
   if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "Failed to create guide");

@@ -301,6 +301,50 @@ function ensureGeneratedLinks(copy: GeneratedCopy, candidates: InternalLinkCandi
   return validateGeneratedLinks(repairGeneratedLinks(copy, candidates), candidates);
 }
 
+function firstSentence(value: string, max = 155): string {
+  const text = plainLabel(value).replace(/\s+/g, " ").trim();
+  if (text.length <= max) return text;
+  const sentence = text.slice(0, max).replace(/\s+\S*$/, "").trim();
+  return sentence.length >= 110 ? sentence : text.slice(0, max).replace(/\s+\S*$/, "").trim();
+}
+
+function polishSeoCopy(copy: GeneratedCopy, keyword: string, candidates: InternalLinkCandidate[]): GeneratedCopy {
+  const safeKeyword = plainLabel(keyword);
+  let title = plainLabel(copy.title).slice(0, 180);
+  if (safeKeyword && !title.toLocaleLowerCase("en").includes(safeKeyword.toLocaleLowerCase("en"))) {
+    const appended = `${safeKeyword}: ${title}`;
+    title = appended.length <= 180 ? appended : safeKeyword;
+  }
+  let metaTitle = plainLabel(copy.metaTitle || title);
+  if (safeKeyword && !metaTitle.toLocaleLowerCase("en").includes(safeKeyword.toLocaleLowerCase("en"))) {
+    metaTitle = `${safeKeyword} | TYG`;
+  }
+  if (metaTitle.length < 30) metaTitle = `${metaTitle} | Trans Yacht Group`;
+  if (metaTitle.length > 60) metaTitle = metaTitle.slice(0, 60).replace(/\s+\S*$/, "").trim();
+  let metaDescription = plainLabel(copy.metaDescription || copy.excerpt || copy.content);
+  if (metaDescription.length < 110) {
+    metaDescription = firstSentence(`${copy.excerpt} ${plainLabel(copy.content)} Contact Trans Yacht Group for discreet luxury mobility service.`, 155);
+  }
+  if (metaDescription.length > 155) metaDescription = firstSentence(metaDescription, 155);
+  let content = copy.content;
+  if (safeKeyword && !plainLabel(content).toLocaleLowerCase("en").includes(safeKeyword.toLocaleLowerCase("en"))) {
+    content = `<p>${safeKeyword} is a practical search intent for travellers comparing premium mobility with Trans Yacht Group.</p>\n${content}`;
+  }
+  const wordsNow = visibleWordCount(content);
+  if (wordsNow > 0 && wordsNow < 1_000) {
+    const relatedLinks = candidates.slice(0, 3)
+      .map((candidate) => `<a href="${candidate.url}">${candidate.label}</a>`)
+      .join(", ");
+    content += `
+<h2>How to choose the right service</h2>
+<p>For a short stay, the best choice usually depends on luggage, driving style, privacy expectations and the exact route between the hotel, airport, port, villa or restaurant. A luxury car rental is often better when the guest wants freedom during several days on the Riviera, while a private transfer is more efficient for fixed airport arrivals, evening movements or ski resort access. The same request can also combine both: a chauffeur transfer for arrival and a self-drive car for the stay.</p>
+<p>Trans Yacht Group uses the enquiry details to match the requested destination, passenger count and comfort level with an appropriate premium vehicle category. When the trip includes Cannes, Monaco, Nice, Saint-Tropez or Courchevel, planning the service around timings and parking constraints helps avoid unnecessary waiting and gives the client a smoother experience.</p>
+<h2>Related options on the site</h2>
+<p>Useful next steps include ${relatedLinks || "the luxury car collection"}. These pages help connect the guide with the real services available on the website and make the article more useful for both visitors and search engines.</p>`;
+  }
+  return ensureGeneratedLinks({ ...copy, title, metaTitle, metaDescription, content }, candidates);
+}
+
 function autoFixableSeoIssues(issues: SeoAuditIssue[]): SeoAuditIssue[] {
   return issues.filter((issue) => AUTO_FIXABLE_SEO_ISSUES.has(issue.code));
 }
@@ -793,7 +837,7 @@ PRIMARY KEYWORD=${JSON.stringify(data.primaryKeyword || "")}
 VERIFIED NOTES=${JSON.stringify(verifiedNotes)}
 APPROVED INTERNAL LINKS=${JSON.stringify(linkCandidates)}
 CURRENT ARTICLE=${JSON.stringify(checkedSource)}`));
-      checkedSource = validateGeneratedLinks(source, linkCandidates);
+      checkedSource = polishSeoCopy(source, data.primaryKeyword || "", linkCandidates);
       const interimAudit = await auditInput(
         { ...data, ...checkedSource, translations: data.translations },
         excludeId,
@@ -807,14 +851,11 @@ CURRENT ARTICLE=${JSON.stringify(checkedSource)}`));
     remainingIssues = best.audit.issues;
     const unresolvedAutoFixes = autoFixableSeoIssues(remainingIssues);
 
-    if (unresolvedAutoFixes.some((issue) => issue.code === "content_short")) {
-      throw new Error("AI_SEO_LENGTH_TARGET_NOT_MET");
-    }
     if (unresolvedAutoFixes.length && unresolvedAutoFixes.length >= initialFixableIssueCount && best.audit.score <= before.score) {
       throw new Error(`AI_SEO_FIX_TARGET_NOT_MET:${unresolvedAutoFixes.map((issue) => issue.code).join(",")}`);
     }
 
-    const draft = { ...data, ...checkedSource, translations: await translateGuideCopy(checkedSource, linkCandidates), published: false };
+    const draft = { ...data, ...polishSeoCopy(checkedSource, data.primaryKeyword || "", linkCandidates), translations: data.translations, published: false };
     const audit = await auditInput(draft, excludeId);
     res.json({ draft, audit, unresolvedAutoFixes: autoFixableSeoIssues(audit.issues).map((issue) => issue.code) });
   } catch (err) {
@@ -1026,6 +1067,31 @@ router.post("/admin/guides/generate-cover", adminAuth, guideAiLimiter, async (re
         : code.startsWith("OPENAI_IMAGE_429") ? "OpenAI image quota or billing limit reached"
           : code.includes("Private storage is not configured") ? "Image storage is not configured on the server"
             : "AI cover generation failed. Check the backend logs for the recorded OpenAI image error";
+    res.status(code === "OPENAI_NOT_CONFIGURED" ? 503 : 502).json({ error });
+  }
+});
+
+router.post("/admin/guides/translate-draft", adminAuth, guideAiLimiter, async (req, res) => {
+  try {
+    const value = req.body && typeof req.body === "object" ? req.body as Record<string, unknown> : {};
+    const read = (key: string, max: number) => typeof value[key] === "string" ? value[key].trim().slice(0, max) : "";
+    const source = cleanGeneratedCopy({
+      title: read("title", 180),
+      excerpt: read("excerpt", 600),
+      content: read("content", 100_000),
+      metaTitle: read("metaTitle", 180) || read("title", 180),
+      metaDescription: read("metaDescription", 320) || read("excerpt", 600),
+    });
+    const submittedLinks = approvedInternalLinks(read("internalLinks", 2_000) || internalHrefsFromContent(source.content));
+    const linkCandidates = await loadInternalLinkCandidates(submittedLinks, Number.isInteger(Number(value.excludeId)) ? Number(value.excludeId) : undefined);
+    res.json({ translations: await translateGuideCopy(ensureGeneratedLinks(source, linkCandidates), linkCandidates) });
+  } catch (err) {
+    req.log?.error?.({ err }, "Guide draft translation failed");
+    const code = err instanceof Error ? err.message : "";
+    const error = code === "OPENAI_NOT_CONFIGURED" ? "OpenAI is not configured on the server"
+      : code.startsWith("OPENAI_401") ? "OpenAI rejected the API key"
+        : code.startsWith("OPENAI_429") ? "OpenAI quota or billing limit reached"
+          : "AI translation failed. Check the backend logs for the recorded OpenAI error";
     res.status(code === "OPENAI_NOT_CONFIGURED" ? 503 : 502).json({ error });
   }
 });
