@@ -267,6 +267,28 @@ function validateGeneratedLinks(copy: GeneratedCopy, candidates: InternalLinkCan
   return copy;
 }
 
+function repairGeneratedLinks(copy: GeneratedCopy, candidates: InternalLinkCandidate[]): GeneratedCopy {
+  const allowed = new Map(candidates.map((item) => [item.url, item]));
+  const used = new Set<string>();
+  const content = copy.content.replace(/<a\s+[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, (full, rawHref: string, label: string) => {
+    const href = canonicalInternalHref(rawHref);
+    if (!href || !allowed.has(href) || used.has(href)) return plainLabel(label) || full;
+    used.add(href);
+    return `<a href="${href}">${plainLabel(label) || allowed.get(href)!.label}</a>`;
+  });
+  const missing = candidates.filter((item) => !used.has(item.url)).slice(0, Math.max(0, 3 - used.size));
+  if (!missing.length) return { ...copy, content };
+  const linksHtml = missing.map((item) => `<a href="${item.url}">${item.label}</a>`).join(", ");
+  return {
+    ...copy,
+    content: `${content}\n<p>For related options, see ${linksHtml}.</p>`,
+  };
+}
+
+function ensureGeneratedLinks(copy: GeneratedCopy, candidates: InternalLinkCandidate[]): GeneratedCopy {
+  return validateGeneratedLinks(repairGeneratedLinks(copy, candidates), candidates);
+}
+
 function autoFixableSeoIssues(issues: SeoAuditIssue[]): SeoAuditIssue[] {
   return issues.filter((issue) => AUTO_FIXABLE_SEO_ISSUES.has(issue.code));
 }
@@ -429,7 +451,7 @@ Vehicles or yachts that may be mentioned only when supported by verified notes: 
 APPROVED INTERNAL LINKS: ${JSON.stringify(input.linkCandidates)}
 VERIFIED NOTES: ${JSON.stringify(input.notes || "None supplied")}
 Return exactly this object shape: {"title":"...","excerpt":"...","content":"<p>...</p>","metaTitle":"...","metaDescription":"..."}`);
-    source = validateGeneratedLinks(cleanGeneratedCopy(sourceRaw), input.linkCandidates);
+    source = ensureGeneratedLinks(cleanGeneratedCopy(sourceRaw), input.linkCandidates);
     measuredWords = visibleWordCount(source.content);
     if (measuredWords >= minimumWords) break;
   }
@@ -449,7 +471,7 @@ Return exactly one object with keys fr, ru, ro and ar. Every value must contain 
   const translatedObject = translatedRaw && typeof translatedRaw === "object" ? translatedRaw as Record<string, unknown> : {};
   const translations: Record<string, GeneratedCopy> = {};
   for (const code of Object.keys(TARGET_LANGUAGES)) {
-    const translated = validateGeneratedLinks(cleanGeneratedCopy(translatedObject[code]), linkCandidates);
+    const translated = ensureGeneratedLinks(cleanGeneratedCopy(translatedObject[code]), linkCandidates);
     translations[code] = localizeCopyLinks(translated, code);
   }
   return translations;
