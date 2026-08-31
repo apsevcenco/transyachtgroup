@@ -32,7 +32,7 @@ export type SeoAuditResult = {
   cannibalization: Array<{ id: number; title: string; slug: string; similarity: number }>;
 };
 
-export type GeneratedGuideDraft = Omit<GuideInput, "slug" | "published"> & { coverImageWarning?: string | null; translationWarning?: string | null };
+export type GeneratedGuideDraft = Omit<GuideInput, "slug" | "published"> & { coverImageWarning?: string | null; generationWarning?: string | null; translationWarning?: string | null };
 
 function getToken(): string | null {
   return localStorage.getItem("admin_token");

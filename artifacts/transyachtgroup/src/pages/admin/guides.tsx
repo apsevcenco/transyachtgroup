@@ -121,10 +121,10 @@ export default function AdminGuides() {
     setBusy(true); setMessage("");
     try {
       const draft = await generateGuideWithAi(ai);
-      const { coverImageWarning, translationWarning, ...generated } = draft;
+      const { coverImageWarning, generationWarning, translationWarning, ...generated } = draft;
       setForm((current) => ({ ...current, ...generated, slug: slugify(draft.title), primaryKeyword: ai.keyword || ai.topic, contentCluster: `${ai.service} — ${ai.city}`, targetPage: ai.service === "Yacht charter" ? "/yachts/" : "/cars/", published: false }));
       setEditing(null);
-      setMessage(coverImageWarning || translationWarning || "AI article draft is ready. Review it, then generate a cover separately if needed.");
+      setMessage(coverImageWarning || generationWarning || translationWarning || "AI article draft is ready. Review it, then generate a cover separately if needed.");
     } catch (err) { setMessage(err instanceof Error ? err.message : "AI generation failed"); }
     finally { setBusy(false); }
   };

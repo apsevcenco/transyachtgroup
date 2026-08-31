@@ -13,7 +13,13 @@ import { safeRemoteFetch } from "../lib/safeRemoteFetch";
 
 const router: IRouter = Router();
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const guideAiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 12 });
+const guideAiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many AI requests. Please wait a minute and try again." },
+});
 const TARGET_LANGUAGES = {
   fr: "French",
   ru: "Russian",
@@ -31,6 +37,7 @@ type GeneratedCopy = {
 
 type GeneratedGuideDraft = GeneratedCopy & {
   translations: Record<string, GeneratedCopy>;
+  generationWarning?: string | null;
   translationWarning?: string | null;
 };
 
@@ -343,14 +350,15 @@ async function requestOpenAiJson(instructions: string, input: string): Promise<u
   const baseUrl = (process.env.OPENAI_BASE_URL || process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
   const apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_NOT_CONFIGURED");
-  const configuredModel = process.env.OPENAI_CONTENT_MODEL?.trim();
-  const preferredModel = configuredModel && !configuredModel.startsWith("gpt-5.6") ? configuredModel : "gpt-4o";
+  const configuredModel = process.env.OPENAI_CONTENT_MODEL?.trim().toLowerCase();
+  const preferredModel = configuredModel && !configuredModel.startsWith("gpt-5") && !configuredModel.includes("5.6") ? configuredModel : "gpt-4o";
   const models = Array.from(new Set([preferredModel, "gpt-4o", "gpt-4o-mini"]));
   let response: Response | null = null;
   let detail = "";
   for (const model of models) {
     response = await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
+      signal: AbortSignal.timeout(75_000),
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model,
@@ -440,10 +448,12 @@ NON-NEGOTIABLE EDITORIAL RULES:
 - Return exactly the requested JSON schema and nothing else.`;
   let source: GeneratedCopy | null = null;
   let measuredWords = 0;
+  let lastGenerationError = "";
   for (let attempt = 0; attempt < 3; attempt++) {
     const minimumWords = Math.max(1_000, Math.min(1_500, input.wordCount - 100));
     const maximumWords = Math.max(minimumWords + 100, Math.min(1_650, input.wordCount + 150));
-    const sourceRaw = await requestOpenAiJson(rules, `Create an original English SEO guide of ${minimumWords}-${maximumWords} visible words after HTML tags are removed.
+    try {
+      const sourceRaw = await requestOpenAiJson(rules, `Create an original English SEO guide of ${minimumWords}-${maximumWords} visible words after HTML tags are removed.
 This is attempt ${attempt + 1}. The previous attempt measured ${measuredWords || "not applicable"} words.
 MANDATORY LENGTH: do not return fewer than ${minimumWords} visible words in content. The article must feel complete, practical and editorial, not padded.
 Topic: ${JSON.stringify(input.topic)}
@@ -456,16 +466,28 @@ Vehicles or yachts that may be mentioned only when supported by verified notes: 
 APPROVED INTERNAL LINKS: ${JSON.stringify(input.linkCandidates)}
 VERIFIED NOTES: ${JSON.stringify(input.notes || "None supplied")}
 Return exactly this object shape: {"title":"...","excerpt":"...","content":"<p>...</p>","metaTitle":"...","metaDescription":"..."}`);
-    source = ensureGeneratedLinks(cleanGeneratedCopy(sourceRaw), input.linkCandidates);
-    measuredWords = visibleWordCount(source.content);
-    if (measuredWords >= minimumWords) break;
+      const candidate = ensureGeneratedLinks(cleanGeneratedCopy(sourceRaw), input.linkCandidates);
+      const candidateWords = visibleWordCount(candidate.content);
+      if (!source || candidateWords > measuredWords) {
+        source = candidate;
+        measuredWords = candidateWords;
+      }
+      if (candidateWords >= minimumWords) break;
+    } catch (err) {
+      lastGenerationError = err instanceof Error ? err.message : "UNKNOWN_AI_ERROR";
+      if (lastGenerationError.startsWith("OPENAI_") || lastGenerationError === "OPENAI_NOT_CONFIGURED") throw err;
+    }
   }
 
-  if (!source || measuredWords < 1_000) throw new Error("AI_SEO_LENGTH_TARGET_NOT_MET");
+  if (!source) throw new Error(lastGenerationError || "INVALID_AI_RESPONSE");
+  const generationWarning = measuredWords < 1_000
+    ? `The article was generated but reached ${measuredWords} words, below the 1,000 word target. Use Fix SEO to expand it if needed.`
+    : null;
 
   return {
     ...source,
     translations: {},
+    generationWarning,
     translationWarning: "The English article was generated. Translations are intentionally separate so article generation is faster and more reliable.",
   };
 }
