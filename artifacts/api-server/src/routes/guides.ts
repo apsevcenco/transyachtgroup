@@ -29,6 +29,11 @@ type GeneratedCopy = {
   metaDescription: string;
 };
 
+type GeneratedGuideDraft = GeneratedCopy & {
+  translations: Record<string, GeneratedCopy>;
+  translationWarning?: string | null;
+};
+
 const AUTO_FIXABLE_SEO_ISSUES = new Set([
   "keyword_title",
   "keyword_body",
@@ -339,7 +344,7 @@ async function requestOpenAiJson(instructions: string, input: string): Promise<u
   const apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_NOT_CONFIGURED");
   const configuredModel = process.env.OPENAI_CONTENT_MODEL?.trim();
-  const preferredModel = configuredModel && configuredModel !== "gpt-5.6-sol" ? configuredModel : "gpt-4o-mini";
+  const preferredModel = configuredModel && !configuredModel.startsWith("gpt-5.6") ? configuredModel : "gpt-4o-mini";
   const models = Array.from(new Set([preferredModel, "gpt-4o-mini"]));
   let response: Response | null = null;
   let detail = "";
@@ -415,7 +420,7 @@ async function generateGuideDraft(input: {
   wordCount: number;
   notes: string;
   linkCandidates: InternalLinkCandidate[];
-}) {
+}): Promise<GeneratedGuideDraft> {
   const rules = `You are the senior multilingual editor for Trans Yacht Group, a luxury car rental and yacht charter company on the French Riviera.
 Return only valid JSON.
 
@@ -458,7 +463,15 @@ Return exactly this object shape: {"title":"...","excerpt":"...","content":"<p>.
 
   if (!source || measuredWords < 1_000) throw new Error("AI_SEO_LENGTH_TARGET_NOT_MET");
 
-  return { ...source, translations: await translateGuideCopy(source, input.linkCandidates) };
+  try {
+    return { ...source, translations: await translateGuideCopy(source, input.linkCandidates), translationWarning: null };
+  } catch {
+    return {
+      ...source,
+      translations: {},
+      translationWarning: "The English article was generated, but translations could not be created automatically. Save the draft and retry translation later.",
+    };
+  }
 }
 
 async function translateGuideCopy(source: GeneratedCopy, linkCandidates: InternalLinkCandidate[]) {
@@ -970,15 +983,7 @@ router.post("/admin/guides/generate", adminAuth, guideAiLimiter, async (req, res
       notes: read("notes", 4_000),
       linkCandidates,
     });
-    let coverImage: string | null = null;
-    let coverImageWarning: string | null = null;
-    try {
-      coverImage = await generateAndStoreGuideCover({ title: draft.title, excerpt: draft.excerpt, service: read("service", 120), city: read("city", 120) });
-    } catch (coverError) {
-      req.log?.error?.({ err: coverError }, "Automatic guide cover generation failed");
-      coverImageWarning = "The article was generated, but its AI cover could not be created. Use Generate AI cover to try again.";
-    }
-    res.json({ ...draft, coverImage, coverImageWarning });
+    res.json({ ...draft, coverImage: null });
   } catch (err) {
     req.log?.error?.({ err }, "AI guide generation failed");
     if (err instanceof Error && err.message === "OPENAI_NOT_CONFIGURED") return void res.status(503).json({ error: "OpenAI is not configured on the server" });
