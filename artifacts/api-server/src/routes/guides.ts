@@ -344,8 +344,8 @@ async function requestOpenAiJson(instructions: string, input: string): Promise<u
   const apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_NOT_CONFIGURED");
   const configuredModel = process.env.OPENAI_CONTENT_MODEL?.trim();
-  const preferredModel = configuredModel && !configuredModel.startsWith("gpt-5.6") ? configuredModel : "gpt-4o-mini";
-  const models = Array.from(new Set([preferredModel, "gpt-4o-mini"]));
+  const preferredModel = configuredModel && !configuredModel.startsWith("gpt-5.6") ? configuredModel : "gpt-4o";
+  const models = Array.from(new Set([preferredModel, "gpt-4o", "gpt-4o-mini"]));
   let response: Response | null = null;
   let detail = "";
   for (const model of models) {
@@ -463,15 +463,11 @@ Return exactly this object shape: {"title":"...","excerpt":"...","content":"<p>.
 
   if (!source || measuredWords < 1_000) throw new Error("AI_SEO_LENGTH_TARGET_NOT_MET");
 
-  try {
-    return { ...source, translations: await translateGuideCopy(source, input.linkCandidates), translationWarning: null };
-  } catch {
-    return {
-      ...source,
-      translations: {},
-      translationWarning: "The English article was generated, but translations could not be created automatically. Save the draft and retry translation later.",
-    };
-  }
+  return {
+    ...source,
+    translations: {},
+    translationWarning: "The English article was generated. Translations are intentionally separate so article generation is faster and more reliable.",
+  };
 }
 
 async function translateGuideCopy(source: GeneratedCopy, linkCandidates: InternalLinkCandidate[]) {
