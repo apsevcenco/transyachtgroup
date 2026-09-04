@@ -42,6 +42,11 @@ export default function ProposalsPage() {
 
       <div className="px-4 py-6">
         <h1 className="font-porter text-white text-lg mb-5">Proposal Generator</h1>
+        <p className="mb-5 max-w-2xl text-sm leading-6 text-white/45">
+          Use Single Vehicle for car PDFs, Fleet Offer for multi-car offers, or
+          AI Business Letter for one-page luxury letters to hotels, concierges
+          and partners.
+        </p>
         <ProposalsDashboard />
       </div>
     </div>

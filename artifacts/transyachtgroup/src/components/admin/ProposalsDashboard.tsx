@@ -365,7 +365,7 @@ export function ProposalsDashboard() {
     <div>
       {/* Generator mode */}
       <div className="mb-6">
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-2">
           {[
             { key: "single" as GeneratorMode, label: "Single Vehicle" },
             { key: "fleet" as GeneratorMode, label: "Fleet Offer" },
