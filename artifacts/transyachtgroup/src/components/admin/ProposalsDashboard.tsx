@@ -10,14 +10,18 @@ import {
   fetchVehicles,
   checkAvailability,
   generateAdminProposal,
+  generateBusinessLetterPdf,
   type Booking,
+  uploadAdminPublicImage,
 } from "@/lib/api";
+import { compressImage } from "@/lib/imageCompress";
 import { VehicleThumb } from "./VehicleThumb";
 import { FleetOfferSection } from "./FleetOfferSection";
 import { stripTags, vehiclePhotos, type VehicleLite } from "./bookingShared";
 
-type GeneratorMode = "single" | "fleet";
+type GeneratorMode = "single" | "fleet" | "business";
 type Lang = "en" | "ru";
+type BusinessLang = "en" | "fr" | "ru" | "ro" | "ar";
 type Branding = "branded" | "whiteLabel";
 type PricingMode = "daily" | "monthly" | "transfer";
 
@@ -118,6 +122,14 @@ export function ProposalsDashboard() {
 
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
+  const [businessLang, setBusinessLang] = useState<BusinessLang>("en");
+  const [businessRecipientType, setBusinessRecipientType] = useState("Concierge service");
+  const [businessTopic, setBusinessTopic] = useState("");
+  const [businessService, setBusinessService] = useState("Luxury car rental and VIP transfers");
+  const [businessNotes, setBusinessNotes] = useState("");
+  const [businessContactName, setBusinessContactName] = useState("Trans Yacht Group");
+  const [businessImageUrl, setBusinessImageUrl] = useState<string | null>(null);
+  const [uploadingBusinessImage, setUploadingBusinessImage] = useState(false);
 
   useEffect(() => {
     fetchVehicles(undefined, true)
@@ -306,6 +318,49 @@ export function ProposalsDashboard() {
     }
   };
 
+  const handleBusinessImage = async (file?: File) => {
+    if (!file) return;
+    setUploadingBusinessImage(true);
+    setError("");
+    try {
+      const compressed = await compressImage(file, 1920, 0.86);
+      const url = await uploadAdminPublicImage(compressed, "proposals");
+      setBusinessImageUrl(url);
+    } catch (err: any) {
+      setError(err.message || "Failed to upload image");
+    } finally {
+      setUploadingBusinessImage(false);
+    }
+  };
+
+  const handleGenerateBusinessLetter = async () => {
+    setGenerating(true);
+    setError("");
+    try {
+      const blob = await generateBusinessLetterPdf({
+        recipientType: businessRecipientType,
+        language: businessLang,
+        topic: businessTopic,
+        service: businessService,
+        notes: businessNotes,
+        imageUrl: businessImageUrl,
+        contactName: businessContactName,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${safeFileName(businessTopic || "business-letter")}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setError(err.message || "Failed to generate business letter");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   return (
     <div>
       {/* Generator mode */}
@@ -314,6 +369,7 @@ export function ProposalsDashboard() {
           {[
             { key: "single" as GeneratorMode, label: "Single Vehicle" },
             { key: "fleet" as GeneratorMode, label: "Fleet Offer" },
+            { key: "business" as GeneratorMode, label: "AI Business Letter" },
           ].map((m) => (
             <button
               key={m.key}
@@ -332,6 +388,133 @@ export function ProposalsDashboard() {
 
       {generatorMode === "fleet" ? (
         <FleetOfferSection />
+      ) : generatorMode === "business" ? (
+        <div className="grid lg:grid-cols-[1fr_320px] gap-6">
+          <div className="space-y-6">
+            <div className="border border-white/[0.08] rounded-lg p-5 bg-white/[0.02]">
+              <p className="text-[10px] uppercase tracking-wide text-gold/70 mb-4">
+                AI one-page presentation letter
+              </p>
+              <div className="grid md:grid-cols-2 gap-4">
+                <label className="text-[10px] uppercase tracking-wide text-white/40">
+                  Recipient type
+                  <select
+                    value={businessRecipientType}
+                    onChange={(e) => setBusinessRecipientType(e.target.value)}
+                    className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white min-h-[44px]"
+                  >
+                    <option>Concierge service</option>
+                    <option>Luxury hotel</option>
+                    <option>Villa manager</option>
+                    <option>Yacht broker</option>
+                    <option>Event agency</option>
+                    <option>Private aviation partner</option>
+                  </select>
+                </label>
+                <label className="text-[10px] uppercase tracking-wide text-white/40">
+                  Language
+                  <select
+                    value={businessLang}
+                    onChange={(e) => setBusinessLang(e.target.value as BusinessLang)}
+                    className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white min-h-[44px]"
+                  >
+                    <option value="en">English</option>
+                    <option value="fr">French</option>
+                    <option value="ru">Russian</option>
+                    <option value="ro">Romanian</option>
+                    <option value="ar">Arabic</option>
+                  </select>
+                </label>
+                <label className="text-[10px] uppercase tracking-wide text-white/40 md:col-span-2">
+                  Topic
+                  <input
+                    value={businessTopic}
+                    onChange={(e) => setBusinessTopic(e.target.value)}
+                    placeholder="Luxury car rental partnership for Monaco hotels"
+                    className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white min-h-[44px] placeholder:text-white/25"
+                  />
+                </label>
+                <label className="text-[10px] uppercase tracking-wide text-white/40">
+                  Service
+                  <input
+                    value={businessService}
+                    onChange={(e) => setBusinessService(e.target.value)}
+                    placeholder="Luxury car rental and VIP transfers"
+                    className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white min-h-[44px] placeholder:text-white/25"
+                  />
+                </label>
+                <label className="text-[10px] uppercase tracking-wide text-white/40">
+                  Signature / contact name
+                  <input
+                    value={businessContactName}
+                    onChange={(e) => setBusinessContactName(e.target.value)}
+                    placeholder="Trans Yacht Group"
+                    className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white min-h-[44px] placeholder:text-white/25"
+                  />
+                </label>
+                <label className="text-[10px] uppercase tracking-wide text-white/40 md:col-span-2">
+                  Notes for AI
+                  <textarea
+                    value={businessNotes}
+                    onChange={(e) => setBusinessNotes(e.target.value)}
+                    rows={5}
+                    placeholder="Mention Courchevel transfers, French Riviera coverage, Monaco, Cannes, Nice, Saint-Tropez, premium fleet, fast concierge response..."
+                    className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white placeholder:text-white/25"
+                  />
+                </label>
+                <div className="md:col-span-2">
+                  <p className="text-[10px] uppercase tracking-wide text-white/40 mb-2">
+                    One presentation photo
+                  </p>
+                  <label className="inline-flex cursor-pointer items-center gap-2 min-h-[44px] px-4 rounded-md border border-white/[0.1] text-sm text-white/60 hover:text-gold transition-colors">
+                    {uploadingBusinessImage ? (
+                      <Loader2 size={15} className="animate-spin" />
+                    ) : (
+                      <FileDown size={15} />
+                    )}
+                    {uploadingBusinessImage ? "Uploading..." : "Upload photo"}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(e) => handleBusinessImage(e.target.files?.[0])}
+                      className="hidden"
+                    />
+                  </label>
+                  {businessImageUrl && (
+                    <img src={businessImageUrl} alt="" className="mt-3 h-40 rounded-md object-cover" />
+                  )}
+                </div>
+              </div>
+            </div>
+            {error && <p className="text-red-400 text-sm">{error}</p>}
+          </div>
+
+          <div className="border border-white/[0.08] rounded-lg p-5 bg-white/[0.02] h-fit lg:sticky lg:top-6">
+            <p className="text-[10px] uppercase tracking-wide text-white/40 mb-3">
+              Output
+            </p>
+            <p className="text-sm text-white/55 leading-6 mb-5">
+              Generates a luxury one-page PDF letter with your photo, AI-written
+              copy, benefits, call to action and Trans Yacht Group contacts.
+            </p>
+            <button
+              type="button"
+              onClick={handleGenerateBusinessLetter}
+              disabled={!businessTopic.trim() || generating || uploadingBusinessImage}
+              className="w-full flex items-center justify-center gap-2 min-h-[44px] bg-[hsl(43,67%,55%)] text-black rounded-md text-xs uppercase tracking-[0.2em] font-medium hover:bg-[hsl(43,67%,60%)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {generating ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" /> Generating…
+                </>
+              ) : (
+                <>
+                  <FileDown size={16} /> Generate PDF
+                </>
+              )}
+            </button>
+          </div>
+        </div>
       ) : (
         <div className="grid lg:grid-cols-[1fr_320px] gap-6">
           <div className="space-y-6">

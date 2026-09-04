@@ -810,7 +810,7 @@ export async function uploadPrivateBookingPhoto(file: File): Promise<string> {
 
 export async function uploadAdminPublicImage(
   file: File,
-  scope: "vehicles" | "content-bg" | "content-office" | "guides" | "news",
+  scope: "vehicles" | "content-bg" | "content-office" | "guides" | "news" | "proposals",
 ): Promise<string> {
   const res = await fetch(`${API_BASE}/admin/uploads/public-image`, {
     method: "POST",
@@ -1056,6 +1056,33 @@ export async function generateFleetOfferPdf(
     const data = await res.json().catch(() => ({}));
     throw new Error(
       data.error || `Failed to generate fleet offer (${res.status})`,
+    );
+  }
+  return res.blob();
+}
+
+export interface BusinessLetterRequest {
+  recipientType: string;
+  language: "en" | "fr" | "ru" | "ro" | "ar";
+  topic: string;
+  service: string;
+  notes?: string;
+  imageUrl?: string | null;
+  contactName?: string;
+}
+
+export async function generateBusinessLetterPdf(
+  req: BusinessLetterRequest,
+): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/admin/proposals/business-letter`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(
+      data.error || `Failed to generate business letter (${res.status})`,
     );
   }
   return res.blob();
