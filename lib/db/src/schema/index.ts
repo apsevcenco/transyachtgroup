@@ -129,6 +129,33 @@ export const newsTable = pgTable(
   ],
 );
 
+export const businessLettersTable = pgTable(
+  "business_letters",
+  {
+    id: serial("id").primaryKey(),
+    title: text("title").notNull(),
+    recipientType: text("recipient_type").notNull(),
+    recipientName: text("recipient_name"),
+    language: varchar("language", { length: 10 }).notNull().default("en"),
+    topic: text("topic").notNull(),
+    service: text("service").notNull(),
+    notes: text("notes"),
+    imageUrl: text("image_url"),
+    signerName: text("signer_name"),
+    signerRole: text("signer_role"),
+    copy: jsonb("copy").notNull().default({}),
+    lastSentTo: text("last_sent_to"),
+    lastSentAt: timestamp("last_sent_at"),
+    sendError: text("send_error"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("business_letters_updated_idx").on(table.updatedAt),
+    index("business_letters_language_idx").on(table.language),
+  ],
+);
+
 export const seoContentPlansTable = pgTable(
   "seo_content_plans",
   {

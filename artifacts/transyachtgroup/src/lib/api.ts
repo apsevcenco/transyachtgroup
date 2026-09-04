@@ -1096,6 +1096,26 @@ export interface BusinessLetterCopy {
   signature: string;
 }
 
+export interface BusinessLetterRecord {
+  id: number;
+  title: string;
+  recipientType: string;
+  recipientName?: string | null;
+  language: "en" | "fr" | "ru" | "ro" | "ar";
+  topic: string;
+  service: string;
+  notes?: string | null;
+  imageUrl?: string | null;
+  signerName?: string | null;
+  signerRole?: string | null;
+  copy: BusinessLetterCopy;
+  lastSentTo?: string | null;
+  lastSentAt?: string | null;
+  sendError?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
 export async function generateBusinessLetterDraft(
   req: BusinessLetterDraftRequest,
 ): Promise<BusinessLetterCopy> {
@@ -1128,6 +1148,53 @@ export async function generateBusinessLetterPdf(
     );
   }
   return res.blob();
+}
+
+export async function fetchBusinessLetters(): Promise<BusinessLetterRecord[]> {
+  const res = await fetch(`${API_BASE}/admin/proposals/business-letters`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to load saved business letters");
+  return res.json();
+}
+
+export async function saveBusinessLetter(
+  req: BusinessLetterRequest & { id?: number; title?: string },
+): Promise<BusinessLetterRecord> {
+  const res = await fetch(
+    `${API_BASE}/admin/proposals/business-letters${req.id ? `/${req.id}` : ""}`,
+    {
+      method: req.id ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(req),
+    },
+  );
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Failed to save business letter");
+  }
+  return res.json();
+}
+
+export async function deleteBusinessLetter(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/admin/proposals/business-letters/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to delete business letter");
+}
+
+export async function sendBusinessLetter(id: number, recipients: string): Promise<BusinessLetterRecord> {
+  const res = await fetch(`${API_BASE}/admin/proposals/business-letters/${id}/send`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ recipients }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Failed to send business letter");
+  }
+  return res.json();
 }
 
 export interface ContractGenerateRequest {

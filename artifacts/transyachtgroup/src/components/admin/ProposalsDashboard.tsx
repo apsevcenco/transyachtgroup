@@ -12,7 +12,12 @@ import {
   generateAdminProposal,
   generateBusinessLetterDraft,
   generateBusinessLetterPdf,
+  fetchBusinessLetters,
+  saveBusinessLetter,
+  deleteBusinessLetter,
+  sendBusinessLetter,
   type Booking,
+  type BusinessLetterRecord,
   type BusinessLetterCopy,
   uploadAdminPublicImage,
 } from "@/lib/api";
@@ -134,6 +139,10 @@ export function ProposalsDashboard() {
   const [businessSignerRole, setBusinessSignerRole] = useState("");
   const [businessImageUrl, setBusinessImageUrl] = useState<string | null>(null);
   const [businessCopy, setBusinessCopy] = useState<BusinessLetterCopy | null>(null);
+  const [businessLetters, setBusinessLetters] = useState<BusinessLetterRecord[]>([]);
+  const [businessLetterId, setBusinessLetterId] = useState<number | null>(null);
+  const [businessRecipients, setBusinessRecipients] = useState("");
+  const [businessNotice, setBusinessNotice] = useState("");
   const [uploadingBusinessImage, setUploadingBusinessImage] = useState(false);
 
   useEffect(() => {
@@ -153,6 +162,16 @@ export function ProposalsDashboard() {
       .catch(() => setVehicles([]))
       .finally(() => setLoadingVehicles(false));
   }, []);
+
+  const loadBusinessLetters = useCallback(() => {
+    fetchBusinessLetters()
+      .then(setBusinessLetters)
+      .catch(() => setBusinessLetters([]));
+  }, []);
+
+  useEffect(() => {
+    loadBusinessLetters();
+  }, [loadBusinessLetters]);
 
   const carVehicles = useMemo(
     () => vehicles.filter((v) => v.category === "car"),
@@ -364,6 +383,97 @@ export function ProposalsDashboard() {
       URL.revokeObjectURL(url);
     } catch (err: any) {
       setError(err.message || "Failed to generate business letter");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const currentBusinessLetterPayload = () => {
+    if (!businessCopy) return null;
+    return {
+      id: businessLetterId || undefined,
+      title: businessTopic || businessCopy.headline,
+      recipientType: businessRecipientType,
+      recipientName: businessRecipientName,
+      language: businessLang,
+      topic: businessTopic,
+      service: businessService,
+      notes: businessNotes,
+      imageUrl: businessImageUrl,
+      contactName: businessContactName,
+      signerRole: businessSignerRole,
+      copy: businessCopy,
+    };
+  };
+
+  const handleSaveBusinessLetter = async () => {
+    const payload = currentBusinessLetterPayload();
+    if (!payload) return;
+    setGenerating(true);
+    setError("");
+    setBusinessNotice("");
+    try {
+      const saved = await saveBusinessLetter(payload);
+      setBusinessLetterId(saved.id);
+      setBusinessNotice("Letter saved.");
+      loadBusinessLetters();
+    } catch (err: any) {
+      setError(err.message || "Failed to save business letter");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleLoadBusinessLetter = (letter: BusinessLetterRecord) => {
+    setBusinessLetterId(letter.id);
+    setBusinessRecipientType(letter.recipientType);
+    setBusinessRecipientName(letter.recipientName || "");
+    setBusinessLang(letter.language);
+    setBusinessTopic(letter.topic);
+    setBusinessService(letter.service);
+    setBusinessNotes(letter.notes || "");
+    setBusinessContactName(letter.signerName || letter.copy.signature || "");
+    setBusinessSignerRole(letter.signerRole || "");
+    setBusinessImageUrl(letter.imageUrl || null);
+    setBusinessCopy(letter.copy);
+    setBusinessNotice(`Loaded: ${letter.title}`);
+    setError("");
+  };
+
+  const handleDeleteBusinessLetter = async (id: number) => {
+    setGenerating(true);
+    setError("");
+    setBusinessNotice("");
+    try {
+      await deleteBusinessLetter(id);
+      if (businessLetterId === id) setBusinessLetterId(null);
+      setBusinessNotice("Letter deleted.");
+      loadBusinessLetters();
+    } catch (err: any) {
+      setError(err.message || "Failed to delete business letter");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleSendBusinessLetter = async () => {
+    let id = businessLetterId;
+    setGenerating(true);
+    setError("");
+    setBusinessNotice("");
+    try {
+      if (!id) {
+        const payload = currentBusinessLetterPayload();
+        if (!payload) return;
+        const saved = await saveBusinessLetter(payload);
+        id = saved.id;
+        setBusinessLetterId(saved.id);
+      }
+      await sendBusinessLetter(id, businessRecipients);
+      setBusinessNotice("Letter sent.");
+      loadBusinessLetters();
+    } catch (err: any) {
+      setError(err.message || "Failed to send business letter");
     } finally {
       setGenerating(false);
     }
@@ -653,6 +763,7 @@ export function ProposalsDashboard() {
               )}
             </div>
             {error && <p className="text-red-400 text-sm">{error}</p>}
+            {businessNotice && <p className="text-gold text-sm">{businessNotice}</p>}
           </div>
 
           <div className="border border-white/[0.08] rounded-lg p-5 bg-white/[0.02] h-fit lg:sticky lg:top-6">
@@ -680,6 +791,77 @@ export function ProposalsDashboard() {
                 </>
               )}
             </button>
+            <button
+              type="button"
+              onClick={handleSaveBusinessLetter}
+              disabled={!businessTopic.trim() || !businessCopy || generating}
+              className="mt-3 w-full flex items-center justify-center gap-2 min-h-[44px] border border-white/[0.1] text-white/70 rounded-md text-xs uppercase tracking-[0.18em] hover:text-gold hover:border-gold/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Save letter
+            </button>
+            <label className="block mt-5 text-[10px] uppercase tracking-wide text-white/40">
+              Send to email addresses
+              <textarea
+                value={businessRecipients}
+                onChange={(e) => setBusinessRecipients(e.target.value)}
+                rows={4}
+                placeholder={"client@hotel.com\npartner@concierge.com"}
+                className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white placeholder:text-white/25"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={handleSendBusinessLetter}
+              disabled={!businessRecipients.trim() || !businessCopy || generating}
+              className="mt-3 w-full flex items-center justify-center gap-2 min-h-[44px] border border-gold/30 text-gold rounded-md text-xs uppercase tracking-[0.18em] hover:bg-gold/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Send letter
+            </button>
+            <div className="mt-6 pt-5 border-t border-white/[0.08]">
+              <p className="text-[10px] uppercase tracking-wide text-white/40 mb-3">
+                Saved letters
+              </p>
+              {businessLetters.length ? (
+                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                  {businessLetters.map((letter) => (
+                    <div
+                      key={letter.id}
+                      className={`rounded-md border p-3 ${
+                        businessLetterId === letter.id
+                          ? "border-gold/40 bg-gold/10"
+                          : "border-white/[0.08] bg-white/[0.03]"
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleLoadBusinessLetter(letter)}
+                        className="block w-full text-left text-sm text-white hover:text-gold"
+                      >
+                        {letter.title}
+                      </button>
+                      <p className="mt-1 text-[11px] text-white/35">
+                        {letter.language.toUpperCase()} · {letter.recipientType}
+                      </p>
+                      {letter.lastSentAt && (
+                        <p className="mt-1 text-[11px] text-gold/70">
+                          Sent: {new Date(letter.lastSentAt).toLocaleDateString()}
+                        </p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteBusinessLetter(letter.id)}
+                        disabled={generating}
+                        className="mt-2 text-[10px] uppercase tracking-wide text-red-300/70 hover:text-red-300 disabled:opacity-40"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-white/35">No saved letters yet.</p>
+              )}
+            </div>
           </div>
         </div>
       ) : (

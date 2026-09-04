@@ -1,8 +1,8 @@
 import { Router, type IRouter } from "express";
 import rateLimit from "express-rate-limit";
 import { db } from "@workspace/db";
-import { vehiclesTable, siteContentTable } from "@workspace/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { vehiclesTable, siteContentTable, businessLettersTable } from "@workspace/db/schema";
+import { desc, eq, inArray } from "drizzle-orm";
 import { generateDocument } from "../documents/generateDocument";
 import { LOGO_DATA_URI } from "../documents/builders/proposal";
 import type {
@@ -44,6 +44,20 @@ type BusinessLetterCopy = {
   partnerAngle: string;
   callToAction: string;
   signature: string;
+};
+
+type BusinessLetterRecordInput = {
+  title: string;
+  recipientType: string;
+  recipientName: string;
+  language: keyof typeof languageNames;
+  topic: string;
+  service: string;
+  notes: string;
+  imageUrl: string | null;
+  signerName: string;
+  signerRole: string;
+  copy: BusinessLetterCopy;
 };
 
 function escapeHtml(value: unknown): string {
@@ -117,6 +131,79 @@ function cleanBusinessLetter(value: unknown): BusinessLetterCopy {
     callToAction: field("callToAction", 350),
     signature: field("signature", 220),
   };
+}
+
+function parseBusinessLetterInput(value: Record<string, unknown>): BusinessLetterRecordInput {
+  const text = (key: string, max: number) => typeof value[key] === "string" ? value[key].trim().slice(0, max) : "";
+  const language = Object.keys(languageNames).includes(text("language", 8))
+    ? text("language", 8) as keyof typeof languageNames
+    : "en";
+  const topic = text("topic", 180) || "Luxury partnership proposal";
+  return {
+    title: text("title", 180) || topic,
+    recipientType: text("recipientType", 120) || "Concierge service",
+    recipientName: text("recipientName", 500),
+    language,
+    topic,
+    service: text("service", 180) || "Luxury car rental and VIP transfers",
+    notes: text("notes", 2_000),
+    imageUrl: text("imageUrl", 2_000) || null,
+    signerName: text("contactName", 120),
+    signerRole: text("signerRole", 140),
+    copy: cleanBusinessLetter(value.copy),
+  };
+}
+
+function validEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function emailHtmlForBusinessLetter(copy: BusinessLetterCopy, pdfUrl?: string) {
+  const benefits = copy.benefits.map((benefit) => `<li>${escapeHtml(benefit)}</li>`).join("");
+  const pdfLink = pdfUrl ? `<p><a href="${escapeHtml(pdfUrl)}" style="color:#8a6d32;text-decoration:underline;font-weight:bold">Download presentation PDF</a></p>` : "";
+  return `<div style="font-family:Arial,sans-serif;color:#171717;line-height:1.6;max-width:680px">
+    <h1 style="font-size:22px;line-height:1.25;margin:0 0 16px">${escapeHtml(copy.headline)}</h1>
+    <p style="color:#9a7a35;font-size:16px">${escapeHtml(copy.subheadline)}</p>
+    <p>${escapeHtml(copy.greeting)}</p>
+    <p>${escapeHtml(copy.opening)}</p>
+    <p>${escapeHtml(copy.valueProposition)}</p>
+    <ul>${benefits}</ul>
+    <p>${escapeHtml(copy.partnerAngle)}</p>
+    <p><strong>${escapeHtml(copy.callToAction)}</strong></p>
+    <p>Warm regards,<br/>${escapeHtml(copy.signature).replace(/\r?\n/g, "<br/>")}</p>
+    ${pdfLink}
+  </div>`;
+}
+
+async function sendBusinessLetterEmail(to: string[], subject: string, copy: BusinessLetterCopy) {
+  const key = process.env.RESEND_API_KEY;
+  const from = process.env.REVIEW_EMAIL_FROM || process.env.PROPOSAL_EMAIL_FROM;
+  if (!key || !from) throw new Error("Email delivery is not configured (RESEND_API_KEY / REVIEW_EMAIL_FROM)");
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from,
+      to,
+      subject,
+      text: [
+        copy.headline,
+        copy.subheadline,
+        copy.greeting,
+        copy.opening,
+        copy.valueProposition,
+        ...copy.benefits,
+        copy.partnerAngle,
+        copy.callToAction,
+        "Warm regards,",
+        copy.signature,
+      ].join("\n\n"),
+      html: emailHtmlForBusinessLetter(copy),
+      tags: [{ name: "workflow", value: "business-letter" }],
+    }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) throw new Error(`Email provider rejected request (${response.status})`);
 }
 
 function renderBusinessLetterHtml(input: {
@@ -669,6 +756,144 @@ router.post(
     }
   },
 );
+
+router.get("/admin/proposals/business-letters", adminAuth, async (_req, res) => {
+  try {
+    const letters = await db
+      .select()
+      .from(businessLettersTable)
+      .orderBy(desc(businessLettersTable.updatedAt))
+      .limit(100);
+    res.json(letters);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error({ err: msg }, "business letters list error");
+    res.status(500).json({ error: "Failed to load saved business letters" });
+  }
+});
+
+router.post("/admin/proposals/business-letters", adminAuth, async (req, res) => {
+  try {
+    const value = req.body && typeof req.body === "object" ? req.body as Record<string, unknown> : {};
+    const parsed = parseBusinessLetterInput(value);
+    const [letter] = await db
+      .insert(businessLettersTable)
+      .values({
+        title: parsed.title,
+        recipientType: parsed.recipientType,
+        recipientName: parsed.recipientName || null,
+        language: parsed.language,
+        topic: parsed.topic,
+        service: parsed.service,
+        notes: parsed.notes || null,
+        imageUrl: parsed.imageUrl,
+        signerName: parsed.signerName || null,
+        signerRole: parsed.signerRole || null,
+        copy: parsed.copy,
+        updatedAt: new Date(),
+      })
+      .returning();
+    res.json(letter);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error({ err: msg }, "business letter save error");
+    res.status(500).json({ error: msg === "INVALID_AI_RESPONSE" ? "Letter text is incomplete" : "Failed to save business letter" });
+  }
+});
+
+router.put("/admin/proposals/business-letters/:id", adminAuth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) {
+      res.status(400).json({ error: "Invalid letter id" });
+      return;
+    }
+    const value = req.body && typeof req.body === "object" ? req.body as Record<string, unknown> : {};
+    const parsed = parseBusinessLetterInput(value);
+    const [letter] = await db
+      .update(businessLettersTable)
+      .set({
+        title: parsed.title,
+        recipientType: parsed.recipientType,
+        recipientName: parsed.recipientName || null,
+        language: parsed.language,
+        topic: parsed.topic,
+        service: parsed.service,
+        notes: parsed.notes || null,
+        imageUrl: parsed.imageUrl,
+        signerName: parsed.signerName || null,
+        signerRole: parsed.signerRole || null,
+        copy: parsed.copy,
+        updatedAt: new Date(),
+      })
+      .where(eq(businessLettersTable.id, id))
+      .returning();
+    if (!letter) {
+      res.status(404).json({ error: "Business letter not found" });
+      return;
+    }
+    res.json(letter);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error({ err: msg }, "business letter update error");
+    res.status(500).json({ error: msg === "INVALID_AI_RESPONSE" ? "Letter text is incomplete" : "Failed to update business letter" });
+  }
+});
+
+router.delete("/admin/proposals/business-letters/:id", adminAuth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) {
+      res.status(400).json({ error: "Invalid letter id" });
+      return;
+    }
+    await db.delete(businessLettersTable).where(eq(businessLettersTable.id, id));
+    res.json({ ok: true });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error({ err: msg }, "business letter delete error");
+    res.status(500).json({ error: "Failed to delete business letter" });
+  }
+});
+
+router.post("/admin/proposals/business-letters/:id/send", adminAuth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) {
+      res.status(400).json({ error: "Invalid letter id" });
+      return;
+    }
+    const value = req.body && typeof req.body === "object" ? req.body as Record<string, unknown> : {};
+    const rawRecipients = typeof value.recipients === "string" ? value.recipients : "";
+    const recipients = Array.from(new Set(rawRecipients.split(/[\s,;]+/).map((v) => v.trim()).filter(validEmail))).slice(0, 50);
+    if (recipients.length === 0) {
+      res.status(400).json({ error: "Add at least one valid email address" });
+      return;
+    }
+    const [letter] = await db.select().from(businessLettersTable).where(eq(businessLettersTable.id, id)).limit(1);
+    if (!letter) {
+      res.status(404).json({ error: "Business letter not found" });
+      return;
+    }
+    const copy = cleanBusinessLetter(letter.copy);
+    await sendBusinessLetterEmail(recipients, letter.title || copy.headline, copy);
+    const [updated] = await db
+      .update(businessLettersTable)
+      .set({
+        lastSentTo: recipients.join(", "),
+        lastSentAt: new Date(),
+        sendError: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(businessLettersTable.id, id))
+      .returning();
+    res.json(updated);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error({ err: msg }, "business letter send error");
+    res.status(500).json({ error: msg || "Failed to send business letter" });
+  }
+});
 
 router.post(
   "/admin/proposals/business-letter-draft",
