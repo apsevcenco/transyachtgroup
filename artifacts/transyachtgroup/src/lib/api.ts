@@ -34,6 +34,30 @@ export type SeoAuditResult = {
 
 export type GeneratedGuideDraft = Omit<GuideInput, "slug" | "published"> & { coverImageWarning?: string | null; generationWarning?: string | null; translationWarning?: string | null };
 
+export type News = {
+  id: number;
+  slug: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  coverImage: string | null;
+  gallery: string[];
+  metaTitle: string | null;
+  metaDescription: string | null;
+  translations: Record<string, Record<string, string>> | null;
+  primaryKeyword: string | null;
+  brief: string | null;
+  scheduledAt: string | null;
+  published: boolean;
+  publishedAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type NewsInput = Pick<News, "slug" | "title" | "excerpt" | "content" | "coverImage" | "gallery" | "metaTitle" | "metaDescription" | "translations" | "primaryKeyword" | "brief" | "scheduledAt" | "published">;
+
+export type GeneratedNewsDraft = Omit<NewsInput, "coverImage" | "gallery" | "published" | "scheduledAt" | "brief" | "primaryKeyword">;
+
 function getToken(): string | null {
   return localStorage.getItem("admin_token");
 }
@@ -130,6 +154,53 @@ export async function fetchGuide(slug: string, lang?: string): Promise<Guide> {
   const res = await fetch(`${API_BASE}/guides/${encodeURIComponent(slug)}?lang=${encodeURIComponent(l)}`);
   if (!res.ok) throw new Error(res.status === 404 ? "Guide not found" : "Failed to fetch guide");
   return res.json();
+}
+
+export async function fetchNews(lang?: string): Promise<News[]> {
+  const l = lang || getLang();
+  const res = await fetch(`${API_BASE}/news?lang=${encodeURIComponent(l)}`);
+  if (!res.ok) throw new Error("Failed to fetch news");
+  return res.json();
+}
+
+export async function fetchNewsItem(slug: string, lang?: string): Promise<News> {
+  const l = lang || getLang();
+  const res = await fetch(`${API_BASE}/news/${encodeURIComponent(slug)}?lang=${encodeURIComponent(l)}`);
+  if (!res.ok) throw new Error(res.status === 404 ? "News not found" : "Failed to fetch news");
+  return res.json();
+}
+
+export async function fetchAdminNews(): Promise<News[]> {
+  const res = await fetch(`${API_BASE}/admin/news`, { headers: authHeaders() });
+  if (!res.ok) throw new Error("Failed to fetch news");
+  return res.json();
+}
+
+export async function generateNewsWithAi(input: { topic: string; keyword?: string; brief?: string; wordCount?: number }): Promise<GeneratedNewsDraft> {
+  const res = await fetch(`${API_BASE}/admin/news/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "AI news generation failed");
+  return res.json();
+}
+
+export async function createNews(data: NewsInput): Promise<News> {
+  const res = await fetch(`${API_BASE}/admin/news`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(data) });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "Failed to create news");
+  return res.json();
+}
+
+export async function updateNews(id: number, data: NewsInput): Promise<News> {
+  const res = await fetch(`${API_BASE}/admin/news/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(data) });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "Failed to update news");
+  return res.json();
+}
+
+export async function deleteNews(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/admin/news/${id}`, { method: "DELETE", headers: authHeaders() });
+  if (!res.ok) throw new Error("Failed to delete news");
 }
 
 export async function fetchAdminGuides(): Promise<Guide[]> {
@@ -723,7 +794,7 @@ export async function uploadPrivateBookingPhoto(file: File): Promise<string> {
 
 export async function uploadAdminPublicImage(
   file: File,
-  scope: "vehicles" | "content-bg" | "content-office" | "guides",
+  scope: "vehicles" | "content-bg" | "content-office" | "guides" | "news",
 ): Promise<string> {
   const res = await fetch(`${API_BASE}/admin/uploads/public-image`, {
     method: "POST",

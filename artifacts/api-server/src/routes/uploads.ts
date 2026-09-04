@@ -10,7 +10,7 @@ router.post("/admin/uploads/public-image", adminAuth, limiter, async (req, res) 
   try {
     const contentType = String(req.headers["content-type"] || "").split(";")[0];
     const scope = String(req.headers["x-upload-scope"] || "vehicles");
-    if (!["vehicles", "content-bg", "content-office", "guides"].includes(scope)) {
+    if (!["vehicles", "content-bg", "content-office", "guides", "news"].includes(scope)) {
       res.status(400).json({ error: "Invalid upload scope" }); return;
     }
     if (!["image/jpeg", "image/png", "image/webp"].includes(contentType)) {
@@ -38,7 +38,7 @@ router.post("/admin/uploads/public-image", adminAuth, limiter, async (req, res) 
     const png = buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
     const webp = buffer.subarray(0, 4).toString("ascii") === "RIFF" && buffer.subarray(8, 12).toString("ascii") === "WEBP";
     if (!(jpeg || png || webp)) { res.status(415).json({ error: "Invalid image signature" }); return; }
-    const url = await uploadPublicImage(buffer, contentType, scope as "vehicles" | "content-bg" | "content-office" | "guides");
+    const url = await uploadPublicImage(buffer, contentType, scope as "vehicles" | "content-bg" | "content-office" | "guides" | "news");
     res.status(201).json({ url });
   } catch (err) {
     req.log?.error?.({ err }, "Public image upload failed");

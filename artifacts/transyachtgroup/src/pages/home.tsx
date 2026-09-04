@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Navbar } from "@/components/Navbar";
 import { useLocation } from "wouter";
-import { fetchFeaturedVehicles, fetchContent, submitRequest } from "@/lib/api";
+import { fetchFeaturedVehicles, fetchContent, fetchNews, submitRequest, type News } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePageView, trackFormSubmit } from "@/hooks/useAnalytics";
 import { CmsContent } from "@/components/CmsContent";
@@ -87,6 +87,12 @@ export default function Home() {
   const { data: siteContent = {} } = useQuery<Record<string, string>>({
     queryKey: ["content", lang],
     queryFn: () => fetchContent(lang),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+  const { data: latestNews = [] } = useQuery<News[]>({
+    queryKey: ["news", "latest", lang],
+    queryFn: () => fetchNews(lang).then((items) => items.slice(0, 3)),
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
   });
@@ -606,6 +612,55 @@ export default function Home() {
           </motion.div>
         </div>
       </section>
+
+      {/* NEWS */}
+      {latestNews.length > 0 && (
+        <section className="py-24 px-4 bg-background relative z-10">
+          <div className="max-w-7xl mx-auto">
+            <div className="mb-12 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.5em] text-gold/50 mb-4 font-light">
+                  Trans Yacht Group News
+                </p>
+                <h2 className="font-serif text-4xl md:text-5xl text-white tracking-tight">
+                  Latest News
+                </h2>
+              </div>
+              <a
+                href={`/news/?lang=${lang}`}
+                className="inline-flex items-center text-gold/70 hover:text-gold text-[11px] uppercase tracking-[0.25em] transition-colors"
+              >
+                View all news <ChevronRight size={13} className="ml-1" />
+              </a>
+            </div>
+            <div className="grid gap-6 md:grid-cols-3">
+              {latestNews.map((item) => (
+                <article key={item.id} className="overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.02]">
+                  {item.coverImage && (
+                    <a href={`/news/${item.slug}/?lang=${lang}`}>
+                      <img src={item.coverImage} alt="" className="aspect-[16/10] w-full object-cover" loading="lazy" />
+                    </a>
+                  )}
+                  <div className="p-6">
+                    <p className="mb-3 text-[10px] uppercase tracking-[0.2em] text-gold/60">
+                      {item.publishedAt ? new Date(item.publishedAt).toLocaleDateString(lang) : "News"}
+                    </p>
+                    <h3 className="line-clamp-2 font-serif text-xl leading-tight text-white">
+                      {item.title}
+                    </h3>
+                    <p className="mt-4 line-clamp-3 text-sm font-light leading-6 text-white/45">
+                      {item.excerpt}
+                    </p>
+                    <a href={`/news/${item.slug}/?lang=${lang}`} className="mt-6 inline-flex items-center text-sm text-gold">
+                      Read more <ChevronRight size={13} className="ml-1" />
+                    </a>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* REQUEST FORM */}
       <section

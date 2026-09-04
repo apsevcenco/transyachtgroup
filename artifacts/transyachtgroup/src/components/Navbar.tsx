@@ -39,6 +39,7 @@ export function Navbar() {
     { name: t("cars"), href: "/cars" },
     { name: t("about_us"), href: "/about" },
     { name: "Guides", href: "/guides/" },
+    { name: "News", href: "/news/" },
     { name: t("contact"), href: "/#request", hash: "request" },
   ];
 

@@ -102,6 +102,33 @@ export const guidesTable = pgTable(
   ],
 );
 
+export const newsTable = pgTable(
+  "news",
+  {
+    id: serial("id").primaryKey(),
+    slug: varchar("slug", { length: 160 }).notNull().unique(),
+    title: text("title").notNull(),
+    excerpt: text("excerpt").notNull(),
+    content: text("content").notNull(),
+    coverImage: text("cover_image"),
+    gallery: jsonb("gallery").notNull().default([]),
+    metaTitle: text("meta_title"),
+    metaDescription: text("meta_description"),
+    translations: jsonb("translations").default({}),
+    primaryKeyword: text("primary_keyword"),
+    brief: text("brief"),
+    scheduledAt: timestamp("scheduled_at"),
+    published: boolean("published").notNull().default(false),
+    publishedAt: timestamp("published_at"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("news_published_at_idx").on(table.published, table.publishedAt),
+    index("news_schedule_idx").on(table.scheduledAt),
+  ],
+);
+
 export const seoContentPlansTable = pgTable(
   "seo_content_plans",
   {
@@ -501,3 +528,11 @@ export const insertGuideSchema = createInsertSchema(guidesTable).omit({
 });
 export type InsertGuide = z.infer<typeof insertGuideSchema>;
 export type Guide = typeof guidesTable.$inferSelect;
+
+export const insertNewsSchema = createInsertSchema(newsTable).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertNews = z.infer<typeof insertNewsSchema>;
+export type News = typeof newsTable.$inferSelect;
