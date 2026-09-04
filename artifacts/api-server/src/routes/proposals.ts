@@ -134,7 +134,9 @@ function renderBusinessLetterHtml(input: {
   const c = input.copy;
   const benefits = c.benefits.map((benefit) => `<li>${escapeHtml(benefit)}</li>`).join("");
   const currentDate = new Intl.DateTimeFormat(input.language === "en" ? "en-GB" : input.language, { dateStyle: "long" }).format(new Date());
-  const greeting = input.recipientName?.trim() || c.greeting;
+  const greeting = c.greeting;
+  const formatLines = (value: string) => escapeHtml(value).replace(/\r?\n/g, "<br/>");
+  const recipientBlock = input.recipientName?.trim();
   const headlineSize = c.headline.length > 115 ? 15 : c.headline.length > 80 ? 17 : 20;
   const cleanContact = (value?: string) =>
     (value || "")
@@ -167,7 +169,9 @@ function renderBusinessLetterHtml(input: {
     .brand { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; position: relative; z-index: 1; }
     .logo { height: 11mm; width: auto; object-fit: contain; display: block; }
     .brand-name { font-family: 'Porter FT', Arial, sans-serif; letter-spacing: .22em; font-size: 15px; color: ${NEAR_BLACK}; }
-    .date { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #777; }
+    .address { min-width: 48mm; max-width: 74mm; text-align: ${dir === "rtl" ? "left" : "right"}; color: #5d5548; }
+    .address-block { font-family: 'Porter FT', Arial, sans-serif; font-size: 9px; line-height: 1.45; letter-spacing: .09em; text-transform: uppercase; color: ${NEAR_BLACK}; overflow-wrap: anywhere; }
+    .date { margin-top: 2.5mm; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: #777; }
     .hero { display: grid; grid-template-columns: 75mm 1fr; gap: 11mm; margin-top: 10mm; align-items: stretch; position: relative; z-index: 1; direction: ltr; }
     .photo { height: 88mm; overflow: hidden; background: transparent; display: flex; align-items: center; justify-content: center; color: ${GOLD_INK}; font-family: 'Porter FT', Arial, sans-serif; letter-spacing: .18em; text-align: center; padding: 0; }
     .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -193,7 +197,10 @@ function renderBusinessLetterHtml(input: {
   <main class="page">
     <section class="brand">
       <div>${logo}</div>
-      <div class="date">${escapeHtml(currentDate)}</div>
+      <div class="address">
+        ${recipientBlock ? `<div class="address-block">${formatLines(recipientBlock)}</div>` : ""}
+        <div class="date">${escapeHtml(currentDate)}</div>
+      </div>
     </section>
     <section class="hero">${image}<div class="headline"><h1>${escapeHtml(c.headline)}</h1><div class="sub">${escapeHtml(c.subheadline)}</div></div></section>
     <section class="content">
@@ -204,7 +211,7 @@ function renderBusinessLetterHtml(input: {
         <p>${escapeHtml(c.partnerAngle)}</p>
         <div class="closing">
           <div class="regards">Warm regards,</div>
-          <div class="signature">${escapeHtml(c.signature)}</div>
+          <div class="signature">${formatLines(c.signature)}</div>
           ${input.signerRole?.trim() ? `<div class="signer-role">${escapeHtml(input.signerRole)}</div>` : ""}
         </div>
         <div class="cta">${escapeHtml(c.callToAction)}</div>

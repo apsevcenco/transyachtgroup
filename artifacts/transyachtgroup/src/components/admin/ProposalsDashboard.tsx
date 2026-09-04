@@ -481,11 +481,12 @@ export function ProposalsDashboard() {
                 </label>
                 <label className="text-[10px] uppercase tracking-wide text-white/40">
                   Addressed to
-                  <input
+                  <textarea
                     value={businessRecipientName}
                     onChange={(e) => setBusinessRecipientName(e.target.value)}
-                    placeholder="General Manager, Hotel de Paris"
-                    className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white min-h-[44px] placeholder:text-white/25"
+                    rows={3}
+                    placeholder={"General Manager\nHotel de Paris\nMonaco"}
+                    className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white placeholder:text-white/25"
                   />
                 </label>
                 <label className="text-[10px] uppercase tracking-wide text-white/40">
