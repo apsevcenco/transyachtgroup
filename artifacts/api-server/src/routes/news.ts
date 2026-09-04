@@ -242,6 +242,34 @@ router.post("/admin/news/generate", adminAuth, newsAiLimiter, async (req, res) =
   }
 });
 
+router.post("/admin/news/translate-draft", adminAuth, newsAiLimiter, async (req, res) => {
+  try {
+    const value = req.body && typeof req.body === "object" ? req.body as Record<string, unknown> : {};
+    const source = cleanCopy(value);
+    const translations: Record<string, NewsCopy> = {};
+    for (const [code, language] of Object.entries(TARGET_LANGUAGES)) {
+      const translated = await requestOpenAiJson(
+        `You localize Trans Yacht Group news. Return only valid JSON with the same fields.
+Keep HTML structure, preserve internal links, translate naturally for luxury travel readers.`,
+        `Translate and localize this news article into ${language}.
+SOURCE=${JSON.stringify(source)}
+Return {"title":"...","excerpt":"...","content":"...","metaTitle":"...","metaDescription":"..."}.`,
+      );
+      translations[code] = cleanCopy(translated);
+    }
+    res.json({ translations });
+  } catch (err) {
+    req.log?.error?.({ err }, "AI news translation failed");
+    const code = err instanceof Error ? err.message : "";
+    const error = code === "OPENAI_NOT_CONFIGURED" ? "OpenAI is not configured on the server"
+      : code.startsWith("OPENAI_401") ? "OpenAI rejected the API key"
+        : code.startsWith("OPENAI_429") ? "OpenAI quota or billing limit reached"
+          : code.startsWith("OPENAI_403") ? "This OpenAI account does not have access to the configured model"
+            : "AI news translation failed. Check the backend logs for the recorded OpenAI error";
+    res.status(code === "OPENAI_NOT_CONFIGURED" ? 503 : 502).json({ error });
+  }
+});
+
 router.post("/admin/news", adminAuth, async (req, res) => {
   try {
     const data = parseNewsInput(req.body);

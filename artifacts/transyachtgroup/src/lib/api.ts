@@ -186,6 +186,22 @@ export async function generateNewsWithAi(input: { topic: string; keyword?: strin
   return res.json();
 }
 
+export async function translateNewsDraftWithAi(input: {
+  title: string;
+  excerpt: string;
+  content: string;
+  metaTitle?: string | null;
+  metaDescription?: string | null;
+}): Promise<Record<string, Record<string, string>>> {
+  const res = await fetch(`${API_BASE}/admin/news/translate-draft`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "AI news translation failed");
+  return (await res.json()).translations;
+}
+
 export async function createNews(data: NewsInput): Promise<News> {
   const res = await fetch(`${API_BASE}/admin/news`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(data) });
   if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "Failed to create news");

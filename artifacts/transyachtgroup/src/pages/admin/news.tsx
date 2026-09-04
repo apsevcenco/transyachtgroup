@@ -3,8 +3,15 @@ import { ArrowLeft, Pencil, Plus, Sparkles, Trash2, Upload } from "lucide-react"
 import { useLocation } from "wouter";
 
 import RichTextEditor from "@/components/RichTextEditor";
-import { checkAuth, createNews, deleteNews, fetchAdminNews, generateNewsWithAi, updateNews, uploadAdminPublicImage, type News, type NewsInput } from "@/lib/api";
+import { checkAuth, createNews, deleteNews, fetchAdminNews, generateNewsWithAi, translateNewsDraftWithAi, updateNews, uploadAdminPublicImage, type News, type NewsInput } from "@/lib/api";
 import { compressImage } from "@/lib/imageCompress";
+
+const translationLanguages = [
+  { code: "fr", label: "Français" },
+  { code: "ru", label: "Русский" },
+  { code: "ro", label: "Română" },
+  { code: "ar", label: "العربية" },
+] as const;
 
 const empty: NewsInput = {
   slug: "",
@@ -33,6 +40,7 @@ export default function AdminNews() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [ai, setAi] = useState({ topic: "", keyword: "", brief: "", wordCount: 1200 });
+  const [translationLang, setTranslationLang] = useState<(typeof translationLanguages)[number]["code"]>("fr");
 
   const load = async () => setItems(await fetchAdminNews());
   useEffect(() => {
@@ -99,6 +107,45 @@ export default function AdminNews() {
       setMessage("AI news draft and translations are ready. Review it, add photos, then publish.");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "AI news generation failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const setTranslation = (field: string, value: string) => {
+    setForm((current) => ({
+      ...current,
+      translations: {
+        ...(current.translations || {}),
+        [translationLang]: {
+          ...((current.translations || {})[translationLang] || {}),
+          [field]: value,
+        },
+      },
+    }));
+  };
+
+  const activeTranslation = (form.translations || {})[translationLang] || {};
+
+  const translateDraft = async () => {
+    const plainContent = form.content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+    if (form.title.trim().length < 3 || plainContent.length < 20) {
+      setMessage("Write or generate the English news article before translating.");
+      return;
+    }
+    setBusy(true); setMessage("");
+    try {
+      const translations = await translateNewsDraftWithAi({
+        title: form.title,
+        excerpt: form.excerpt,
+        content: form.content,
+        metaTitle: form.metaTitle,
+        metaDescription: form.metaDescription,
+      });
+      setForm((current) => ({ ...current, translations: { ...(current.translations || {}), ...translations } }));
+      setMessage("AI translations are ready. Review and edit them, then save.");
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "AI news translation failed");
     } finally {
       setBusy(false);
     }
@@ -175,6 +222,38 @@ export default function AdminNews() {
             <label className="text-xs text-white/55">SEO title<input value={form.metaTitle || ""} onChange={(e) => set("metaTitle", e.target.value)} className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white" /></label>
             <label className="text-xs text-white/55">SEO description<input value={form.metaDescription || ""} onChange={(e) => set("metaDescription", e.target.value)} className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white" /></label>
             <div className="md:col-span-2"><p className="mb-2 text-xs text-white/55">Article</p><RichTextEditor content={form.content} onChange={(html) => set("content", html)} /></div>
+          </div>
+
+          <div className="mt-6 rounded-lg border border-white/10 bg-black/20 p-4 md:p-5">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-gold/70">Translations</p>
+                <p className="mt-1 text-xs text-white/35">Generate all languages with AI, then edit each version manually before saving.</p>
+              </div>
+              <button type="button" disabled={busy || form.title.trim().length < 3} onClick={translateDraft} className="inline-flex items-center gap-2 rounded border border-gold/30 px-4 py-2 text-xs text-gold hover:bg-gold/10 disabled:opacity-40"><Sparkles size={14} /> {busy ? "Working…" : "Translate article with AI"}</button>
+            </div>
+            <div className="mb-5 flex flex-wrap gap-2">
+              {translationLanguages.map((language) => (
+                <button
+                  type="button"
+                  key={language.code}
+                  onClick={() => setTranslationLang(language.code)}
+                  className={`rounded px-3 py-2 text-xs transition ${translationLang === language.code ? "bg-gold text-black" : "border border-white/10 text-white/55 hover:text-gold"}`}
+                >
+                  {language.label}
+                </button>
+              ))}
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="text-xs text-white/55">Translated title<input value={activeTranslation.title || ""} onChange={(e) => setTranslation("title", e.target.value)} className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white" /></label>
+              <label className="text-xs text-white/55">Translated SEO title<input value={activeTranslation.metaTitle || ""} onChange={(e) => setTranslation("metaTitle", e.target.value)} className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white" /></label>
+              <label className="text-xs text-white/55 md:col-span-2">Translated excerpt<textarea value={activeTranslation.excerpt || ""} onChange={(e) => setTranslation("excerpt", e.target.value)} rows={2} className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white" /></label>
+              <label className="text-xs text-white/55 md:col-span-2">Translated SEO description<input value={activeTranslation.metaDescription || ""} onChange={(e) => setTranslation("metaDescription", e.target.value)} className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white" /></label>
+              <div className="md:col-span-2">
+                <p className="mb-2 text-xs text-white/55">Translated article</p>
+                <RichTextEditor content={activeTranslation.content || "<p></p>"} onChange={(html) => setTranslation("content", html)} />
+              </div>
+            </div>
           </div>
 
           <div className="mt-6 grid gap-5 md:grid-cols-2">
