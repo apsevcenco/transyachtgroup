@@ -68,6 +68,7 @@ interface ParsedContractRequest {
   returnLocation: string;
   totalAmount: number;
   deliveryCost: number;
+  vatPercent: number | null;
   depositAmount: number;
   kmPerDay: number;
   extraKmPrice: number;
@@ -194,6 +195,7 @@ function parseContractRequest(
 
   const totalAmount = numOrNull(b.totalAmount);
   const deliveryCost = numOrNull(b.deliveryCost) ?? 0;
+  const vatPercent = numOrNull(b.vatPercent);
   const depositAmount = numOrNull(b.depositAmount);
   const kmPerDay = numOrNull(b.kmPerDay);
   const extraKmPrice = numOrNull(b.extraKmPrice);
@@ -201,6 +203,8 @@ function parseContractRequest(
     return { error: "totalAmount must be a non-negative number" };
   if (deliveryCost < 0)
     return { error: "deliveryCost must be a non-negative number" };
+  if (vatPercent != null && (vatPercent < 0 || vatPercent > 100))
+    return { error: "vatPercent must be between 0 and 100" };
   if (depositAmount == null || depositAmount < 0)
     return { error: "depositAmount must be a non-negative number" };
   if (kmPerDay == null || kmPerDay < 0)
@@ -268,6 +272,7 @@ function parseContractRequest(
       returnLocation: requiredText.returnLocation,
       totalAmount,
       deliveryCost,
+      vatPercent,
       depositAmount,
       kmPerDay,
       extraKmPrice,
@@ -432,11 +437,18 @@ router.post(
         returnLocation: text("returnLocation"),
         totalAmount: optionalNumber("totalAmount"),
         deliveryCost: optionalNumber("deliveryCost"),
+        vatPercent: optionalNumber("vatPercent"),
         depositAmount: optionalNumber("depositAmount"),
         kmPerDay: optionalNumber("kmPerDay"),
         extraKmPrice: optionalNumber("extraKmPrice"),
         representativeName: text("representativeName", 200),
       };
+      if (
+        contractInput.vatPercent != null &&
+        (contractInput.vatPercent < 0 || contractInput.vatPercent > 100)
+      ) {
+        throw new Error("vatPercent must be between 0 and 100");
+      }
 
       const buffer = await renderPdf(renderContractHtml(contractInput), {
         scale: 1,
@@ -629,6 +641,7 @@ router.post(
           returnLocation: data.returnLocation,
           totalAmount: data.totalAmount,
           deliveryCost: data.deliveryCost,
+          vatPercent: data.vatPercent,
           depositAmount: data.depositAmount,
           kmPerDay: data.kmPerDay,
           extraKmPrice: data.extraKmPrice,

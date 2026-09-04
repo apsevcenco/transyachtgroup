@@ -40,6 +40,7 @@ export interface ContractPrefill {
   returnLocation?: string;
   totalAmount?: number | null;
   deliveryCost?: number | null;
+  vatPercent?: number | null;
   depositAmount?: number | null;
   kmPerDay?: number | null;
   extraKmPrice?: number | null;
@@ -62,6 +63,7 @@ export function buildContractPrefillFromBooking(
     returnTime: booking.endTime || "23:59",
     totalAmount: booking.totalAmount ?? null,
     deliveryCost: booking.deliveryCost ?? null,
+    vatPercent: booking.vatPercent ?? null,
     depositAmount: booking.depositAmount ?? null,
     kmPerDay: booking.kmIncluded ?? null,
     extraKmPrice: booking.pricePerExtraKm ?? null,
@@ -147,6 +149,7 @@ export function ContractGenerator({
   const [deliveryCost, setDeliveryCost] = useState(
     numToStr(prefill?.deliveryCost),
   );
+  const [vatPercent, setVatPercent] = useState(numToStr(prefill?.vatPercent));
   const [depositAmount, setDepositAmount] = useState(
     numToStr(prefill?.depositAmount),
   );
@@ -251,6 +254,7 @@ export function ContractGenerator({
     if (p.returnLocation) setReturnLocation(p.returnLocation);
     if (p.totalAmount != null) setTotalAmount(numToStr(p.totalAmount));
     if (p.deliveryCost != null) setDeliveryCost(numToStr(p.deliveryCost));
+    if (p.vatPercent != null) setVatPercent(numToStr(p.vatPercent));
     if (p.depositAmount != null) setDepositAmount(numToStr(p.depositAmount));
     if (p.kmPerDay != null) setKmPerDay(numToStr(p.kmPerDay));
     if (p.extraKmPrice != null) setExtraKmPrice(numToStr(p.extraKmPrice));
@@ -320,6 +324,13 @@ export function ContractGenerator({
     `${returnDate}T${returnTime || "23:59"}` >=
       `${pickupDate}T${pickupTime || "00:00"}`;
   const canSubmit = oneOffMode ? oneOffFormValid : registeredFormValid;
+  const rentalAmountValue = strToNum(totalAmount);
+  const deliveryCostValue = deliveryCost.trim() ? strToNum(deliveryCost) : 0;
+  const vatPercentValue = vatPercent.trim() ? strToNum(vatPercent) : 0;
+  const depositAmountValue = depositAmount.trim() ? strToNum(depositAmount) : 0;
+  const taxableSubtotal = rentalAmountValue + deliveryCostValue;
+  const vatAmount = taxableSubtotal * (vatPercentValue / 100);
+  const totalDue = taxableSubtotal + vatAmount + depositAmountValue;
 
   const handleGenerate = async () => {
     if (!canSubmit || (!oneOffMode && !vehicleId)) return;
@@ -375,6 +386,7 @@ export function ContractGenerator({
           deliveryCost: deliveryCost.trim()
             ? strToNum(deliveryCost)
             : undefined,
+          vatPercent: vatPercent.trim() ? strToNum(vatPercent) : undefined,
           depositAmount: depositAmount.trim()
             ? strToNum(depositAmount)
             : undefined,
@@ -402,6 +414,7 @@ export function ContractGenerator({
         vehicleId: vehicleId!,
         totalAmount: strToNum(totalAmount),
         deliveryCost: deliveryCost.trim() ? strToNum(deliveryCost) : 0,
+        vatPercent: vatPercent.trim() ? strToNum(vatPercent) : 0,
         depositAmount: strToNum(depositAmount),
         kmPerDay: strToNum(kmPerDay),
         extraKmPrice: strToNum(extraKmPrice),
@@ -870,6 +883,16 @@ export function ContractGenerator({
               />
             </div>
             <div>
+              <label className={labelClass}>VAT / TVA (%)</label>
+              <input
+                type="number"
+                value={vatPercent}
+                onChange={(e) => setVatPercent(e.target.value)}
+                className={inputClass}
+                placeholder="Transferred from booking"
+              />
+            </div>
+            <div>
               <label className={labelClass}>Security Deposit (€)</label>
               <input
                 type="number"
@@ -877,6 +900,18 @@ export function ContractGenerator({
                 onChange={(e) => setDepositAmount(e.target.value)}
                 className={inputClass}
               />
+            </div>
+            <div className="rounded-md border border-white/[0.08] bg-black/20 px-3 py-2">
+              <p className={labelClass}>VAT Amount</p>
+              <p className="text-sm text-white">
+                {vatAmount > 0 ? `€ ${vatAmount.toLocaleString("en-GB", { maximumFractionDigits: 2 })}` : "—"}
+              </p>
+            </div>
+            <div className="rounded-md border border-gold/25 bg-gold/[0.08] px-3 py-2">
+              <p className={labelClass}>Total Due incl. VAT + Deposit</p>
+              <p className="font-porter text-sm text-gold">
+                {totalDue > 0 ? `€ ${totalDue.toLocaleString("en-GB", { maximumFractionDigits: 2 })}` : "—"}
+              </p>
             </div>
             <div>
               <label className={labelClass}>Km / Day Included</label>

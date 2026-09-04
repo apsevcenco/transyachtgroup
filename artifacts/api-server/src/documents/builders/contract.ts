@@ -64,6 +64,7 @@ export interface ContractInput {
   returnLocation: string;
   totalAmount: number | null;
   deliveryCost: number | null;
+  vatPercent?: number | null;
   depositAmount: number | null;
   kmPerDay: number | null;
   extraKmPrice: number | null;
@@ -169,10 +170,16 @@ export function renderContractHtml(input: ContractInput): string {
       : null;
   const agreedMileage =
     input.kmPerDay == null || days == null ? null : input.kmPerDay * days;
-  const totalDue =
-    input.totalAmount == null || input.depositAmount == null
+  const taxableSubtotal =
+    input.totalAmount == null ? null : input.totalAmount + (input.deliveryCost ?? 0);
+  const vatAmount =
+    taxableSubtotal == null || input.vatPercent == null
       ? null
-      : input.totalAmount + (input.deliveryCost ?? 0) + input.depositAmount;
+      : taxableSubtotal * (input.vatPercent / 100);
+  const totalDue =
+    taxableSubtotal == null || input.depositAmount == null
+      ? null
+      : taxableSubtotal + (vatAmount ?? 0) + input.depositAmount;
   const vehicleName = stripHtml(input.vehicle.name);
   const renterLegalEntity = stripHtml(input.renter.legalEntity || "");
   const compactPage1 = !!input.additionalDriver || !!renterLegalEntity;
@@ -380,6 +387,7 @@ export function renderContractHtml(input: ContractInput): string {
     `<tbody>` +
     `<tr><td>Vehicle Rental</td><td>${esc(formatDateShort(input.pickupDate))} → ${esc(formatDateShort(input.returnDate))}${days == null ? "" : ` (${days} day${days === 1 ? "" : "s"})`}</td><td class="ctr-ta-r">${esc(fmtEur(input.totalAmount))}</td></tr>` +
     `<tr><td>Vehicle Delivery</td><td>Delivery to the agreed pick-up location</td><td class="ctr-ta-r">${esc(fmtEur(input.deliveryCost ?? 0))}</td></tr>` +
+    `<tr><td>VAT / TVA${input.vatPercent == null ? "" : ` (${esc(String(input.vatPercent))}%)`}</td><td>Calculated on rental and delivery</td><td class="ctr-ta-r">${esc(fmtEur(vatAmount))}</td></tr>` +
     `<tr><td>Excess Mileage</td><td>Billed after return — per km over agreed allowance</td><td class="ctr-ta-r">TBD</td></tr>` +
     `<tr><td>Insurance</td><td>Included in rental</td><td class="ctr-ta-r">Included</td></tr>` +
     `<tr><td>Security Deposit (Refundable)</td><td>Held for duration of rental</td><td class="ctr-ta-r">${esc(fmtEur(input.depositAmount))}</td></tr>` +

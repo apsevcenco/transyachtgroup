@@ -1232,6 +1232,7 @@ export interface ContractGenerateRequest {
   returnLocation: string;
   totalAmount: number;
   deliveryCost: number;
+  vatPercent?: number;
   depositAmount: number;
   kmPerDay: number;
   extraKmPrice: number;
@@ -1316,6 +1317,7 @@ export interface StoredContract {
     returnLocation?: string;
     totalAmount?: number;
     deliveryCost?: number;
+    vatPercent?: number;
     depositAmount?: number;
     kmPerDay?: number;
     extraKmPrice?: number;
