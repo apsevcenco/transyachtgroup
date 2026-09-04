@@ -4,6 +4,7 @@ import { db } from "@workspace/db";
 import { vehiclesTable, siteContentTable } from "@workspace/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { generateDocument } from "../documents/generateDocument";
+import { LOGO_DATA_URI } from "../documents/builders/proposal";
 import type {
   RentalDates,
   TransferDetails,
@@ -12,6 +13,7 @@ import {
   renderFleetOfferHtml,
   type FleetOfferVehicle,
 } from "../documents/builders/fleetOffer";
+import { GOLD, GOLD_INK, HAIRLINE, NEAR_BLACK } from "../documents/core/theme";
 import {
   normalizeTemplate,
   PDF_CONTENT_TYPE,
@@ -131,6 +133,7 @@ function renderBusinessLetterHtml(input: {
   const image = input.imageUrl
     ? `<div class="photo"><img src="${escapeHtml(input.imageUrl)}" alt="Luxury service" /></div>`
     : `<div class="photo placeholder">TRANS YACHT GROUP</div>`;
+  const logo = LOGO_DATA_URI ? `<img class="logo" src="${LOGO_DATA_URI}" alt="Trans Yacht Group" />` : `<div class="brand-name">TRANSYACHTGROUP</div>`;
   return `<!doctype html>
 <html lang="${input.language}" dir="${dir}">
 <head>
@@ -138,35 +141,36 @@ function renderBusinessLetterHtml(input: {
   <style>
     @page { size: A4; margin: 0; }
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: Inter, Arial, sans-serif; color: #111; background: #f7f3ea; }
-    .page { width: 210mm; height: 297mm; padding: 18mm; background: linear-gradient(135deg, #fbf8ef 0%, #f1eadb 100%); position: relative; overflow: hidden; }
-    .page:before { content: ""; position: absolute; inset: 10mm; border: 1px solid rgba(184,138,61,.35); pointer-events: none; }
+    body { margin: 0; font-family: Inter, Arial, sans-serif; color: ${NEAR_BLACK}; background: #fff; }
+    .page { width: 210mm; height: 297mm; padding: 18mm; background: #fff; position: relative; overflow: hidden; }
+    .page:before { content: ""; position: absolute; inset: 10mm; border: 1px solid ${HAIRLINE}; pointer-events: none; }
     .brand { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; position: relative; z-index: 1; }
-    .brand-name { font-family: Georgia, serif; letter-spacing: .22em; font-size: 15px; color: #111; }
-    .label { letter-spacing: .24em; text-transform: uppercase; color: #a8792b; font-size: 9px; margin-top: 4px; }
+    .logo { height: 11mm; width: auto; object-fit: contain; display: block; }
+    .brand-name { font-family: Georgia, serif; letter-spacing: .22em; font-size: 15px; color: ${NEAR_BLACK}; }
+    .label { letter-spacing: .24em; text-transform: uppercase; color: ${GOLD_INK}; font-size: 9px; margin-top: 4px; }
     .meta { text-align: ${dir === "rtl" ? "left" : "right"}; font-size: 10px; line-height: 1.6; color: #5d5548; max-width: 60mm; }
     .hero { display: grid; grid-template-columns: 78mm 1fr; gap: 12mm; margin-top: 15mm; align-items: stretch; position: relative; z-index: 1; direction: ltr; }
     .photo { height: 105mm; border-radius: 2mm; overflow: hidden; background: #171717; display: flex; align-items: center; justify-content: center; color: #d9b46a; font-family: Georgia, serif; letter-spacing: .18em; text-align: center; padding: 10mm; }
     .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .headline { direction: ${dir}; }
-    h1 { font-family: Georgia, serif; font-size: 33px; line-height: 1.05; margin: 0 0 8mm; font-weight: 400; letter-spacing: -.02em; }
-    .sub { color: #7c622f; font-size: 13px; line-height: 1.55; margin-bottom: 10mm; }
+    h1 { font-family: Georgia, serif; font-size: 33px; line-height: 1.05; margin: 0 0 8mm; font-weight: 400; letter-spacing: -.02em; color: ${NEAR_BLACK}; }
+    .sub { color: ${GOLD_INK}; font-size: 13px; line-height: 1.55; margin-bottom: 10mm; }
     .content { margin-top: 13mm; display: grid; grid-template-columns: 1fr 68mm; gap: 10mm; position: relative; z-index: 1; direction: ${dir}; }
     p { margin: 0 0 4.5mm; font-size: 11.5px; line-height: 1.62; color: #2b2924; }
     .greeting { font-family: Georgia, serif; font-size: 17px; color: #111; margin-bottom: 5mm; }
-    .panel { border-left: ${dir === "rtl" ? "0" : "1px"} solid rgba(184,138,61,.35); border-right: ${dir === "rtl" ? "1px" : "0"} solid rgba(184,138,61,.35); padding-${dir === "rtl" ? "right" : "left"}: 7mm; }
-    .panel h2 { margin: 0 0 4mm; font-size: 10px; text-transform: uppercase; letter-spacing: .2em; color: #a8792b; font-weight: 600; }
+    .panel { border-left: ${dir === "rtl" ? "0" : "1px"} solid ${HAIRLINE}; border-right: ${dir === "rtl" ? "1px" : "0"} solid ${HAIRLINE}; padding-${dir === "rtl" ? "right" : "left"}: 7mm; }
+    .panel h2 { margin: 0 0 4mm; font-size: 10px; text-transform: uppercase; letter-spacing: .2em; color: ${GOLD_INK}; font-weight: 600; }
     ul { margin: 0; padding-${dir === "rtl" ? "right" : "left"}: 5mm; }
     li { margin-bottom: 3.5mm; font-size: 11px; line-height: 1.45; color: #2b2924; }
-    .cta { margin-top: 7mm; padding: 5mm 6mm; background: #111; color: #f5ead2; font-size: 11px; line-height: 1.55; }
+    .cta { margin-top: 7mm; padding: 5mm 6mm; background: ${NEAR_BLACK}; color: #fff; border-bottom: 2px solid ${GOLD}; font-size: 11px; line-height: 1.55; }
     .signature { margin-top: 7mm; font-family: Georgia, serif; font-size: 13px; color: #111; white-space: pre-line; }
-    .footer { position: absolute; left: 18mm; right: 18mm; bottom: 12mm; display: flex; justify-content: space-between; gap: 10px; border-top: 1px solid rgba(184,138,61,.35); padding-top: 4mm; font-size: 9.5px; color: #5d5548; z-index: 1; direction: ltr; }
+    .footer { position: absolute; left: 18mm; right: 18mm; bottom: 12mm; display: flex; justify-content: space-between; gap: 10px; border-top: 1px solid ${HAIRLINE}; padding-top: 4mm; font-size: 9.5px; color: #5d5548; z-index: 1; direction: ltr; }
   </style>
 </head>
 <body>
   <main class="page">
     <section class="brand">
-      <div><div class="brand-name">TRANS YACHT GROUP</div><div class="label">${escapeHtml(input.service)}</div></div>
+      <div>${logo}<div class="label">${escapeHtml(input.service)}</div></div>
       <div class="meta">${escapeHtml(input.recipientType)}<br/>${escapeHtml(input.topic)}</div>
     </section>
     <section class="hero">${image}<div class="headline"><h1>${escapeHtml(c.headline)}</h1><div class="sub">${escapeHtml(c.subheadline)}</div></div></section>
@@ -637,7 +641,7 @@ router.post(
 );
 
 router.post(
-  "/admin/proposals/business-letter",
+  "/admin/proposals/business-letter-draft",
   adminAuth,
   pdfLimiter,
   async (req, res) => {
@@ -651,7 +655,6 @@ router.post(
       const topic = text("topic", 180);
       const service = text("service", 180) || "Luxury car rental and VIP transfers";
       const notes = text("notes", 2_000);
-      const imageUrl = text("imageUrl", 2_000) || null;
       const contactName = text("contactName", 120) || "Trans Yacht Group";
 
       if (!topic) {
@@ -684,6 +687,37 @@ Return JSON with:
 }`,
       );
       const copy = cleanBusinessLetter(raw);
+      res.json(copy);
+    } catch (err: unknown) {
+      const code = err instanceof Error ? err.message : "";
+      logger.error({ err: code || String(err) }, "business letter draft error");
+      const error = code === "OPENAI_NOT_CONFIGURED" ? "OpenAI is not configured on the server"
+        : code.startsWith("OPENAI_401") ? "OpenAI rejected the API key"
+          : code.startsWith("OPENAI_429") ? "OpenAI quota or billing limit reached"
+            : code.startsWith("OPENAI_403") ? "This OpenAI account does not have access to the configured model"
+              : "Failed to generate business letter draft";
+      res.status(code === "OPENAI_NOT_CONFIGURED" ? 503 : 500).json({ error });
+    }
+  },
+);
+
+router.post(
+  "/admin/proposals/business-letter",
+  adminAuth,
+  pdfLimiter,
+  async (req, res) => {
+    try {
+      const value = req.body && typeof req.body === "object" ? req.body as Record<string, unknown> : {};
+      const text = (key: string, max: number) => typeof value[key] === "string" ? value[key].trim().slice(0, max) : "";
+      const language = Object.keys(languageNames).includes(text("language", 8))
+        ? text("language", 8) as keyof typeof languageNames
+        : "en";
+      const recipientType = text("recipientType", 120) || "Concierge service";
+      const recipientName = text("recipientName", 180);
+      const topic = text("topic", 180) || "Luxury partnership proposal";
+      const service = text("service", 180) || "Luxury car rental and VIP transfers";
+      const imageUrl = text("imageUrl", 2_000) || null;
+      const copy = cleanBusinessLetter(value.copy);
 
       const contentRows = await db
         .select({ key: siteContentTable.key, value: siteContentTable.value })
@@ -707,7 +741,7 @@ Return JSON with:
         copy,
         language,
         imageUrl,
-        topic,
+        topic: recipientName ? `${topic} · ${recipientName}` : topic,
         service,
         recipientType,
         contact,

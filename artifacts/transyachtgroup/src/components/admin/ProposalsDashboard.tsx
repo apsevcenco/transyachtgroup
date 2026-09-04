@@ -10,8 +10,10 @@ import {
   fetchVehicles,
   checkAvailability,
   generateAdminProposal,
+  generateBusinessLetterDraft,
   generateBusinessLetterPdf,
   type Booking,
+  type BusinessLetterCopy,
   uploadAdminPublicImage,
 } from "@/lib/api";
 import { compressImage } from "@/lib/imageCompress";
@@ -124,11 +126,13 @@ export function ProposalsDashboard() {
   const [error, setError] = useState("");
   const [businessLang, setBusinessLang] = useState<BusinessLang>("en");
   const [businessRecipientType, setBusinessRecipientType] = useState("Concierge service");
+  const [businessRecipientName, setBusinessRecipientName] = useState("");
   const [businessTopic, setBusinessTopic] = useState("");
   const [businessService, setBusinessService] = useState("Luxury car rental and VIP transfers");
   const [businessNotes, setBusinessNotes] = useState("");
   const [businessContactName, setBusinessContactName] = useState("Trans Yacht Group");
   const [businessImageUrl, setBusinessImageUrl] = useState<string | null>(null);
+  const [businessCopy, setBusinessCopy] = useState<BusinessLetterCopy | null>(null);
   const [uploadingBusinessImage, setUploadingBusinessImage] = useState(false);
 
   useEffect(() => {
@@ -334,17 +338,18 @@ export function ProposalsDashboard() {
   };
 
   const handleGenerateBusinessLetter = async () => {
+    if (!businessCopy) return;
     setGenerating(true);
     setError("");
     try {
       const blob = await generateBusinessLetterPdf({
         recipientType: businessRecipientType,
+        recipientName: businessRecipientName,
         language: businessLang,
         topic: businessTopic,
         service: businessService,
-        notes: businessNotes,
         imageUrl: businessImageUrl,
-        contactName: businessContactName,
+        copy: businessCopy,
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -359,6 +364,62 @@ export function ProposalsDashboard() {
     } finally {
       setGenerating(false);
     }
+  };
+
+  const handleGenerateBusinessDraft = async () => {
+    setGenerating(true);
+    setError("");
+    try {
+      const draft = await generateBusinessLetterDraft({
+        recipientType: businessRecipientType,
+        language: businessLang,
+        topic: businessTopic,
+        service: businessService,
+        notes: businessNotes,
+        contactName: businessContactName,
+      });
+      setBusinessCopy(draft);
+    } catch (err: any) {
+      setError(err.message || "Failed to generate business letter draft");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const updateBusinessCopy = (field: keyof BusinessLetterCopy, value: string) => {
+    setBusinessCopy((current) => {
+      const base: BusinessLetterCopy = current || {
+        headline: "",
+        subheadline: "",
+        greeting: "",
+        opening: "",
+        valueProposition: "",
+        benefits: ["", "", "", ""],
+        partnerAngle: "",
+        callToAction: "",
+        signature: "",
+      };
+      return { ...base, [field]: value };
+    });
+  };
+
+  const updateBusinessBenefit = (index: number, value: string) => {
+    setBusinessCopy((current) => {
+      const base: BusinessLetterCopy = current || {
+        headline: "",
+        subheadline: "",
+        greeting: "",
+        opening: "",
+        valueProposition: "",
+        benefits: ["", "", "", ""],
+        partnerAngle: "",
+        callToAction: "",
+        signature: "",
+      };
+      const benefits = [...base.benefits];
+      benefits[index] = value;
+      return { ...base, benefits };
+    });
   };
 
   return (
@@ -410,6 +471,15 @@ export function ProposalsDashboard() {
                     <option>Event agency</option>
                     <option>Private aviation partner</option>
                   </select>
+                </label>
+                <label className="text-[10px] uppercase tracking-wide text-white/40">
+                  Addressed to
+                  <input
+                    value={businessRecipientName}
+                    onChange={(e) => setBusinessRecipientName(e.target.value)}
+                    placeholder="General Manager, Hotel de Paris"
+                    className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white min-h-[44px] placeholder:text-white/25"
+                  />
                 </label>
                 <label className="text-[10px] uppercase tracking-wide text-white/40">
                   Language
@@ -486,6 +556,82 @@ export function ProposalsDashboard() {
                 </div>
               </div>
             </div>
+            <div className="border border-white/[0.08] rounded-lg p-5 bg-white/[0.02]">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-gold/70">
+                    Editable AI draft
+                  </p>
+                  <p className="mt-1 text-xs text-white/35">
+                    Generate the text first, edit it here, then create the PDF.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleGenerateBusinessDraft}
+                  disabled={!businessTopic.trim() || generating}
+                  className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-md border border-gold/30 text-xs uppercase tracking-[0.16em] text-gold hover:bg-gold/10 disabled:opacity-40"
+                >
+                  {generating ? <Loader2 size={15} className="animate-spin" /> : null}
+                  Write with AI
+                </button>
+              </div>
+              {businessCopy ? (
+                <div className="grid md:grid-cols-2 gap-4">
+                  <label className="text-[10px] uppercase tracking-wide text-white/40 md:col-span-2">
+                    Headline
+                    <input value={businessCopy.headline} onChange={(e) => updateBusinessCopy("headline", e.target.value)} className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white min-h-[44px]" />
+                  </label>
+                  <label className="text-[10px] uppercase tracking-wide text-white/40 md:col-span-2">
+                    Subheadline
+                    <textarea value={businessCopy.subheadline} onChange={(e) => updateBusinessCopy("subheadline", e.target.value)} rows={2} className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white" />
+                  </label>
+                  <label className="text-[10px] uppercase tracking-wide text-white/40">
+                    Greeting
+                    <input value={businessCopy.greeting} onChange={(e) => updateBusinessCopy("greeting", e.target.value)} className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white min-h-[44px]" />
+                  </label>
+                  <label className="text-[10px] uppercase tracking-wide text-white/40">
+                    Signature
+                    <input value={businessCopy.signature} onChange={(e) => updateBusinessCopy("signature", e.target.value)} className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white min-h-[44px]" />
+                  </label>
+                  <label className="text-[10px] uppercase tracking-wide text-white/40 md:col-span-2">
+                    Opening
+                    <textarea value={businessCopy.opening} onChange={(e) => updateBusinessCopy("opening", e.target.value)} rows={3} className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white" />
+                  </label>
+                  <label className="text-[10px] uppercase tracking-wide text-white/40 md:col-span-2">
+                    Value proposition
+                    <textarea value={businessCopy.valueProposition} onChange={(e) => updateBusinessCopy("valueProposition", e.target.value)} rows={3} className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white" />
+                  </label>
+                  <div className="md:col-span-2">
+                    <p className="text-[10px] uppercase tracking-wide text-white/40 mb-2">
+                      Benefits
+                    </p>
+                    <div className="grid md:grid-cols-2 gap-3">
+                      {businessCopy.benefits.map((benefit, index) => (
+                        <input
+                          key={index}
+                          value={benefit}
+                          onChange={(e) => updateBusinessBenefit(index, e.target.value)}
+                          className="w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white min-h-[44px]"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <label className="text-[10px] uppercase tracking-wide text-white/40 md:col-span-2">
+                    Partner angle
+                    <textarea value={businessCopy.partnerAngle} onChange={(e) => updateBusinessCopy("partnerAngle", e.target.value)} rows={3} className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white" />
+                  </label>
+                  <label className="text-[10px] uppercase tracking-wide text-white/40 md:col-span-2">
+                    Call to action
+                    <textarea value={businessCopy.callToAction} onChange={(e) => updateBusinessCopy("callToAction", e.target.value)} rows={2} className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white" />
+                  </label>
+                </div>
+              ) : (
+                <p className="text-sm text-white/35">
+                  No draft yet. Fill the topic and click “Write with AI”.
+                </p>
+              )}
+            </div>
             {error && <p className="text-red-400 text-sm">{error}</p>}
           </div>
 
@@ -495,12 +641,13 @@ export function ProposalsDashboard() {
             </p>
             <p className="text-sm text-white/55 leading-6 mb-5">
               Generates a luxury one-page PDF letter with your photo, AI-written
-              copy, benefits, call to action and Trans Yacht Group contacts.
+              editable copy, benefits, call to action, logo and Trans Yacht
+              Group contacts.
             </p>
             <button
               type="button"
               onClick={handleGenerateBusinessLetter}
-              disabled={!businessTopic.trim() || generating || uploadingBusinessImage}
+              disabled={!businessTopic.trim() || !businessCopy || generating || uploadingBusinessImage}
               className="w-full flex items-center justify-center gap-2 min-h-[44px] bg-[hsl(43,67%,55%)] text-black rounded-md text-xs uppercase tracking-[0.2em] font-medium hover:bg-[hsl(43,67%,60%)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               {generating ? (

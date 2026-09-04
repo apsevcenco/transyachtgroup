@@ -1063,12 +1063,52 @@ export async function generateFleetOfferPdf(
 
 export interface BusinessLetterRequest {
   recipientType: string;
+  recipientName?: string;
   language: "en" | "fr" | "ru" | "ro" | "ar";
   topic: string;
   service: string;
   notes?: string;
   imageUrl?: string | null;
   contactName?: string;
+  copy: BusinessLetterCopy;
+}
+
+export interface BusinessLetterDraftRequest {
+  recipientType: string;
+  language: "en" | "fr" | "ru" | "ro" | "ar";
+  topic: string;
+  service: string;
+  notes?: string;
+  contactName?: string;
+}
+
+export interface BusinessLetterCopy {
+  headline: string;
+  subheadline: string;
+  greeting: string;
+  opening: string;
+  valueProposition: string;
+  benefits: string[];
+  partnerAngle: string;
+  callToAction: string;
+  signature: string;
+}
+
+export async function generateBusinessLetterDraft(
+  req: BusinessLetterDraftRequest,
+): Promise<BusinessLetterCopy> {
+  const res = await fetch(`${API_BASE}/admin/proposals/business-letter-draft`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(
+      data.error || `Failed to generate business letter draft (${res.status})`,
+    );
+  }
+  return res.json();
 }
 
 export async function generateBusinessLetterPdf(
