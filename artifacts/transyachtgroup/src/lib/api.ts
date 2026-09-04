@@ -1070,6 +1070,7 @@ export interface BusinessLetterRequest {
   notes?: string;
   imageUrl?: string | null;
   contactName?: string;
+  signerRole?: string;
   copy: BusinessLetterCopy;
 }
 

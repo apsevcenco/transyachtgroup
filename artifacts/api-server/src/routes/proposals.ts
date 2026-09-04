@@ -127,6 +127,7 @@ function renderBusinessLetterHtml(input: {
   service: string;
   recipientType: string;
   recipientName?: string;
+  signerRole?: string;
   contact: { phone?: string; whatsapp?: string; email?: string; website?: string };
 }) {
   const dir = input.language === "ar" ? "rtl" : "ltr";
@@ -143,11 +144,11 @@ function renderBusinessLetterHtml(input: {
       .replace(/^tel:/i, "")
       .trim();
   const footerItems = [
-    cleanContact(input.contact.phone),
-    cleanContact(input.contact.whatsapp),
-    cleanContact(input.contact.email),
-    cleanContact(input.contact.website || "www.transyachtgroup.com"),
-  ].filter(Boolean);
+    ["Phone", cleanContact(input.contact.phone)],
+    ["WhatsApp", cleanContact(input.contact.whatsapp)],
+    ["Email", cleanContact(input.contact.email)],
+    ["Web", cleanContact(input.contact.website || "www.transyachtgroup.com")],
+  ].filter(([, value]) => Boolean(value));
   const image = input.imageUrl
     ? `<div class="photo"><img src="${escapeHtml(input.imageUrl)}" alt="Luxury service" /></div>`
     : `<div class="photo placeholder">TRANSYACHTGROUP</div>`;
@@ -166,7 +167,6 @@ function renderBusinessLetterHtml(input: {
     .brand { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; position: relative; z-index: 1; }
     .logo { height: 11mm; width: auto; object-fit: contain; display: block; }
     .brand-name { font-family: 'Porter FT', Arial, sans-serif; letter-spacing: .22em; font-size: 15px; color: ${NEAR_BLACK}; }
-    .label { font-family: 'Antro Vectra', 'Wix MadeFor Display', Arial, sans-serif; letter-spacing: .12em; text-transform: none; color: ${GOLD_INK}; font-size: 13px; margin-top: 4px; }
     .date { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #777; }
     .hero { display: grid; grid-template-columns: 75mm 1fr; gap: 11mm; margin-top: 10mm; align-items: stretch; position: relative; z-index: 1; direction: ltr; }
     .photo { height: 88mm; overflow: hidden; background: transparent; display: flex; align-items: center; justify-content: center; color: ${GOLD_INK}; font-family: 'Porter FT', Arial, sans-serif; letter-spacing: .18em; text-align: center; padding: 0; }
@@ -181,7 +181,10 @@ function renderBusinessLetterHtml(input: {
     .panel h2 { margin: 0 0 4mm; font-family: 'Porter FT', Arial, sans-serif; font-size: 9px; text-transform: uppercase; letter-spacing: .18em; color: ${GOLD_INK}; font-weight: 400; }
     ul { margin: 0; padding-${dir === "rtl" ? "right" : "left"}: 5mm; }
     li { margin-bottom: 3.2mm; font-size: 10.5px; line-height: 1.42; color: #2b2924; }
-    .signature { margin-top: 4.5mm; margin-bottom: 4mm; font-family: 'Antro Vectra', 'Wix MadeFor Display', Arial, sans-serif; font-size: 17px; line-height: 1.2; color: ${NEAR_BLACK}; white-space: pre-line; }
+    .closing { margin-top: 4.5mm; margin-bottom: 4mm; }
+    .regards { font-family: 'Wix MadeFor Display', Arial, sans-serif; font-size: 10.4px; font-weight: 700; color: ${NEAR_BLACK}; margin-bottom: 1.8mm; }
+    .signature { font-family: 'Antro Vectra', 'Wix MadeFor Display', Arial, sans-serif; font-size: 17px; line-height: 1.2; color: ${NEAR_BLACK}; white-space: pre-line; }
+    .signer-role { margin-top: 1.4mm; font-family: 'Wix MadeFor Display', Arial, sans-serif; font-size: 10.2px; font-weight: 700; color: ${NEAR_BLACK}; }
     .cta { margin-top: 0; padding-top: 3.5mm; border-top: 1px solid ${GOLD}; color: ${NEAR_BLACK}; font-size: 10.3px; line-height: 1.45; font-weight: 600; }
     .footer { position: absolute; left: 18mm; right: 18mm; bottom: 8mm; display: flex; justify-content: center; flex-wrap: wrap; gap: 4mm 7mm; border-top: 1px solid ${HAIRLINE}; padding-top: 3mm; font-size: 8.8px; color: #5d5548; z-index: 1; direction: ltr; }
   </style>
@@ -189,7 +192,7 @@ function renderBusinessLetterHtml(input: {
 <body>
   <main class="page">
     <section class="brand">
-      <div>${logo}<div class="label">${escapeHtml(input.service)}</div></div>
+      <div>${logo}</div>
       <div class="date">${escapeHtml(currentDate)}</div>
     </section>
     <section class="hero">${image}<div class="headline"><h1>${escapeHtml(c.headline)}</h1><div class="sub">${escapeHtml(c.subheadline)}</div></div></section>
@@ -199,13 +202,17 @@ function renderBusinessLetterHtml(input: {
         <p>${escapeHtml(c.opening)}</p>
         <p>${escapeHtml(c.valueProposition)}</p>
         <p>${escapeHtml(c.partnerAngle)}</p>
-        <div class="signature">${escapeHtml(c.signature)}</div>
+        <div class="closing">
+          <div class="regards">Warm regards,</div>
+          <div class="signature">${escapeHtml(c.signature)}</div>
+          ${input.signerRole?.trim() ? `<div class="signer-role">${escapeHtml(input.signerRole)}</div>` : ""}
+        </div>
         <div class="cta">${escapeHtml(c.callToAction)}</div>
       </div>
       <aside class="panel"><h2>Key advantages</h2><ul>${benefits}</ul></aside>
     </section>
     <footer class="footer">
-      ${footerItems.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}
+      ${footerItems.map(([label, value]) => `<span><strong>${escapeHtml(label)}</strong> ${escapeHtml(value)}</span>`).join("")}
     </footer>
   </main>
 </body>
@@ -672,7 +679,7 @@ router.post(
       const topic = text("topic", 180);
       const service = text("service", 180) || "Luxury car rental and VIP transfers";
       const notes = text("notes", 2_000);
-      const contactName = text("contactName", 120) || "Trans Yacht Group";
+      const contactName = text("contactName", 120);
 
       if (!topic) {
         res.status(400).json({ error: "Topic is required" });
@@ -690,7 +697,7 @@ Addressed to: ${recipientName || "Use a neutral premium greeting."}
 Topic: ${topic}
 Service to promote: ${service}
 Notes: ${notes || "No additional notes."}
-Contact/signature name: ${contactName}
+Contact/signature name: ${contactName || "Leave the signature neutral; it can be edited manually before PDF export."}
 If "Addressed to" is provided, use it as the greeting field instead of a generic greeting.
 Return JSON with:
 {
@@ -735,8 +742,11 @@ router.post(
       const recipientName = text("recipientName", 180);
       const topic = text("topic", 180) || "Luxury partnership proposal";
       const service = text("service", 180) || "Luxury car rental and VIP transfers";
+      const signerRole = text("signerRole", 140);
+      const contactName = text("contactName", 120);
       const imageUrl = text("imageUrl", 2_000) || null;
       const copy = cleanBusinessLetter(value.copy);
+      if (contactName) copy.signature = contactName;
 
       const contentRows = await db
         .select({ key: siteContentTable.key, value: siteContentTable.value })
@@ -764,6 +774,7 @@ router.post(
         service,
         recipientType,
         recipientName,
+        signerRole,
         contact,
       });
       const buffer = await withDeadline(renderPdf(html, { scale: 1 }), 120_000);

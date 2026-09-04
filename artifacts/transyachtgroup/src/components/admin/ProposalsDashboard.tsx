@@ -130,7 +130,8 @@ export function ProposalsDashboard() {
   const [businessTopic, setBusinessTopic] = useState("");
   const [businessService, setBusinessService] = useState("Luxury car rental and VIP transfers");
   const [businessNotes, setBusinessNotes] = useState("");
-  const [businessContactName, setBusinessContactName] = useState("Trans Yacht Group");
+  const [businessContactName, setBusinessContactName] = useState("");
+  const [businessSignerRole, setBusinessSignerRole] = useState("");
   const [businessImageUrl, setBusinessImageUrl] = useState<string | null>(null);
   const [businessCopy, setBusinessCopy] = useState<BusinessLetterCopy | null>(null);
   const [uploadingBusinessImage, setUploadingBusinessImage] = useState(false);
@@ -349,6 +350,8 @@ export function ProposalsDashboard() {
         topic: businessTopic,
         service: businessService,
         imageUrl: businessImageUrl,
+        contactName: businessContactName,
+        signerRole: businessSignerRole,
         copy: businessCopy,
       });
       const url = URL.createObjectURL(blob);
@@ -379,7 +382,10 @@ export function ProposalsDashboard() {
         notes: businessNotes,
         contactName: businessContactName,
       });
-      setBusinessCopy(draft);
+      setBusinessCopy({
+        ...draft,
+        signature: businessContactName.trim() || draft.signature,
+      });
     } catch (err: any) {
       setError(err.message || "Failed to generate business letter draft");
     } finally {
@@ -518,8 +524,20 @@ export function ProposalsDashboard() {
                   Signature line
                   <input
                     value={businessContactName}
-                    onChange={(e) => setBusinessContactName(e.target.value)}
-                    placeholder="Trans Yacht Group"
+                    onChange={(e) => {
+                      setBusinessContactName(e.target.value);
+                      updateBusinessCopy("signature", e.target.value);
+                    }}
+                    placeholder="Andrey"
+                    className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white min-h-[44px] placeholder:text-white/25"
+                  />
+                </label>
+                <label className="text-[10px] uppercase tracking-wide text-white/40">
+                  Signer role
+                  <input
+                    value={businessSignerRole}
+                    onChange={(e) => setBusinessSignerRole(e.target.value)}
+                    placeholder="General Manager"
                     className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white min-h-[44px] placeholder:text-white/25"
                   />
                 </label>
