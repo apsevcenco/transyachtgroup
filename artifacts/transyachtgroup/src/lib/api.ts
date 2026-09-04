@@ -1184,11 +1184,15 @@ export async function deleteBusinessLetter(id: number): Promise<void> {
   if (!res.ok) throw new Error("Failed to delete business letter");
 }
 
-export async function sendBusinessLetter(id: number, recipients: string): Promise<BusinessLetterRecord> {
+export async function sendBusinessLetter(
+  id: number,
+  recipients: string,
+  options?: { subject?: string; coverMessage?: string; attachPdf?: boolean; sendMode?: "body_only" | "cover_with_pdf" },
+): Promise<BusinessLetterRecord> {
   const res = await fetch(`${API_BASE}/admin/proposals/business-letters/${id}/send`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({ recipients }),
+    body: JSON.stringify({ recipients, ...options }),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));

@@ -175,30 +175,58 @@ function emailHtmlForBusinessLetter(copy: BusinessLetterCopy, pdfUrl?: string) {
   </div>`;
 }
 
-async function sendBusinessLetterEmail(to: string[], subject: string, copy: BusinessLetterCopy) {
+function emailHtmlForCoverMessage(message: string) {
+  return `<div style="font-family:Arial,sans-serif;color:#171717;line-height:1.6;max-width:680px">
+    ${escapeHtml(message).replace(/\r?\n/g, "<br/>")}
+  </div>`;
+}
+
+function safePdfFilename(value: string) {
+  const safe = value
+    .replace(/<[^>]+>/g, "")
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .slice(0, 80);
+  return `${safe || "business-letter"}.pdf`;
+}
+
+async function sendBusinessLetterEmail(input: {
+  to: string[];
+  subject: string;
+  copy: BusinessLetterCopy;
+  coverMessage?: string;
+  attachment?: { filename: string; content: string };
+}) {
   const key = process.env.RESEND_API_KEY;
   const from = process.env.REVIEW_EMAIL_FROM || process.env.PROPOSAL_EMAIL_FROM;
   if (!key || !from) throw new Error("Email delivery is not configured (RESEND_API_KEY / REVIEW_EMAIL_FROM)");
+  const bodyText = input.coverMessage?.trim()
+    ? input.coverMessage.trim()
+    : [
+      input.copy.headline,
+      input.copy.subheadline,
+      input.copy.greeting,
+      input.copy.opening,
+      input.copy.valueProposition,
+      ...input.copy.benefits,
+      input.copy.partnerAngle,
+      input.copy.callToAction,
+      "Warm regards,",
+      input.copy.signature,
+    ].join("\n\n");
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       from,
-      to,
-      subject,
-      text: [
-        copy.headline,
-        copy.subheadline,
-        copy.greeting,
-        copy.opening,
-        copy.valueProposition,
-        ...copy.benefits,
-        copy.partnerAngle,
-        copy.callToAction,
-        "Warm regards,",
-        copy.signature,
-      ].join("\n\n"),
-      html: emailHtmlForBusinessLetter(copy),
+      to: input.to,
+      subject: input.subject,
+      text: bodyText,
+      html: input.coverMessage?.trim()
+        ? emailHtmlForCoverMessage(input.coverMessage.trim())
+        : emailHtmlForBusinessLetter(input.copy),
+      attachments: input.attachment ? [input.attachment] : undefined,
       tags: [{ name: "workflow", value: "business-letter" }],
     }),
     signal: AbortSignal.timeout(15_000),
@@ -864,6 +892,7 @@ router.post("/admin/proposals/business-letters/:id/send", adminAuth, async (req,
       return;
     }
     const value = req.body && typeof req.body === "object" ? req.body as Record<string, unknown> : {};
+    const text = (key: string, max: number) => typeof value[key] === "string" ? value[key].trim().slice(0, max) : "";
     const rawRecipients = typeof value.recipients === "string" ? value.recipients : "";
     const recipients = Array.from(new Set(rawRecipients.split(/[\s,;]+/).map((v) => v.trim()).filter(validEmail))).slice(0, 50);
     if (recipients.length === 0) {
@@ -876,7 +905,48 @@ router.post("/admin/proposals/business-letters/:id/send", adminAuth, async (req,
       return;
     }
     const copy = cleanBusinessLetter(letter.copy);
-    await sendBusinessLetterEmail(recipients, letter.title || copy.headline, copy);
+    const subject = text("subject", 180) || letter.title || copy.headline;
+    const coverMessage = text("coverMessage", 4_000);
+    const attachPdf = value.attachPdf === true;
+    const sendMode = text("sendMode", 32);
+
+    let attachment: { filename: string; content: string } | undefined;
+    if (attachPdf || sendMode === "cover_with_pdf") {
+      const contentRows = await db
+        .select({ key: siteContentTable.key, value: siteContentTable.value })
+        .from(siteContentTable)
+        .where(inArray(siteContentTable.key, ["phone_number", "whatsapp_number", "admin_email"]));
+      const cms = Object.fromEntries(contentRows.map((r) => [r.key, r.value]));
+      const pdfHtml = renderBusinessLetterHtml({
+        copy,
+        language: (letter.language as keyof typeof languageNames) || "en",
+        imageUrl: letter.imageUrl,
+        topic: letter.topic,
+        service: letter.service,
+        recipientType: letter.recipientType,
+        recipientName: letter.recipientName || undefined,
+        signerRole: letter.signerRole || undefined,
+        contact: {
+          phone: cms["phone_number"] || undefined,
+          whatsapp: cms["whatsapp_number"] || undefined,
+          email: cms["admin_email"] || undefined,
+          website: "www.transyachtgroup.com",
+        },
+      });
+      const pdfBuffer = await withDeadline(renderPdf(pdfHtml, { scale: 1 }), 120_000);
+      attachment = {
+        filename: safePdfFilename(letter.title || letter.topic || copy.headline),
+        content: pdfBuffer.toString("base64"),
+      };
+    }
+
+    await sendBusinessLetterEmail({
+      to: recipients,
+      subject,
+      copy,
+      coverMessage: coverMessage || undefined,
+      attachment,
+    });
     const [updated] = await db
       .update(businessLettersTable)
       .set({

@@ -142,6 +142,9 @@ export function ProposalsDashboard() {
   const [businessLetters, setBusinessLetters] = useState<BusinessLetterRecord[]>([]);
   const [businessLetterId, setBusinessLetterId] = useState<number | null>(null);
   const [businessRecipients, setBusinessRecipients] = useState("");
+  const [businessEmailSubject, setBusinessEmailSubject] = useState("");
+  const [businessCoverMessage, setBusinessCoverMessage] = useState("");
+  const [businessSendMode, setBusinessSendMode] = useState<"body_only" | "cover_with_pdf">("cover_with_pdf");
   const [businessNotice, setBusinessNotice] = useState("");
   const [uploadingBusinessImage, setUploadingBusinessImage] = useState(false);
 
@@ -436,6 +439,7 @@ export function ProposalsDashboard() {
     setBusinessSignerRole(letter.signerRole || "");
     setBusinessImageUrl(letter.imageUrl || null);
     setBusinessCopy(letter.copy);
+    setBusinessEmailSubject(letter.title || letter.copy.headline || "");
     setBusinessNotice(`Loaded: ${letter.title}`);
     setError("");
   };
@@ -469,7 +473,12 @@ export function ProposalsDashboard() {
         id = saved.id;
         setBusinessLetterId(saved.id);
       }
-      await sendBusinessLetter(id, businessRecipients);
+      await sendBusinessLetter(id, businessRecipients, {
+        subject: businessEmailSubject || businessTopic || businessCopy?.headline,
+        coverMessage: businessCoverMessage,
+        attachPdf: businessSendMode === "cover_with_pdf",
+        sendMode: businessSendMode,
+      });
       setBusinessNotice("Letter sent.");
       loadBusinessLetters();
     } catch (err: any) {
@@ -496,6 +505,7 @@ export function ProposalsDashboard() {
         ...draft,
         signature: businessContactName.trim() || draft.signature,
       });
+      setBusinessEmailSubject(businessTopic || draft.headline);
     } catch (err: any) {
       setError(err.message || "Failed to generate business letter draft");
     } finally {
@@ -637,7 +647,7 @@ export function ProposalsDashboard() {
                     value={businessContactName}
                     onChange={(e) => {
                       setBusinessContactName(e.target.value);
-                      updateBusinessCopy("signature", e.target.value);
+                      setBusinessCopy((current) => current ? { ...current, signature: e.target.value } : current);
                     }}
                     placeholder="Andrey"
                     className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white min-h-[44px] placeholder:text-white/25"
@@ -809,6 +819,38 @@ export function ProposalsDashboard() {
                 className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white placeholder:text-white/25"
               />
             </label>
+            <label className="block mt-3 text-[10px] uppercase tracking-wide text-white/40">
+              Email subject
+              <input
+                value={businessEmailSubject}
+                onChange={(e) => setBusinessEmailSubject(e.target.value)}
+                placeholder="Luxury partnership proposal"
+                className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white min-h-[44px] placeholder:text-white/25"
+              />
+            </label>
+            <label className="block mt-3 text-[10px] uppercase tracking-wide text-white/40">
+              Sending mode
+              <select
+                value={businessSendMode}
+                onChange={(e) => setBusinessSendMode(e.target.value as "body_only" | "cover_with_pdf")}
+                className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white min-h-[44px]"
+              >
+                <option value="cover_with_pdf">Cover message + PDF attachment</option>
+                <option value="body_only">Letter text in email body</option>
+              </select>
+            </label>
+            {businessSendMode === "cover_with_pdf" && (
+              <label className="block mt-3 text-[10px] uppercase tracking-wide text-white/40">
+                Cover message
+                <textarea
+                  value={businessCoverMessage}
+                  onChange={(e) => setBusinessCoverMessage(e.target.value)}
+                  rows={5}
+                  placeholder={"Dear Partner,\nPlease find attached our presentation proposal.\nWarm regards,"}
+                  className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white placeholder:text-white/25"
+                />
+              </label>
+            )}
             <button
               type="button"
               onClick={handleSendBusinessLetter}
