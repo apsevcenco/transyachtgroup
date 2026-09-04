@@ -14,6 +14,7 @@ import {
   type FleetOfferVehicle,
 } from "../documents/builders/fleetOffer";
 import { GOLD, GOLD_INK, HAIRLINE, NEAR_BLACK } from "../documents/core/theme";
+import { FONT_FACE_CSS } from "../documents/core/fonts.generated";
 import {
   normalizeTemplate,
   PDF_CONTENT_TYPE,
@@ -125,45 +126,49 @@ function renderBusinessLetterHtml(input: {
   topic: string;
   service: string;
   recipientType: string;
+  recipientName?: string;
   contact: { phone?: string; whatsapp?: string; email?: string; website?: string };
 }) {
   const dir = input.language === "ar" ? "rtl" : "ltr";
   const c = input.copy;
   const benefits = c.benefits.map((benefit) => `<li>${escapeHtml(benefit)}</li>`).join("");
+  const currentDate = new Intl.DateTimeFormat(input.language === "en" ? "en-GB" : input.language, { dateStyle: "long" }).format(new Date());
+  const greeting = input.recipientName?.trim() || c.greeting;
   const image = input.imageUrl
     ? `<div class="photo"><img src="${escapeHtml(input.imageUrl)}" alt="Luxury service" /></div>`
-    : `<div class="photo placeholder">TRANS YACHT GROUP</div>`;
+    : `<div class="photo placeholder">TRANSYACHTGROUP</div>`;
   const logo = LOGO_DATA_URI ? `<img class="logo" src="${LOGO_DATA_URI}" alt="Trans Yacht Group" />` : `<div class="brand-name">TRANSYACHTGROUP</div>`;
   return `<!doctype html>
 <html lang="${input.language}" dir="${dir}">
 <head>
   <meta charset="utf-8" />
   <style>
+    ${FONT_FACE_CSS}
     @page { size: A4; margin: 0; }
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: Inter, Arial, sans-serif; color: ${NEAR_BLACK}; background: #fff; }
-    .page { width: 210mm; height: 297mm; padding: 18mm; background: #fff; position: relative; overflow: hidden; }
+    body { margin: 0; font-family: 'Wix MadeFor Display', Arial, sans-serif; color: ${NEAR_BLACK}; background: #fff; }
+    .page { width: 210mm; height: 297mm; padding: 16mm 18mm 22mm; background: #fff; position: relative; overflow: hidden; }
     .page:before { content: ""; position: absolute; inset: 10mm; border: 1px solid ${HAIRLINE}; pointer-events: none; }
     .brand { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; position: relative; z-index: 1; }
     .logo { height: 11mm; width: auto; object-fit: contain; display: block; }
-    .brand-name { font-family: Georgia, serif; letter-spacing: .22em; font-size: 15px; color: ${NEAR_BLACK}; }
+    .brand-name { font-family: 'Porter FT', Arial, sans-serif; letter-spacing: .22em; font-size: 15px; color: ${NEAR_BLACK}; }
     .label { letter-spacing: .24em; text-transform: uppercase; color: ${GOLD_INK}; font-size: 9px; margin-top: 4px; }
-    .meta { text-align: ${dir === "rtl" ? "left" : "right"}; font-size: 10px; line-height: 1.6; color: #5d5548; max-width: 60mm; }
-    .hero { display: grid; grid-template-columns: 78mm 1fr; gap: 12mm; margin-top: 15mm; align-items: stretch; position: relative; z-index: 1; direction: ltr; }
-    .photo { height: 105mm; border-radius: 2mm; overflow: hidden; background: #171717; display: flex; align-items: center; justify-content: center; color: #d9b46a; font-family: Georgia, serif; letter-spacing: .18em; text-align: center; padding: 10mm; }
+    .date { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #777; }
+    .hero { display: grid; grid-template-columns: 76mm 1fr; gap: 12mm; margin-top: 12mm; align-items: stretch; position: relative; z-index: 1; direction: ltr; }
+    .photo { height: 96mm; overflow: hidden; background: transparent; display: flex; align-items: center; justify-content: center; color: ${GOLD_INK}; font-family: 'Porter FT', Arial, sans-serif; letter-spacing: .18em; text-align: center; padding: 0; }
     .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .headline { direction: ${dir}; }
-    h1 { font-family: Georgia, serif; font-size: 33px; line-height: 1.05; margin: 0 0 8mm; font-weight: 400; letter-spacing: -.02em; color: ${NEAR_BLACK}; }
+    h1 { font-family: 'Porter FT', Arial, sans-serif; font-size: 25px; line-height: 1.18; margin: 0 0 7mm; font-weight: 400; letter-spacing: .03em; color: ${NEAR_BLACK}; text-transform: uppercase; }
     .sub { color: ${GOLD_INK}; font-size: 13px; line-height: 1.55; margin-bottom: 10mm; }
-    .content { margin-top: 13mm; display: grid; grid-template-columns: 1fr 68mm; gap: 10mm; position: relative; z-index: 1; direction: ${dir}; }
-    p { margin: 0 0 4.5mm; font-size: 11.5px; line-height: 1.62; color: #2b2924; }
-    .greeting { font-family: Georgia, serif; font-size: 17px; color: #111; margin-bottom: 5mm; }
+    .content { margin-top: 10mm; display: grid; grid-template-columns: 1fr 68mm; gap: 10mm; position: relative; z-index: 1; direction: ${dir}; }
+    p { margin: 0 0 3.8mm; font-size: 10.8px; line-height: 1.55; color: #2b2924; }
+    .greeting { font-family: 'Wix MadeFor Display', Arial, sans-serif; font-size: 13px; color: ${NEAR_BLACK}; margin-bottom: 4mm; font-weight: 600; }
     .panel { border-left: ${dir === "rtl" ? "0" : "1px"} solid ${HAIRLINE}; border-right: ${dir === "rtl" ? "1px" : "0"} solid ${HAIRLINE}; padding-${dir === "rtl" ? "right" : "left"}: 7mm; }
-    .panel h2 { margin: 0 0 4mm; font-size: 10px; text-transform: uppercase; letter-spacing: .2em; color: ${GOLD_INK}; font-weight: 600; }
+    .panel h2 { margin: 0 0 4mm; font-family: 'Porter FT', Arial, sans-serif; font-size: 9px; text-transform: uppercase; letter-spacing: .18em; color: ${GOLD_INK}; font-weight: 400; }
     ul { margin: 0; padding-${dir === "rtl" ? "right" : "left"}: 5mm; }
-    li { margin-bottom: 3.5mm; font-size: 11px; line-height: 1.45; color: #2b2924; }
-    .cta { margin-top: 7mm; padding: 5mm 6mm; background: ${NEAR_BLACK}; color: #fff; border-bottom: 2px solid ${GOLD}; font-size: 11px; line-height: 1.55; }
-    .signature { margin-top: 7mm; font-family: Georgia, serif; font-size: 13px; color: #111; white-space: pre-line; }
+    li { margin-bottom: 3.2mm; font-size: 10.5px; line-height: 1.42; color: #2b2924; }
+    .cta { margin-top: 5mm; padding-top: 4mm; border-top: 1px solid ${GOLD}; color: ${NEAR_BLACK}; font-size: 10.8px; line-height: 1.55; font-weight: 600; }
+    .signature { margin-top: 6mm; font-family: 'Antro Vectra', 'Wix MadeFor Display', Arial, sans-serif; font-size: 18px; color: ${NEAR_BLACK}; white-space: pre-line; }
     .footer { position: absolute; left: 18mm; right: 18mm; bottom: 12mm; display: flex; justify-content: space-between; gap: 10px; border-top: 1px solid ${HAIRLINE}; padding-top: 4mm; font-size: 9.5px; color: #5d5548; z-index: 1; direction: ltr; }
   </style>
 </head>
@@ -171,12 +176,12 @@ function renderBusinessLetterHtml(input: {
   <main class="page">
     <section class="brand">
       <div>${logo}<div class="label">${escapeHtml(input.service)}</div></div>
-      <div class="meta">${escapeHtml(input.recipientType)}<br/>${escapeHtml(input.topic)}</div>
+      <div class="date">${escapeHtml(currentDate)}</div>
     </section>
     <section class="hero">${image}<div class="headline"><h1>${escapeHtml(c.headline)}</h1><div class="sub">${escapeHtml(c.subheadline)}</div></div></section>
     <section class="content">
       <div>
-        <div class="greeting">${escapeHtml(c.greeting)}</div>
+        <div class="greeting">${escapeHtml(greeting)}</div>
         <p>${escapeHtml(c.opening)}</p>
         <p>${escapeHtml(c.valueProposition)}</p>
         <p>${escapeHtml(c.partnerAngle)}</p>
@@ -652,6 +657,7 @@ router.post(
         ? text("language", 8) as keyof typeof languageNames
         : "en";
       const recipientType = text("recipientType", 120) || "Concierge service";
+      const recipientName = text("recipientName", 180);
       const topic = text("topic", 180);
       const service = text("service", 180) || "Luxury car rental and VIP transfers";
       const notes = text("notes", 2_000);
@@ -669,10 +675,12 @@ The tone must be premium, concise, specific, partnership-oriented and suitable f
 Avoid exaggerated guarantees. Do not invent exact prices, legal claims or unavailable services.`,
         `Language: ${languageNames[language]}
 Recipient type: ${recipientType}
+Addressed to: ${recipientName || "Use a neutral premium greeting."}
 Topic: ${topic}
 Service to promote: ${service}
 Notes: ${notes || "No additional notes."}
 Contact/signature name: ${contactName}
+If "Addressed to" is provided, use it as the greeting field instead of a generic greeting.
 Return JSON with:
 {
  "headline": "...",
@@ -741,9 +749,10 @@ router.post(
         copy,
         language,
         imageUrl,
-        topic: recipientName ? `${topic} · ${recipientName}` : topic,
+        topic,
         service,
         recipientType,
+        recipientName,
         contact,
       });
       const buffer = await withDeadline(renderPdf(html, { scale: 1 }), 120_000);

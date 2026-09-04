@@ -1075,6 +1075,7 @@ export interface BusinessLetterRequest {
 
 export interface BusinessLetterDraftRequest {
   recipientType: string;
+  recipientName?: string;
   language: "en" | "fr" | "ru" | "ro" | "ar";
   topic: string;
   service: string;

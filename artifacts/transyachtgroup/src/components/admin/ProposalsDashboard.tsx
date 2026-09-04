@@ -372,6 +372,7 @@ export function ProposalsDashboard() {
     try {
       const draft = await generateBusinessLetterDraft({
         recipientType: businessRecipientType,
+        recipientName: businessRecipientName,
         language: businessLang,
         topic: businessTopic,
         service: businessService,
@@ -514,7 +515,7 @@ export function ProposalsDashboard() {
                   />
                 </label>
                 <label className="text-[10px] uppercase tracking-wide text-white/40">
-                  Signature / contact name
+                  Signature line
                   <input
                     value={businessContactName}
                     onChange={(e) => setBusinessContactName(e.target.value)}
