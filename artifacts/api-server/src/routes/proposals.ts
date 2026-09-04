@@ -134,6 +134,20 @@ function renderBusinessLetterHtml(input: {
   const benefits = c.benefits.map((benefit) => `<li>${escapeHtml(benefit)}</li>`).join("");
   const currentDate = new Intl.DateTimeFormat(input.language === "en" ? "en-GB" : input.language, { dateStyle: "long" }).format(new Date());
   const greeting = input.recipientName?.trim() || c.greeting;
+  const headlineSize = c.headline.length > 115 ? 15 : c.headline.length > 80 ? 17 : 20;
+  const cleanContact = (value?: string) =>
+    (value || "")
+      .replace(/<\/?[^>]+>/g, " ")
+      .replace(/\b(phone|tel|telephone|whatsapp|email|mail|site|website)\s*:\s*/gi, "")
+      .replace(/^mailto:/i, "")
+      .replace(/^tel:/i, "")
+      .trim();
+  const footerItems = [
+    cleanContact(input.contact.phone),
+    cleanContact(input.contact.whatsapp),
+    cleanContact(input.contact.email),
+    cleanContact(input.contact.website || "www.transyachtgroup.com"),
+  ].filter(Boolean);
   const image = input.imageUrl
     ? `<div class="photo"><img src="${escapeHtml(input.imageUrl)}" alt="Luxury service" /></div>`
     : `<div class="photo placeholder">TRANSYACHTGROUP</div>`;
@@ -147,29 +161,29 @@ function renderBusinessLetterHtml(input: {
     @page { size: A4; margin: 0; }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: 'Wix MadeFor Display', Arial, sans-serif; color: ${NEAR_BLACK}; background: #fff; }
-    .page { width: 210mm; height: 297mm; padding: 16mm 18mm 22mm; background: #fff; position: relative; overflow: hidden; }
+    .page { width: 210mm; height: 297mm; padding: 15mm 18mm 26mm; background: #fff; position: relative; overflow: hidden; }
     .page:before { content: ""; position: absolute; inset: 10mm; border: 1px solid ${HAIRLINE}; pointer-events: none; }
     .brand { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; position: relative; z-index: 1; }
     .logo { height: 11mm; width: auto; object-fit: contain; display: block; }
     .brand-name { font-family: 'Porter FT', Arial, sans-serif; letter-spacing: .22em; font-size: 15px; color: ${NEAR_BLACK}; }
-    .label { letter-spacing: .24em; text-transform: uppercase; color: ${GOLD_INK}; font-size: 9px; margin-top: 4px; }
+    .label { font-family: 'Antro Vectra', 'Wix MadeFor Display', Arial, sans-serif; letter-spacing: .12em; text-transform: none; color: ${GOLD_INK}; font-size: 13px; margin-top: 4px; }
     .date { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #777; }
-    .hero { display: grid; grid-template-columns: 76mm 1fr; gap: 12mm; margin-top: 12mm; align-items: stretch; position: relative; z-index: 1; direction: ltr; }
-    .photo { height: 96mm; overflow: hidden; background: transparent; display: flex; align-items: center; justify-content: center; color: ${GOLD_INK}; font-family: 'Porter FT', Arial, sans-serif; letter-spacing: .18em; text-align: center; padding: 0; }
+    .hero { display: grid; grid-template-columns: 75mm 1fr; gap: 11mm; margin-top: 10mm; align-items: stretch; position: relative; z-index: 1; direction: ltr; }
+    .photo { height: 88mm; overflow: hidden; background: transparent; display: flex; align-items: center; justify-content: center; color: ${GOLD_INK}; font-family: 'Porter FT', Arial, sans-serif; letter-spacing: .18em; text-align: center; padding: 0; }
     .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .headline { direction: ${dir}; }
-    h1 { font-family: 'Porter FT', Arial, sans-serif; font-size: 25px; line-height: 1.18; margin: 0 0 7mm; font-weight: 400; letter-spacing: .03em; color: ${NEAR_BLACK}; text-transform: uppercase; }
-    .sub { color: ${GOLD_INK}; font-size: 13px; line-height: 1.55; margin-bottom: 10mm; }
-    .content { margin-top: 10mm; display: grid; grid-template-columns: 1fr 68mm; gap: 10mm; position: relative; z-index: 1; direction: ${dir}; }
-    p { margin: 0 0 3.8mm; font-size: 10.8px; line-height: 1.55; color: #2b2924; }
-    .greeting { font-family: 'Wix MadeFor Display', Arial, sans-serif; font-size: 13px; color: ${NEAR_BLACK}; margin-bottom: 4mm; font-weight: 600; }
+    .headline { direction: ${dir}; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+    h1 { font-family: 'Porter FT', Arial, sans-serif; font-size: ${headlineSize}px; line-height: 1.22; margin: 0 0 6mm; font-weight: 400; letter-spacing: .02em; color: ${NEAR_BLACK}; text-transform: uppercase; text-align: center; overflow-wrap: anywhere; hyphens: auto; }
+    .sub { font-family: 'Antro Vectra', 'Wix MadeFor Display', Arial, sans-serif; color: ${GOLD_INK}; font-size: 13px; line-height: 1.35; margin-bottom: 7mm; text-align: center; }
+    .content { margin-top: 8mm; display: grid; grid-template-columns: 1fr 66mm; gap: 9mm; position: relative; z-index: 1; direction: ${dir}; }
+    p { margin: 0 0 3.2mm; font-size: 10.3px; line-height: 1.48; color: #2b2924; }
+    .greeting { font-family: 'Antro Vectra', 'Wix MadeFor Display', Arial, sans-serif; font-size: 15px; color: ${NEAR_BLACK}; margin-bottom: 3.6mm; font-weight: 400; }
     .panel { border-left: ${dir === "rtl" ? "0" : "1px"} solid ${HAIRLINE}; border-right: ${dir === "rtl" ? "1px" : "0"} solid ${HAIRLINE}; padding-${dir === "rtl" ? "right" : "left"}: 7mm; }
     .panel h2 { margin: 0 0 4mm; font-family: 'Porter FT', Arial, sans-serif; font-size: 9px; text-transform: uppercase; letter-spacing: .18em; color: ${GOLD_INK}; font-weight: 400; }
     ul { margin: 0; padding-${dir === "rtl" ? "right" : "left"}: 5mm; }
     li { margin-bottom: 3.2mm; font-size: 10.5px; line-height: 1.42; color: #2b2924; }
-    .cta { margin-top: 5mm; padding-top: 4mm; border-top: 1px solid ${GOLD}; color: ${NEAR_BLACK}; font-size: 10.8px; line-height: 1.55; font-weight: 600; }
-    .signature { margin-top: 6mm; font-family: 'Antro Vectra', 'Wix MadeFor Display', Arial, sans-serif; font-size: 18px; color: ${NEAR_BLACK}; white-space: pre-line; }
-    .footer { position: absolute; left: 18mm; right: 18mm; bottom: 12mm; display: flex; justify-content: space-between; gap: 10px; border-top: 1px solid ${HAIRLINE}; padding-top: 4mm; font-size: 9.5px; color: #5d5548; z-index: 1; direction: ltr; }
+    .signature { margin-top: 4.5mm; margin-bottom: 4mm; font-family: 'Antro Vectra', 'Wix MadeFor Display', Arial, sans-serif; font-size: 17px; line-height: 1.2; color: ${NEAR_BLACK}; white-space: pre-line; }
+    .cta { margin-top: 0; padding-top: 3.5mm; border-top: 1px solid ${GOLD}; color: ${NEAR_BLACK}; font-size: 10.3px; line-height: 1.45; font-weight: 600; }
+    .footer { position: absolute; left: 18mm; right: 18mm; bottom: 8mm; display: flex; justify-content: center; flex-wrap: wrap; gap: 4mm 7mm; border-top: 1px solid ${HAIRLINE}; padding-top: 3mm; font-size: 8.8px; color: #5d5548; z-index: 1; direction: ltr; }
   </style>
 </head>
 <body>
@@ -185,16 +199,13 @@ function renderBusinessLetterHtml(input: {
         <p>${escapeHtml(c.opening)}</p>
         <p>${escapeHtml(c.valueProposition)}</p>
         <p>${escapeHtml(c.partnerAngle)}</p>
-        <div class="cta">${escapeHtml(c.callToAction)}</div>
         <div class="signature">${escapeHtml(c.signature)}</div>
+        <div class="cta">${escapeHtml(c.callToAction)}</div>
       </div>
       <aside class="panel"><h2>Key advantages</h2><ul>${benefits}</ul></aside>
     </section>
     <footer class="footer">
-      <span>${escapeHtml(input.contact.phone || "")}</span>
-      <span>${escapeHtml(input.contact.whatsapp || "")}</span>
-      <span>${escapeHtml(input.contact.email || "")}</span>
-      <span>${escapeHtml(input.contact.website || "www.transyachtgroup.com")}</span>
+      ${footerItems.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}
     </footer>
   </main>
 </body>
