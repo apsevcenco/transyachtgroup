@@ -17,17 +17,32 @@ export function plainText(html: string): string {
   return html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/&[a-z#0-9]+;/gi, " ").replace(/\s+/g, " ").trim();
 }
 
+const SIMILARITY_STOP_WORDS = new Set([
+  "about", "after", "again", "also", "around", "available", "because", "been", "before", "between", "both", "cannes", "client",
+  "clients", "comfort", "concierge", "contact", "courchevel", "during", "each", "every", "experience", "french", "from",
+  "guide", "guests", "hotel", "into", "journey", "luxury", "make", "monaco", "nice", "offer", "private", "rental", "riviera",
+  "service", "services", "saint", "should", "stay", "tropez", "trans", "transfer", "transfers", "travel", "vehicle", "vehicles",
+  "with", "without", "yacht", "yachts", "your",
+]);
+
 function words(value: string): string[] {
   return plainText(value).toLocaleLowerCase("en").match(/[\p{L}\p{N}]+/gu) || [];
 }
 
 export function textSimilarity(a: string, b: string): number {
-  const left = new Set(words(a).filter((word) => word.length > 3));
-  const right = new Set(words(b).filter((word) => word.length > 3));
+  const left = new Set(words(a).filter((word) => word.length > 3 && !SIMILARITY_STOP_WORDS.has(word)));
+  const right = new Set(words(b).filter((word) => word.length > 3 && !SIMILARITY_STOP_WORDS.has(word)));
   if (!left.size || !right.size) return 0;
   let overlap = 0;
   for (const word of left) if (right.has(word)) overlap++;
   return Math.round((overlap / new Set([...left, ...right]).size) * 100);
+}
+
+function hasFaqSection(html: string, body: string): boolean {
+  if (/\bfaq\b|frequently asked|questions? and answers?/i.test(body)) return true;
+  if (/<h2\b[^>]*>[\s\S]*?(questions?|asked|faq)[\s\S]*?<\/h2>/i.test(html)) return true;
+  const questionHeadings = (html.match(/<h3\b[^>]*>[\s\S]*?\?[\s\S]*?<\/h3>/gi) || []).length;
+  return questionHeadings >= 2;
 }
 
 export function auditGuide(input: SeoAuditInput, existing: Array<{ id: number; title: string; slug: string; primaryKeyword?: string | null; content: string }> = []): SeoAuditResult {
@@ -41,7 +56,7 @@ export function auditGuide(input: SeoAuditInput, existing: Array<{ id: number; t
   const h1Count = (input.content.match(/<h1\b/gi) || []).length;
   const h2Count = (input.content.match(/<h2\b/gi) || []).length;
   const internalLinks = (input.content.match(/<a\s[^>]*href=["'](?:\/|https:\/\/www\.transyachtgroup\.com\/)/gi) || []).length;
-  const faqMentions = (body.match(/\bfaq\b|frequently asked|questions? and answers?/gi) || []).length;
+  const faqMentions = hasFaqSection(input.content, body) ? 1 : 0;
   const translations = input.translations || {};
   const completeTranslations = ["fr", "ru", "ro", "ar"].filter((lang) => {
     const item = translations[lang] || {};
@@ -66,11 +81,18 @@ export function auditGuide(input: SeoAuditInput, existing: Array<{ id: number; t
   if (!input.targetPage) add("target_page", "warning", "Select the commercial page supported by this article.", 4);
   if (completeTranslations < 4) add("translations", "warning", `Only ${completeTranslations}/4 translations are complete.`, 6);
 
+  const keywordWords = new Set(words(keyword).filter((word) => word.length > 3));
   const cannibalization = existing.map((guide) => {
-    const exactKeyword = keyword && guide.primaryKeyword?.trim().toLocaleLowerCase("en") === keyword;
+    const existingKeyword = guide.primaryKeyword?.trim().toLocaleLowerCase("en") || "";
+    const exactKeyword = Boolean(keyword && existingKeyword === keyword);
+    const existingKeywordWords = new Set(words(existingKeyword).filter((word) => word.length > 3));
+    const sharedKeywordWords = [...keywordWords].filter((word) => existingKeywordWords.has(word)).length;
     const similarity = exactKeyword ? 100 : textSimilarity(`${input.title} ${body}`, `${guide.title} ${plainText(guide.content)}`);
-    return { id: guide.id, title: guide.title, slug: guide.slug, similarity };
-  }).filter((guide) => guide.similarity >= 35).sort((a, b) => b.similarity - a.similarity).slice(0, 5);
+    return { id: guide.id, title: guide.title, slug: guide.slug, similarity, exactKeyword, sharedKeywordWords };
+  }).filter((guide) => guide.exactKeyword || (guide.sharedKeywordWords >= 2 && guide.similarity >= 45) || guide.similarity >= 60)
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, 5)
+    .map(({ id, title, slug, similarity }) => ({ id, title, slug, similarity }));
   if (cannibalization.length) add("cannibalization", "error", `Possible search overlap with ${cannibalization.length} existing article(s).`, 12);
 
   return {

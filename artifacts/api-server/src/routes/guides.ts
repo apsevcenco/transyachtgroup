@@ -587,8 +587,20 @@ function parseGuideInput(body: unknown) {
 }
 
 async function auditInput(input: SeoAuditInput, excludeId?: number) {
-  const all = await db.select({ id: guidesTable.id, title: guidesTable.title, slug: guidesTable.slug, primaryKeyword: guidesTable.primaryKeyword, content: guidesTable.content }).from(guidesTable);
-  return auditGuide(input, all.filter((guide) => guide.id !== excludeId));
+  const all = await db.select({
+    id: guidesTable.id,
+    title: guidesTable.title,
+    slug: guidesTable.slug,
+    primaryKeyword: guidesTable.primaryKeyword,
+    content: guidesTable.content,
+    published: guidesTable.published,
+    scheduledAt: guidesTable.scheduledAt,
+  }).from(guidesTable);
+  const now = Date.now();
+  const visibleExisting = all.filter((guide) =>
+    guide.id !== excludeId && (guide.published || Boolean(guide.scheduledAt && guide.scheduledAt.getTime() <= now))
+  );
+  return auditGuide(input, visibleExisting);
 }
 
 const publiclyVisible = () => or(
