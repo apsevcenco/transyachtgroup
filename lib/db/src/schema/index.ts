@@ -291,10 +291,41 @@ export const analyticsEventsTable = pgTable("analytics_events", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const customersTable = pgTable(
+  "customers",
+  {
+    id: serial("id").primaryKey(),
+    fullName: text("full_name").notNull(),
+    phone: text("phone"),
+    email: text("email"),
+    dateOfBirth: date("date_of_birth"),
+    placeOfBirth: text("place_of_birth"),
+    nationality: text("nationality"),
+    passportNumber: text("passport_number"),
+    passportExpiry: date("passport_expiry"),
+    driverLicenseNumber: text("driver_license_number"),
+    driverLicenseExpiry: date("driver_license_expiry"),
+    driverLicenseIssuedBy: text("driver_license_issued_by"),
+    legalEntity: text("legal_entity"),
+    address: text("address"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("customers_full_name_idx").on(table.fullName),
+    index("customers_phone_idx").on(table.phone),
+    index("customers_email_idx").on(table.email),
+  ],
+);
+
 export const bookingsTable = pgTable(
   "bookings",
   {
     id: serial("id").primaryKey(),
+    customerId: integer("customer_id").references(() => customersTable.id, {
+      onDelete: "set null",
+    }),
     vehicleId: integer("vehicle_id")
       .notNull()
       .references(() => vehiclesTable.id, { onDelete: "cascade" }),
@@ -365,6 +396,9 @@ export const rentalHistoryTable = pgTable(
   "rental_history",
   {
     id: serial("id").primaryKey(),
+    customerId: integer("customer_id").references(() => customersTable.id, {
+      onDelete: "set null",
+    }),
     bookingId: integer("booking_id").references(() => bookingsTable.id, {
       onDelete: "set null",
     }),
@@ -452,6 +486,9 @@ export const contractsTable = pgTable("contracts", {
   id: serial("id").primaryKey(),
   contractNumber: varchar("contract_number", { length: 50 }).notNull().unique(),
   requestId: varchar("request_id", { length: 64 }).unique(),
+  customerId: integer("customer_id").references(() => customersTable.id, {
+    onDelete: "set null",
+  }),
   bookingId: integer("booking_id"),
   vehicleId: integer("vehicle_id"),
 
@@ -511,6 +548,14 @@ export const insertContractSchema = createInsertSchema(contractsTable).omit({
 });
 export type InsertContract = z.infer<typeof insertContractSchema>;
 export type Contract = typeof contractsTable.$inferSelect;
+
+export const insertCustomerSchema = createInsertSchema(customersTable).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
+export type Customer = typeof customersTable.$inferSelect;
 
 export const insertVehicleSchema = createInsertSchema(vehiclesTable, {
   // .optional() only — the column is NOT NULL at the DB level (default

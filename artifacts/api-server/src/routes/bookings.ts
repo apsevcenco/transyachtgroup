@@ -23,6 +23,7 @@ import {
   uploadBookingPhoto,
 } from "../lib/privateStorage";
 import { dispatchReviewRequest, reviewRequestCopy } from "../lib/reviewDelivery";
+import { upsertCustomerFromContact } from "./customers";
 
 // Vehicle names can carry rich-text markup from the admin's CMS editor
 // (e.g. "<p><span style=...>McLaren</span></p>") — strip it for the plain
@@ -348,9 +349,17 @@ router.post("/bookings", async (req, res) => {
       return;
     }
 
+    const customerId = await upsertCustomerFromContact({
+      customerId: parsed.data.customerId,
+      fullName: parsed.data.clientName,
+      phone: parsed.data.clientPhone,
+      email: parsed.data.clientEmail,
+      notes: parsed.data.notes,
+    });
+
     const [booking] = await db
       .insert(bookingsTable)
-      .values(parsed.data)
+      .values({ ...parsed.data, customerId })
       .returning();
     res.status(201).json(await signBookingPhotos(booking));
   } catch (err) {
@@ -430,10 +439,18 @@ router.put("/bookings/:id", async (req, res) => {
       return;
     }
 
+    const customerId = await upsertCustomerFromContact({
+      customerId: parsed.data.customerId,
+      fullName: parsed.data.clientName,
+      phone: parsed.data.clientPhone,
+      email: parsed.data.clientEmail,
+      notes: parsed.data.notes,
+    });
+
     const booking = await db.transaction(async (tx) => {
       const [updated] = await tx
         .update(bookingsTable)
-        .set({ ...parsed.data, updatedAt: new Date() })
+        .set({ ...parsed.data, customerId, updatedAt: new Date() })
         .where(eq(bookingsTable.id, id))
         .returning();
 
@@ -443,6 +460,7 @@ router.put("/bookings/:id", async (req, res) => {
           .from(vehiclesTable)
           .where(eq(vehiclesTable.id, updated.vehicleId));
         await tx.insert(rentalHistoryTable).values({
+          customerId: updated.customerId,
           bookingId: updated.id,
           clientName: updated.clientName,
           clientPhone: updated.clientPhone,

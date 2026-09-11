@@ -8,6 +8,7 @@ import {
 } from "@workspace/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { adminAuth } from "../middleware/auth";
+import { upsertCustomerFromContact } from "./customers";
 import {
   renderContractHtml,
   type ContractInput,
@@ -41,6 +42,7 @@ function numOrNull(v: unknown): number | null {
 
 interface ParsedContractRequest {
   requestId: string;
+  customerId: number | null;
   bookingId: number | null;
   vehicleId: number;
   renterName: string;
@@ -224,6 +226,18 @@ function parseContractRequest(
     return { error: "bookingId must be a positive integer" };
   }
 
+  const customerIdNum = Number(b.customerId);
+  const customerId =
+    b.customerId != null &&
+    b.customerId !== "" &&
+    Number.isInteger(customerIdNum) &&
+    customerIdNum > 0
+      ? customerIdNum
+      : null;
+  if (b.customerId != null && b.customerId !== "" && customerId == null) {
+    return { error: "customerId must be a positive integer" };
+  }
+
   const requestId = str(b.requestId);
   if (!/^[0-9a-f-]{36}$/i.test(requestId))
     return { error: "requestId must be a UUID" };
@@ -235,6 +249,7 @@ function parseContractRequest(
   return {
     data: {
       requestId,
+      customerId,
       bookingId,
       vehicleId,
       renterName: requiredText.renterName,
@@ -487,6 +502,21 @@ router.post(
         return;
       }
       const data = parsed.data;
+      const customerId = await upsertCustomerFromContact({
+        customerId: data.customerId,
+        fullName: data.renterName,
+        phone: data.renterPhone,
+        email: data.renterEmail,
+        dateOfBirth: data.renterDob,
+        placeOfBirth: data.renterPob,
+        nationality: data.renterNationality,
+        passportNumber: data.renterPassport,
+        passportExpiry: data.renterPassportExpiry,
+        driverLicenseNumber: data.renterLicence,
+        driverLicenseExpiry: data.renterLicenceExpiry,
+        driverLicenseIssuedBy: data.renterLicenceIssuedBy,
+        legalEntity: data.renterLegalEntity,
+      });
 
       const [existingRequest] = await db
         .select()
@@ -657,6 +687,7 @@ router.post(
           const pdfSha256 = createHash("sha256").update(buffer).digest("hex");
           const contractRecord = {
             requestId: data.requestId,
+            customerId,
             bookingId: data.bookingId,
             vehicleId: data.vehicleId,
             renterName: data.renterName,

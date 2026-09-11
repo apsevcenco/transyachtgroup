@@ -7,8 +7,10 @@ import {
   updateBooking,
   deleteBooking,
   checkAvailability,
+  fetchCustomers,
   type Booking,
   type BookingInput,
+  type Customer,
 } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { GanttGrid } from "./GanttGrid";
@@ -147,6 +149,9 @@ function YachtBookingFormModal({
   const [endDate, setEndDate] = useState(editingBooking?.endDate || target.date || "");
   const [status, setStatus] = useState<Booking["status"]>(editingBooking?.status || "confirmed");
   const [clientName, setClientName] = useState(stripTags(editingBooking?.clientName) || "");
+  const [customerId, setCustomerId] = useState<number | null>(editingBooking?.customerId ?? null);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  useEffect(() => { fetchCustomers({ limit: 500 }).then(setCustomers).catch(() => {}); }, []);
   const [clientPhone, setClientPhone] = useState(editingBooking?.clientPhone || "");
   const [notes, setNotes] = useState(editingBooking?.notes || "");
   const [totalAmount, setTotalAmount] = useState(numToStr(editingBooking?.totalAmount));
@@ -214,6 +219,7 @@ function YachtBookingFormModal({
     setError("");
     try {
       const payload: BookingInput = {
+        customerId,
         vehicleId,
         startDate,
         endDate,
@@ -288,6 +294,19 @@ function YachtBookingFormModal({
         <h3 className="font-porter text-white text-lg mb-5">{editingBooking ? "Edit Yacht Charter" : "New Yacht Charter"}</h3>
 
         <div className="space-y-3.5">
+          <div>
+            <label className={labelClass}>CRM client</label>
+            <select value={customerId ?? ""} onChange={(e) => {
+              const id = e.target.value ? Number(e.target.value) : null;
+              setCustomerId(id);
+              const customer = customers.find((item) => item.id === id);
+              if (customer) { setClientName(customer.fullName); setClientPhone(customer.phone || ""); }
+            }} disabled={isReadOnly} className={`${inputClass} disabled:opacity-50`}>
+              <option value="">New / not selected</option>
+              {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.fullName}{customer.phone ? ` — ${customer.phone}` : ""}</option>)}
+            </select>
+          </div>
+
           <div>
             <label className={labelClass}>Yacht</label>
 

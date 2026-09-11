@@ -5,8 +5,10 @@ import {
   fetchBooking,
   generateContract,
   generateOneOffContract,
+  fetchCustomers,
   type Booking,
   type ContractGenerateRequest,
+  type Customer,
 } from "@/lib/api";
 import { stripTags, vehiclePhotos, type VehicleLite } from "./bookingShared";
 import { VehicleThumb } from "./VehicleThumb";
@@ -14,6 +16,7 @@ import { VehicleThumb } from "./VehicleThumb";
 export interface ContractPrefill {
   editContractNumber?: string;
   bookingId?: number;
+  customerId?: number;
   vehicleId?: number;
   renterName?: string;
   renterLegalEntity?: string;
@@ -53,6 +56,7 @@ export function buildContractPrefillFromBooking(
 ): ContractPrefill {
   return {
     bookingId: booking.id,
+    customerId: booking.customerId ?? undefined,
     vehicleId: booking.vehicleId,
     renterName: stripTags(booking.clientName) || "",
     renterPhone: booking.clientPhone || "",
@@ -108,6 +112,8 @@ export function ContractGenerator({
   const vehiclePickerRef = useRef<HTMLDivElement>(null);
 
   const [renterName, setRenterName] = useState(prefill?.renterName || "");
+  const [customerId, setCustomerId] = useState<number | null>(prefill?.customerId ?? null);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [renterLegalEntity, setRenterLegalEntity] = useState(
     prefill?.renterLegalEntity || "",
   );
@@ -189,6 +195,8 @@ export function ContractGenerator({
       .finally(() => setLoadingVehicles(false));
   }, []);
 
+  useEffect(() => { fetchCustomers({ limit: 500 }).then(setCustomers).catch(() => {}); }, []);
+
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
       if (
@@ -215,6 +223,7 @@ export function ContractGenerator({
     if (p.bookingId != null) setBookingIdInput(String(p.bookingId));
     if (p.vehicleId != null) setVehicleId(p.vehicleId);
     if (p.renterName) setRenterName(p.renterName);
+    if (p.customerId != null) setCustomerId(p.customerId);
     setRenterLegalEntity(p.renterLegalEntity || "");
     if (p.renterDob) setRenterDob(p.renterDob);
     if (p.renterPob) setRenterPob(p.renterPob);
@@ -339,6 +348,7 @@ export function ContractGenerator({
     setSuccess("");
     try {
       const commonPayload = {
+        customerId: customerId ?? undefined,
         bookingId: bookingIdInput.trim()
           ? parseInt(bookingIdInput.trim(), 10)
           : undefined,
@@ -594,6 +604,31 @@ export function ContractGenerator({
         <div className="border-t border-white/[0.06] pt-4">
           <p className={sectionLabelClass}>Renter Details</p>
           <div className="space-y-3">
+            <div>
+              <label className={labelClass}>CRM client</label>
+              <select value={customerId ?? ""} onChange={(e) => {
+                const id = e.target.value ? Number(e.target.value) : null;
+                setCustomerId(id);
+                const customer = customers.find((item) => item.id === id);
+                if (customer) {
+                  setRenterName(customer.fullName);
+                  setRenterLegalEntity(customer.legalEntity || "");
+                  setRenterDob(customer.dateOfBirth || "");
+                  setRenterPob(customer.placeOfBirth || "");
+                  setRenterNationality(customer.nationality || "");
+                  setRenterPassport(customer.passportNumber || "");
+                  setRenterPassportExpiry(customer.passportExpiry || "");
+                  setRenterLicence(customer.driverLicenseNumber || "");
+                  setRenterLicenceExpiry(customer.driverLicenseExpiry || "");
+                  setRenterLicenceIssuedBy(customer.driverLicenseIssuedBy || "");
+                  setRenterPhone(customer.phone || "");
+                  setRenterEmail(customer.email || "");
+                }
+              }} className={inputClass}>
+                <option value="">New / not selected</option>
+                {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.fullName}{customer.phone ? ` — ${customer.phone}` : ""}</option>)}
+              </select>
+            </div>
             <div>
               <label className={labelClass}>Full Name</label>
               <input

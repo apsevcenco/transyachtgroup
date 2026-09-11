@@ -20,8 +20,10 @@ import {
   fetchBookingContracts,
   uploadPrivateBookingPhoto,
   downloadStoredContract,
+  fetchCustomers,
   type Booking,
   type BookingInput,
+  type Customer,
   type StoredContract,
 } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -288,6 +290,9 @@ function CarBookingFormModal({
   const [clientName, setClientName] = useState(
     stripTags(editingBooking?.clientName) || "",
   );
+  const [customerId, setCustomerId] = useState<number | null>(editingBooking?.customerId ?? null);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  useEffect(() => { fetchCustomers({ limit: 500 }).then(setCustomers).catch(() => {}); }, []);
   const [clientPhone, setClientPhone] = useState(
     editingBooking?.clientPhone || "",
   );
@@ -661,6 +666,7 @@ function CarBookingFormModal({
     setError("");
     try {
       const payload: BookingInput = {
+        customerId,
         vehicleId,
         startDate,
         endDate,
@@ -749,6 +755,28 @@ function CarBookingFormModal({
         </h3>
 
         <div className="space-y-3.5">
+          <div>
+            <label className={labelClass}>CRM client</label>
+            <select
+              value={customerId ?? ""}
+              onChange={(e) => {
+                const id = e.target.value ? Number(e.target.value) : null;
+                setCustomerId(id);
+                const customer = customers.find((item) => item.id === id);
+                if (customer) {
+                  setClientName(customer.fullName);
+                  setClientPhone(customer.phone || "");
+                  setClientEmail(customer.email || "");
+                }
+              }}
+              disabled={isReadOnly}
+              className={`${inputClass} disabled:opacity-50`}
+            >
+              <option value="">New / not selected</option>
+              {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.fullName}{customer.phone ? ` — ${customer.phone}` : ""}</option>)}
+            </select>
+          </div>
+
           <div>
             <label className={labelClass}>Vehicle</label>
 
