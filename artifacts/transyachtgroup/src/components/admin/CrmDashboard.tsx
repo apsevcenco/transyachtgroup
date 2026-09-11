@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Loader2, X, Trash2, ChevronDown } from "lucide-react";
-import { fetchVehicles, fetchRentalHistory, deleteRentalHistory, type RentalHistoryRecord } from "@/lib/api";
+import { Loader2, X, Trash2, ChevronDown, Search } from "lucide-react";
+import { fetchVehicles, fetchRentalHistory, deleteRentalHistory, fetchCustomers, type Customer, type RentalHistoryRecord } from "@/lib/api";
 import { VehicleThumb } from "./VehicleThumb";
 import { VehiclePhotoModal } from "./VehiclePhotoModal";
 import { stripTags, vehiclePhotos, type VehicleLite } from "./bookingShared";
 
 type CategoryFilter = "all" | "car" | "yacht";
+type CrmView = "rentals" | "customers";
 
 function formatMoney(n: number | null): string {
   return n == null ? "—" : `€${n.toLocaleString()}`;
@@ -24,10 +25,16 @@ function customerTotal(r: RentalHistoryRecord): number | null {
 export function CrmDashboard() {
   const [vehicles, setVehicles] = useState<VehicleLite[]>([]);
   const [rentals, setRentals] = useState<RentalHistoryRecord[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [customersLoading, setCustomersLoading] = useState(true);
   const [error, setError] = useState("");
+  const [customersError, setCustomersError] = useState("");
   const [selectedRental, setSelectedRental] = useState<RentalHistoryRecord | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [vehiclePickerOpen, setVehiclePickerOpen] = useState(false);
+  const [view, setView] = useState<CrmView>("rentals");
+  const [customerQuery, setCustomerQuery] = useState("");
 
   const [vehicleId, setVehicleId] = useState<number | null>(null);
   const [category, setCategory] = useState<CategoryFilter>("all");
@@ -68,9 +75,29 @@ export function CrmDashboard() {
     }
   }, [vehicleId, category, dateStart, dateEnd]);
 
+  const loadCustomers = useCallback(async () => {
+    setCustomersLoading(true);
+    setCustomersError("");
+    try {
+      const data = await fetchCustomers({ q: customerQuery || undefined, limit: 500 });
+      setCustomers(data);
+    } catch (err: any) {
+      setCustomersError(err.message || "Failed to load customers");
+    } finally {
+      setCustomersLoading(false);
+    }
+  }, [customerQuery]);
+
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      loadCustomers();
+    }, 250);
+    return () => window.clearTimeout(t);
+  }, [loadCustomers]);
 
   const stats = useMemo(() => {
     const totalRevenue = rentals.reduce((sum, r) => sum + (customerTotal(r) ?? 0), 0);
@@ -102,6 +129,36 @@ export function CrmDashboard() {
 
   return (
     <div>
+      <div className="flex flex-wrap gap-2 mb-5">
+        {(["rentals", "customers"] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setView(tab)}
+            className={`min-h-[44px] px-4 rounded-md text-[11px] uppercase tracking-wide border transition-colors ${
+              view === tab
+                ? "bg-[hsl(43,67%,55%)]/15 border-gold/40 text-gold"
+                : "border-white/10 text-white/50 hover:text-white/70"
+            }`}
+          >
+            {tab === "rentals" ? "Rentals" : `Customers (${customers.length})`}
+          </button>
+        ))}
+      </div>
+
+      {view === "customers" && (
+        <CustomersPanel
+          customers={customers}
+          loading={customersLoading}
+          error={customersError}
+          query={customerQuery}
+          onQueryChange={setCustomerQuery}
+          onSelect={setSelectedCustomer}
+        />
+      )}
+
+      {view === "rentals" && (
+        <>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <div className="border border-white/[0.08] rounded-lg p-4 bg-white/[0.02]">
           <p className="text-[10px] uppercase tracking-wide text-white/40 mb-1">Total Revenue</p>
@@ -355,6 +412,154 @@ export function CrmDashboard() {
           onDelete={handleDelete}
         />
       )}
+
+        </>
+      )}
+
+      {selectedCustomer && <CustomerDetailModal customer={selectedCustomer} onClose={() => setSelectedCustomer(null)} />}
+    </div>
+  );
+}
+
+function displayCustomerContact(customer: Customer): string {
+  return [customer.phone, customer.email].filter(Boolean).join(" · ") || "No contact data";
+}
+
+function CustomersPanel({
+  customers,
+  loading,
+  error,
+  query,
+  onQueryChange,
+  onSelect,
+}: {
+  customers: Customer[];
+  loading: boolean;
+  error: string;
+  query: string;
+  onQueryChange: (value: string) => void;
+  onSelect: (customer: Customer) => void;
+}) {
+  return (
+    <div>
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-gold/60 font-medium mb-1">CRM Customers</p>
+          <p className="text-sm text-white/50">Clients imported from bookings, contracts and completed rentals.</p>
+        </div>
+        <label className="relative block w-full sm:w-80">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35" />
+          <input
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            placeholder="Search by name, phone or email"
+            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-md pl-9 pr-3 py-2 text-sm text-white min-h-[44px] placeholder:text-white/30"
+          />
+        </label>
+      </div>
+
+      {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
+
+      {loading ? (
+        <div className="flex items-center justify-center py-20 text-white/40">
+          <Loader2 size={20} className="animate-spin mr-2" /> Loading customers…
+        </div>
+      ) : customers.length === 0 ? (
+        <p className="text-white/40 text-sm py-10 text-center">No customers found yet.</p>
+      ) : (
+        <>
+          <div className="lg:hidden space-y-2">
+            {customers.map((customer) => (
+              <button
+                key={customer.id}
+                type="button"
+                onClick={() => onSelect(customer)}
+                className="w-full p-3 rounded-lg border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] text-left transition-colors"
+              >
+                <p className="text-sm text-white truncate">{stripTags(customer.fullName) || "Unnamed client"}</p>
+                <p className="text-[11px] text-white/45 truncate">{displayCustomerContact(customer)}</p>
+                <p className="text-[11px] text-white/35 truncate">{customer.legalEntity || customer.passportNumber || customer.driverLicenseNumber || "No documents yet"}</p>
+              </button>
+            ))}
+          </div>
+
+          <div className="hidden lg:block overflow-x-auto border border-white/[0.08] rounded-lg">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/10 bg-white/[0.02] text-left">
+                  <th className="px-3 py-2 text-[10px] uppercase tracking-wide text-white/40 font-normal">Client</th>
+                  <th className="px-3 py-2 text-[10px] uppercase tracking-wide text-white/40 font-normal">Contact</th>
+                  <th className="px-3 py-2 text-[10px] uppercase tracking-wide text-white/40 font-normal">Passport</th>
+                  <th className="px-3 py-2 text-[10px] uppercase tracking-wide text-white/40 font-normal">Driving Licence</th>
+                  <th className="px-3 py-2 text-[10px] uppercase tracking-wide text-white/40 font-normal">Legal Entity</th>
+                </tr>
+              </thead>
+              <tbody>
+                {customers.map((customer) => (
+                  <tr
+                    key={customer.id}
+                    onClick={() => onSelect(customer)}
+                    className="border-b border-white/10 last:border-b-0 hover:bg-white/[0.03] cursor-pointer transition-colors"
+                  >
+                    <td className="px-3 py-2">
+                      <p className="text-white">{stripTags(customer.fullName) || "Unnamed client"}</p>
+                      <p className="text-[11px] text-white/35">{customer.dateOfBirth || "No date of birth"}</p>
+                    </td>
+                    <td className="px-3 py-2 text-white/60">{displayCustomerContact(customer)}</td>
+                    <td className="px-3 py-2 text-white/60">{customer.passportNumber || "—"}</td>
+                    <td className="px-3 py-2 text-white/60">{customer.driverLicenseNumber || "—"}</td>
+                    <td className="px-3 py-2 text-white/60">{customer.legalEntity || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function CustomerDetailModal({ customer, onClose }: { customer: Customer; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="bg-[#0f0f0f] border border-white/[0.08] rounded-xl w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button onClick={onClose} className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors">
+          <X size={18} />
+        </button>
+
+        <div className="mb-5 pr-8">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-gold/60 font-medium mb-1">CRM Customer</p>
+          <h3 className="font-porter text-white text-lg">{stripTags(customer.fullName) || "Unnamed client"}</h3>
+          <p className="text-xs text-white/45 mt-1">{displayCustomerContact(customer)}</p>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-gold/60 font-medium mb-1">Personal</p>
+            <DetailRow label="Date of birth" value={customer.dateOfBirth} />
+            <DetailRow label="Place of birth" value={customer.placeOfBirth} />
+            <DetailRow label="Nationality" value={customer.nationality} />
+            <DetailRow label="Address" value={customer.address} />
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-gold/60 font-medium mb-1">Documents</p>
+            <DetailRow label="Passport" value={customer.passportNumber} />
+            <DetailRow label="Passport expiry" value={customer.passportExpiry} />
+            <DetailRow label="Licence" value={customer.driverLicenseNumber} />
+            <DetailRow label="Licence expiry" value={customer.driverLicenseExpiry} />
+            <DetailRow label="Licence issued by" value={customer.driverLicenseIssuedBy} />
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-gold/60 font-medium mb-1">Business</p>
+            <DetailRow label="Legal entity" value={customer.legalEntity} />
+            <DetailRow label="Notes" value={customer.notes} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
