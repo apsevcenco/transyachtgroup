@@ -340,6 +340,13 @@ export default function Catalog({ category }: CatalogProps) {
     ro: "Întrebări frecvente",
     ar: "الأسئلة الشائعة",
   }[lang];
+  const seoDetailsTitle = {
+    en: isYacht ? "More about luxury yacht charter" : "More about luxury car rental",
+    fr: isYacht ? "En savoir plus sur le yacht charter" : "En savoir plus sur la location de voitures de luxe",
+    ru: isYacht ? "Подробнее об аренде яхт" : "Подробнее об аренде люксовых автомобилей",
+    ro: isYacht ? "Mai multe despre charterul de iahturi" : "Mai multe despre închirieri auto de lux",
+    ar: isYacht ? "المزيد عن تأجير اليخوت" : "المزيد عن تأجير السيارات الفاخرة",
+  }[lang];
 
   const title = isYacht
     ? siteContent.yacht_section_title || "Ocean Prestige"
@@ -549,43 +556,45 @@ export default function Catalog({ category }: CatalogProps) {
             </div>
           )}
 
-          <section className="mt-20 border-t border-white/[0.06] pt-14">
-            <div className="grid gap-6 lg:grid-cols-3">
-              {seoSections.map((section) => (
-                <article
-                  key={section.title}
-                  className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 md:p-7"
-                >
-                  <h2 className="mb-4 font-serif text-2xl leading-tight text-white">
-                    {section.title}
-                  </h2>
-                  <p className="text-sm font-light leading-7 text-white/55">
-                    {section.body}
-                  </p>
-                </article>
-              ))}
-            </div>
-          </section>
+          <section className="mt-12 border-t border-white/[0.05] pt-8">
+            <details className="group rounded-2xl border border-white/[0.06] bg-white/[0.018]">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-left text-xs uppercase tracking-[0.22em] text-white/35 transition hover:text-gold md:px-6">
+                <span>{seoDetailsTitle}</span>
+                <span className="text-gold/60 transition group-open:rotate-45">+</span>
+              </summary>
+              <div className="border-t border-white/[0.05] px-5 py-6 md:px-6">
+                <div className="grid gap-5 lg:grid-cols-3">
+                  {seoSections.map((section) => (
+                    <article key={section.title}>
+                      <h2 className="mb-3 font-serif text-xl leading-tight text-white/85">
+                        {section.title}
+                      </h2>
+                      <p className="text-sm font-light leading-7 text-white/50">
+                        {section.body}
+                      </p>
+                    </article>
+                  ))}
+                </div>
 
-          <section className="mt-14 rounded-2xl border border-gold/15 bg-gold/[0.03] p-6 md:p-8">
-            <h2 className="mb-8 font-serif text-3xl leading-tight text-white">
-              {faqTitle}
-            </h2>
-            <div className="grid gap-5 md:grid-cols-2">
-              {faqSections.map((item) => (
-                <article
-                  key={item.question}
-                  className="rounded-xl border border-white/[0.06] bg-black/20 p-5"
-                >
-                  <h3 className="mb-3 text-base font-medium leading-snug text-gold">
-                    {item.question}
-                  </h3>
-                  <p className="text-sm font-light leading-7 text-white/55">
-                    {item.answer}
-                  </p>
-                </article>
-              ))}
-            </div>
+                <div className="mt-8 rounded-xl border border-gold/10 bg-gold/[0.025] p-5">
+                  <h2 className="mb-5 font-serif text-2xl leading-tight text-white/90">
+                    {faqTitle}
+                  </h2>
+                  <div className="grid gap-5 md:grid-cols-2">
+                    {faqSections.map((item) => (
+                      <article key={item.question}>
+                        <h3 className="mb-2 text-sm font-medium leading-snug text-gold/90">
+                          {item.question}
+                        </h3>
+                        <p className="text-sm font-light leading-7 text-white/50">
+                          {item.answer}
+                        </p>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </details>
           </section>
         </div>
       </section>
