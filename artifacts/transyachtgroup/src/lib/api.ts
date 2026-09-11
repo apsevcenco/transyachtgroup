@@ -214,6 +214,16 @@ export async function auditNewsSeo(data: NewsInput): Promise<SeoAuditResult> {
   return res.json();
 }
 
+export async function fixNewsSeoWithAi(data: NewsInput): Promise<{ draft: NewsInput; audit: SeoAuditResult; unresolvedAutoFixes?: string[] }> {
+  const res = await fetch(`${API_BASE}/admin/news/fix-seo`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ news: data }),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "AI news SEO correction failed");
+  return res.json();
+}
+
 export async function createNews(data: NewsInput): Promise<News> {
   const res = await fetch(`${API_BASE}/admin/news`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(data) });
   if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "Failed to create news");

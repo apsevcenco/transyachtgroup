@@ -3,7 +3,7 @@ import { ArrowLeft, Pencil, Plus, ShieldCheck, Sparkles, Trash2, Upload } from "
 import { useLocation } from "wouter";
 
 import RichTextEditor from "@/components/RichTextEditor";
-import { auditNewsSeo, checkAuth, createNews, deleteNews, fetchAdminNews, generateNewsWithAi, translateNewsDraftWithAi, updateNews, uploadAdminPublicImage, type News, type NewsInput, type SeoAuditResult } from "@/lib/api";
+import { auditNewsSeo, checkAuth, createNews, deleteNews, fetchAdminNews, fixNewsSeoWithAi, generateNewsWithAi, translateNewsDraftWithAi, updateNews, uploadAdminPublicImage, type News, type NewsInput, type SeoAuditResult } from "@/lib/api";
 import { compressImage } from "@/lib/imageCompress";
 
 const translationLanguages = [
@@ -203,6 +203,25 @@ export default function AdminNews() {
     }
   };
 
+  const fixSeo = async () => {
+    setBusy(true); setMessage("");
+    try {
+      const previousScore = seoAudit?.score ?? 0;
+      const result = await fixNewsSeoWithAi({ ...form, slug: form.slug || slugify(form.title), primaryKeyword: form.primaryKeyword || ai.keyword || ai.topic || null, brief: form.brief || ai.brief || null, published: false });
+      setForm(result.draft);
+      setSeoAudit(result.audit);
+      if (result.unresolvedAutoFixes?.length) {
+        setMessage(`AI updated the news draft, but some SEO fixes still need attention: ${result.unresolvedAutoFixes.join(", ")}. SEO score: ${previousScore}/100 → ${result.audit.score}/100.`);
+      } else {
+        setMessage(`AI fixed the news SEO issues. SEO score: ${previousScore}/100 → ${result.audit.score}/100. Review and save when ready.`);
+      }
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "AI news SEO correction failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (!authorized) return <div className="min-h-screen bg-background" />;
 
   return (
@@ -290,6 +309,7 @@ export default function AdminNews() {
           <div className="mt-6 flex flex-wrap items-center gap-4">
             <label className="flex items-center gap-3 text-sm text-white/70"><input type="checkbox" checked={form.published} onChange={(e) => set("published", e.target.checked)} /> Published and visible</label>
             <button disabled={busy || !form.title || !form.excerpt || !form.content} onClick={runAudit} className="inline-flex items-center gap-2 rounded border border-white/15 px-5 py-3 text-sm text-white/70 hover:border-gold/30 hover:text-gold disabled:opacity-40"><ShieldCheck size={16} /> Audit SEO</button>
+            {seoAudit && seoAudit.issues.length > 0 && <button disabled={busy || !form.title || !form.excerpt || !form.content} onClick={fixSeo} className="inline-flex items-center gap-2 rounded border border-gold/35 bg-gold/5 px-5 py-3 text-sm text-gold disabled:opacity-40"><Sparkles size={16} /> Fix SEO issues with AI</button>}
             <button disabled={busy || !form.title || !form.slug || !form.excerpt || !form.content} onClick={save} className="rounded bg-gold px-6 py-3 text-sm font-medium text-black disabled:opacity-40">{busy ? "Working…" : editing ? "Save changes" : "Create news"}</button>
           </div>
           {seoAudit && <div className="mt-6 rounded-lg border border-white/10 bg-black/30 p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs uppercase tracking-wider text-white/35">News SEO readiness</p><p className={`mt-1 text-4xl font-semibold ${seoAudit.score >= 80 ? "text-emerald-400" : seoAudit.score >= 60 ? "text-gold" : "text-red-400"}`}>{seoAudit.score}/100</p></div><div className="text-right text-xs text-white/40"><p>{seoAudit.stats.wordCount || 0} words</p><p>{seoAudit.stats.internalLinks || 0} internal links</p><p>{seoAudit.stats.completeTranslations || 0}/4 translations</p></div></div><div className="mt-5 space-y-2">{seoAudit.issues.map((issue) => <div key={issue.code} className={`rounded px-3 py-2 text-xs ${issue.severity === "error" ? "bg-red-500/10 text-red-300" : "bg-gold/5 text-gold/80"}`}>{issue.message} <span className="opacity-40">−{issue.points}</span></div>)}{!seoAudit.issues.length && <p className="text-sm text-emerald-400">Ready to publish.</p>}</div></div>}
