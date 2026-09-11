@@ -54,6 +54,16 @@ export function localizedUrl(path: string, lang: LangCode) {
   return url.toString();
 }
 
+export function canonicalUrl(path: string) {
+  const url = new URL(path || "/", `${SITE_URL}/`);
+  if (url.pathname !== "/" && !url.pathname.endsWith("/")) {
+    url.pathname = `${url.pathname}/`;
+  }
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}
+
 export function SeoHead({
   title,
   description,
@@ -65,7 +75,7 @@ export function SeoHead({
   jsonLd,
 }: SeoHeadProps) {
   useEffect(() => {
-    const canonical = localizedUrl(path, lang);
+    const canonical = canonicalUrl(path);
     const fullTitle = title.includes("Trans Yacht Group")
       ? title
       : `${title} | Trans Yacht Group`;
@@ -88,7 +98,7 @@ export function SeoHead({
     });
 
     document.head
-      .querySelectorAll('link[rel="alternate"][data-seo="language"]')
+      .querySelectorAll('link[rel="alternate"][hreflang]')
       .forEach((node) => node.remove());
     LANGUAGES.forEach(({ code }) => {
       const link = document.createElement("link");

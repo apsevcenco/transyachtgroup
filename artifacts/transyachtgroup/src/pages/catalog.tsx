@@ -47,6 +47,220 @@ interface CatalogProps {
   category: "yacht" | "car";
 }
 
+const SEO_SECTIONS = {
+  car: {
+    en: [
+      {
+        title: "Luxury car rental in Cannes, Monaco and the French Riviera",
+        body: "Trans Yacht Group arranges private luxury car rental across Cannes, Monaco, Nice, Saint-Tropez, Antibes and Courchevel for clients who expect discretion, comfort and precise timing. The service is designed for hotel stays, villa arrivals, yacht connections, business meetings, private aviation transfers and events on the Côte d’Azur.",
+      },
+      {
+        title: "Supercars, executive cars and chauffeur options",
+        body: "The fleet may include supercars, luxury SUVs, Mercedes-Benz models, Rolls-Royce, Ferrari, Lamborghini and other premium vehicles depending on availability. Each request is handled individually: we confirm dates, route, delivery address, driver requirements, luggage needs and the level of privacy expected before proposing the most suitable car.",
+      },
+      {
+        title: "VIP delivery, airport transfers and concierge coordination",
+        body: "Vehicles can be coordinated for Nice Côte d’Azur Airport, Cannes, Monaco, private terminals, hotels, villas, ports and winter transfers to Courchevel. Clients can request self-drive rental, chauffeur service, airport meet-and-greet, yacht-to-car transfers or a complete mobility plan for several days.",
+      },
+    ],
+    fr: [
+      {
+        title: "Location de voitures de luxe à Cannes, Monaco et sur la Côte d’Azur",
+        body: "Trans Yacht Group organise la location privée de voitures de luxe à Cannes, Monaco, Nice, Saint-Tropez, Antibes et Courchevel pour une clientèle qui recherche discrétion, confort et ponctualité. Le service convient aux hôtels, villas, événements, arrivées en jet privé, rendez-vous d’affaires et connexions avec yacht.",
+      },
+      {
+        title: "Supercars, voitures avec chauffeur et modèles exécutifs",
+        body: "La flotte peut inclure des supercars, SUV de luxe, Mercedes-Benz, Rolls-Royce, Ferrari, Lamborghini et d’autres véhicules premium selon disponibilité. Chaque demande est préparée sur mesure selon les dates, le trajet, l’adresse de livraison, le besoin de chauffeur, les bagages et le niveau de confidentialité attendu.",
+      },
+      {
+        title: "Livraison VIP, transferts aéroport et conciergerie",
+        body: "Les véhicules peuvent être livrés à l’aéroport de Nice Côte d’Azur, Cannes, Monaco, aux terminaux privés, hôtels, villas, ports et pour les transferts vers Courchevel. Le client peut demander une location sans chauffeur, un chauffeur privé, un accueil aéroport ou un itinéraire complet de mobilité.",
+      },
+    ],
+    ru: [
+      {
+        title: "Аренда люксовых автомобилей в Каннах, Монако и на Лазурном Берегу",
+        body: "Trans Yacht Group организует частную аренду премиальных автомобилей в Каннах, Монако, Ницце, Сен-Тропе, Антибе и Куршевеле для клиентов, которым важны приватность, комфорт и точная логистика. Сервис подходит для отелей, вилл, мероприятий, бизнес-встреч, частной авиации и пересадок с яхты в автомобиль.",
+      },
+      {
+        title: "Суперкары, представительские автомобили и водитель",
+        body: "В автопарке могут быть суперкары, люксовые SUV, Mercedes-Benz, Rolls-Royce, Ferrari, Lamborghini и другие премиальные модели в зависимости от доступности. Каждая заявка готовится индивидуально: даты, маршрут, адрес доставки, водитель, багаж и требования к приватности уточняются до подбора автомобиля.",
+      },
+      {
+        title: "VIP-доставка, аэропорты и консьерж-сопровождение",
+        body: "Автомобили можно организовать для аэропорта Nice Côte d’Azur, Канн, Монако, частных терминалов, отелей, вилл, портов и трансферов в Куршевель. Возможны аренда без водителя, chauffeur service, встреча в аэропорту, пересадка yacht-to-car и полный план передвижения на несколько дней.",
+      },
+    ],
+    ro: [
+      {
+        title: "Închirieri auto de lux în Cannes, Monaco și pe Riviera Franceză",
+        body: "Trans Yacht Group organizează închirieri private de automobile de lux în Cannes, Monaco, Nisa, Saint-Tropez, Antibes și Courchevel pentru clienți care cer discreție, confort și logistică precisă. Serviciul este potrivit pentru hoteluri, vile, evenimente, aviație privată, întâlniri de afaceri și conexiuni cu iahturi.",
+      },
+      {
+        title: "Supercaruri, automobile executive și opțiuni cu șofer",
+        body: "Flota poate include supercaruri, SUV-uri de lux, Mercedes-Benz, Rolls-Royce, Ferrari, Lamborghini și alte modele premium, în funcție de disponibilitate. Fiecare solicitare este pregătită individual, în funcție de date, traseu, adresă de livrare, șofer, bagaje și nivelul de confidențialitate.",
+      },
+      {
+        title: "Livrare VIP, transferuri aeroport și concierge",
+        body: "Automobilele pot fi coordonate pentru aeroportul Nice Côte d’Azur, Cannes, Monaco, terminale private, hoteluri, vile, porturi și transferuri către Courchevel. Clienții pot solicita self-drive, șofer privat, întâmpinare la aeroport sau un plan complet de mobilitate.",
+      },
+    ],
+    ar: [
+      {
+        title: "تأجير سيارات فاخرة في كان وموناكو والريفييرا الفرنسية",
+        body: "تنظم Trans Yacht Group تأجير السيارات الفاخرة الخاصة في كان وموناكو ونيس وسان تروبيه وأنتيب وكورشوفيل للعملاء الذين يبحثون عن الخصوصية والراحة والدقة في التنقل. تناسب الخدمة الفنادق والفلل والفعاليات والطيران الخاص والاجتماعات والانتقال بين اليخوت والسيارات.",
+      },
+      {
+        title: "سيارات سوبركار وسيارات تنفيذية وخدمة سائق",
+        body: "يمكن أن تشمل المجموعة سيارات سوبركار وسيارات SUV فاخرة وMercedes-Benz وRolls-Royce وFerrari وLamborghini وغيرها من السيارات الراقية حسب التوفر. تتم دراسة كل طلب حسب التاريخ والمسار وموقع التسليم والحاجة إلى سائق والأمتعة ومستوى الخصوصية.",
+      },
+      {
+        title: "تسليم VIP وانتقالات المطار وخدمة الكونسيرج",
+        body: "يمكن تنسيق السيارات لمطار نيس كوت دازور وكان وموناكو والمحطات الخاصة والفنادق والفلل والموانئ والانتقالات إلى كورشوفيل. يمكن طلب قيادة ذاتية أو سائق خاص أو استقبال في المطار أو خطة تنقل كاملة لعدة أيام.",
+      },
+    ],
+  },
+  yacht: {
+    en: [
+      {
+        title: "Luxury yacht charter in Cannes, Monaco and Saint-Tropez",
+        body: "Trans Yacht Group coordinates private yacht charters across the French Riviera, including Cannes, Monaco, Nice, Antibes and Saint-Tropez. The service is built for clients who need a curated yacht selection, discreet communication, flexible embarkation and concierge support before and during the charter.",
+      },
+      {
+        title: "Private day charters, events and bespoke itineraries",
+        body: "A yacht request can be prepared for a day at sea, a private celebration, a corporate event, a Monaco Grand Prix stay, Cannes Film Festival logistics or a coastal itinerary with restaurant and beach club stops. The team reviews dates, guest count, preferred style, route, crew expectations and onboard service requirements.",
+      },
+      {
+        title: "Yacht-to-car transfers and complete Riviera mobility",
+        body: "For clients arriving by jet, staying in a villa or moving between ports, yacht charter can be coordinated together with luxury car rental, chauffeur service and VIP transfers. This creates one private mobility plan from airport arrival to hotel, yacht embarkation and evening return.",
+      },
+    ],
+    fr: [
+      {
+        title: "Location de yachts de luxe à Cannes, Monaco et Saint-Tropez",
+        body: "Trans Yacht Group coordonne des charters privés de yachts sur la Côte d’Azur, notamment à Cannes, Monaco, Nice, Antibes et Saint-Tropez. Le service est conçu pour les clients qui recherchent une sélection de yachts adaptée, une communication discrète, un embarquement flexible et une conciergerie dédiée.",
+      },
+      {
+        title: "Charters privés, événements et itinéraires sur mesure",
+        body: "Une demande de yacht peut être organisée pour une journée en mer, une célébration privée, un événement corporate, le Grand Prix de Monaco, le Festival de Cannes ou un itinéraire côtier avec restaurants et beach clubs. L’équipe vérifie les dates, le nombre d’invités, le style souhaité, la route et le service à bord.",
+      },
+      {
+        title: "Transferts yacht-to-car et mobilité complète",
+        body: "Pour les clients arrivant en jet privé, séjournant en villa ou se déplaçant entre plusieurs ports, le yacht charter peut être coordonné avec la location de voiture de luxe, chauffeur privé et transferts VIP. L’objectif est un itinéraire fluide de l’aéroport au yacht puis au retour du soir.",
+      },
+    ],
+    ru: [
+      {
+        title: "Аренда яхт в Каннах, Монако и Сен-Тропе",
+        body: "Trans Yacht Group организует частный yacht charter на Лазурном Берегу, включая Канны, Монако, Ниццу, Антиб и Сен-Тропе. Сервис рассчитан на клиентов, которым нужна точная подборка яхты, приватная коммуникация, гибкая посадка и консьерж-сопровождение до и во время выхода в море.",
+      },
+      {
+        title: "Частные чартеры, мероприятия и маршруты",
+        body: "Яхту можно подготовить для дня в море, частного праздника, корпоративного события, Monaco Grand Prix, Cannes Film Festival или маршрута по побережью с ресторанами и beach clubs. Команда уточняет даты, количество гостей, стиль яхты, маршрут, требования к экипажу и сервису на борту.",
+      },
+      {
+        title: "Пересадка yacht-to-car и полная мобильность",
+        body: "Для клиентов, прилетающих частным рейсом, живущих на вилле или перемещающихся между портами, аренда яхты может быть связана с luxury car rental, chauffeur service и VIP transfers. Это создаёт один приватный план от аэропорта до отеля, яхты и вечернего возвращения.",
+      },
+    ],
+    ro: [
+      {
+        title: "Închirieri iahturi de lux în Cannes, Monaco și Saint-Tropez",
+        body: "Trans Yacht Group coordonează charter privat de iahturi pe Riviera Franceză, inclusiv Cannes, Monaco, Nisa, Antibes și Saint-Tropez. Serviciul este creat pentru clienți care au nevoie de o selecție atentă, comunicare discretă, îmbarcare flexibilă și concierge dedicat.",
+      },
+      {
+        title: "Charter privat, evenimente și itinerarii personalizate",
+        body: "O solicitare de iaht poate fi pregătită pentru o zi pe mare, o celebrare privată, un eveniment corporate, Grand Prix Monaco, Festivalul de Film de la Cannes sau un itinerariu de coastă cu restaurante și beach cluburi. Echipa verifică datele, numărul de invitați, stilul dorit, ruta și serviciile la bord.",
+      },
+      {
+        title: "Transferuri yacht-to-car și mobilitate completă",
+        body: "Pentru clienții care sosesc cu jet privat, stau într-o vilă sau se deplasează între porturi, charterul de iaht poate fi coordonat cu închirieri auto de lux, șofer privat și transferuri VIP. Rezultatul este un plan fluent de la aeroport la hotel, iaht și retur.",
+      },
+    ],
+    ar: [
+      {
+        title: "تأجير يخوت فاخرة في كان وموناكو وسان تروبيه",
+        body: "تنظم Trans Yacht Group رحلات يخوت خاصة في الريفييرا الفرنسية، بما في ذلك كان وموناكو ونيس وأنتيب وسان تروبيه. صممت الخدمة للعملاء الذين يحتاجون إلى اختيار دقيق لليخت وتواصل خاص ونقطة صعود مرنة ودعم كونسيرج قبل الرحلة وأثناءها.",
+      },
+      {
+        title: "رحلات خاصة وفعاليات ومسارات مخصصة",
+        body: "يمكن تجهيز اليخت ليوم في البحر أو مناسبة خاصة أو فعالية للشركات أو إقامة خلال سباق موناكو أو مهرجان كان أو مسار ساحلي مع مطاعم ونوادٍ شاطئية. يراجع الفريق التواريخ وعدد الضيوف والأسلوب المطلوب والمسار والخدمة على متن اليخت.",
+      },
+      {
+        title: "انتقالات yacht-to-car وتنقل فاخر كامل",
+        body: "للعملاء القادمين بطائرة خاصة أو المقيمين في فيلا أو المتنقلين بين الموانئ، يمكن تنسيق اليخت مع تأجير سيارة فاخرة وخدمة سائق وانتقالات VIP. الهدف هو خطة تنقل خاصة واحدة من المطار إلى الفندق واليخت والعودة مساءً.",
+      },
+    ],
+  },
+} as const;
+
+const FAQ_SECTIONS = {
+  car: {
+    en: [
+      { question: "Can I rent a luxury car with a chauffeur?", answer: "Yes. Trans Yacht Group can arrange chauffeur-driven luxury cars, VIP transfers and self-drive rentals depending on the route, vehicle and availability." },
+      { question: "Where can the car be delivered?", answer: "Cars can be coordinated for Cannes, Monaco, Nice, Saint-Tropez, Antibes, Courchevel, hotels, villas, ports, airports and private aviation terminals." },
+      { question: "Which luxury car brands are available?", answer: "Availability changes by date, but requests can include Mercedes-Benz, Rolls-Royce, Ferrari, Lamborghini, luxury SUVs, supercars and executive vehicles." },
+      { question: "Can you arrange airport or yacht transfers?", answer: "Yes. The team can coordinate airport meet-and-greet, yacht-to-car transfers, hotel pickup and multi-day private mobility across the French Riviera." },
+    ],
+    fr: [
+      { question: "Puis-je louer une voiture de luxe avec chauffeur ?", answer: "Oui. Trans Yacht Group peut organiser voitures avec chauffeur, transferts VIP et location sans chauffeur selon le trajet, le véhicule et la disponibilité." },
+      { question: "Où la voiture peut-elle être livrée ?", answer: "La livraison peut être coordonnée à Cannes, Monaco, Nice, Saint-Tropez, Antibes, Courchevel, hôtels, villas, ports, aéroports et terminaux privés." },
+      { question: "Quelles marques de voitures de luxe sont disponibles ?", answer: "La disponibilité varie selon les dates, mais les demandes peuvent inclure Mercedes-Benz, Rolls-Royce, Ferrari, Lamborghini, SUV de luxe et supercars." },
+      { question: "Organisez-vous des transferts aéroport ou yacht ?", answer: "Oui. L’équipe peut coordonner accueil aéroport, transferts yacht-to-car, prise en charge hôtel et mobilité privée sur plusieurs jours." },
+    ],
+    ru: [
+      { question: "Можно ли арендовать люксовый автомобиль с водителем?", answer: "Да. Trans Yacht Group может организовать автомобиль с водителем, VIP-трансфер или аренду без водителя в зависимости от маршрута, модели и доступности." },
+      { question: "Куда можно доставить автомобиль?", answer: "Доставка возможна в Каннах, Монако, Ницце, Сен-Тропе, Антибе, Куршевеле, к отелям, виллам, портам, аэропортам и частным терминалам." },
+      { question: "Какие марки премиальных автомобилей доступны?", answer: "Доступность зависит от даты, но заявки могут включать Mercedes-Benz, Rolls-Royce, Ferrari, Lamborghini, люксовые SUV, суперкары и представительские авто." },
+      { question: "Можно ли организовать трансфер из аэропорта или с яхты?", answer: "Да. Команда может организовать встречу в аэропорту, пересадку yacht-to-car, подачу к отелю и частную мобильность на несколько дней." },
+    ],
+    ro: [
+      { question: "Pot închiria o mașină de lux cu șofer?", answer: "Da. Trans Yacht Group poate organiza automobile de lux cu șofer, transferuri VIP sau închiriere self-drive în funcție de traseu, model și disponibilitate." },
+      { question: "Unde poate fi livrată mașina?", answer: "Livrarea poate fi coordonată în Cannes, Monaco, Nisa, Saint-Tropez, Antibes, Courchevel, hoteluri, vile, porturi, aeroporturi și terminale private." },
+      { question: "Ce mărci de automobile de lux sunt disponibile?", answer: "Disponibilitatea variază, dar cererile pot include Mercedes-Benz, Rolls-Royce, Ferrari, Lamborghini, SUV-uri de lux, supercaruri și automobile executive." },
+      { question: "Puteți organiza transferuri de aeroport sau yacht-to-car?", answer: "Da. Echipa poate coordona întâmpinare la aeroport, transferuri de la iaht la mașină, preluare de la hotel și mobilitate privată." },
+    ],
+    ar: [
+      { question: "هل يمكن استئجار سيارة فاخرة مع سائق؟", answer: "نعم. يمكن لـ Trans Yacht Group تنظيم سيارات فاخرة مع سائق أو انتقالات VIP أو قيادة ذاتية حسب المسار والسيارة والتوفر." },
+      { question: "أين يمكن تسليم السيارة؟", answer: "يمكن تنسيق التسليم في كان وموناكو ونيس وسان تروبيه وأنتيب وكورشوفيل والفنادق والفلل والموانئ والمطارات والمحطات الخاصة." },
+      { question: "ما هي علامات السيارات الفاخرة المتاحة؟", answer: "يتغير التوفر حسب التاريخ، لكن الطلبات قد تشمل Mercedes-Benz وRolls-Royce وFerrari وLamborghini وسيارات SUV فاخرة وسوبركار." },
+      { question: "هل يمكن تنظيم انتقال من المطار أو اليخت؟", answer: "نعم. يمكن للفريق تنسيق استقبال المطار، انتقال yacht-to-car، الاستلام من الفندق وخطة تنقل خاصة لعدة أيام." },
+    ],
+  },
+  yacht: {
+    en: [
+      { question: "Can I book a private yacht charter on the French Riviera?", answer: "Yes. Trans Yacht Group coordinates private yacht charters from Cannes, Monaco, Nice, Antibes and Saint-Tropez with tailored concierge support." },
+      { question: "Can the yacht charter include a custom itinerary?", answer: "Yes. The itinerary can include coastal cruising, restaurants, beach clubs, events, swimming stops and private celebrations depending on the yacht and conditions." },
+      { question: "Can you combine yacht charter with car transfers?", answer: "Yes. Yacht charter can be paired with luxury car rental, chauffeur service, airport pickup and yacht-to-car transfers for a complete private journey." },
+      { question: "What information is needed for a yacht request?", answer: "The team usually needs preferred dates, guest count, embarkation point, destination ideas, yacht style, onboard service expectations and transfer needs." },
+    ],
+    fr: [
+      { question: "Puis-je réserver un yacht privé sur la Côte d’Azur ?", answer: "Oui. Trans Yacht Group coordonne des charters privés depuis Cannes, Monaco, Nice, Antibes et Saint-Tropez avec conciergerie dédiée." },
+      { question: "Le charter peut-il inclure un itinéraire sur mesure ?", answer: "Oui. L’itinéraire peut inclure croisière côtière, restaurants, beach clubs, événements, baignade et célébrations privées selon le yacht et les conditions." },
+      { question: "Peut-on combiner yacht et transferts voiture ?", answer: "Oui. Le yacht charter peut être associé à une voiture de luxe, chauffeur privé, accueil aéroport et transferts yacht-to-car." },
+      { question: "Quelles informations faut-il pour une demande yacht ?", answer: "L’équipe a généralement besoin des dates, nombre d’invités, point d’embarquement, destinations souhaitées, style de yacht, service à bord et transferts." },
+    ],
+    ru: [
+      { question: "Можно ли забронировать частную яхту на Лазурном Берегу?", answer: "Да. Trans Yacht Group организует частные чартеры из Канн, Монако, Ниццы, Антиба и Сен-Тропе с персональным консьерж-сопровождением." },
+      { question: "Можно ли сделать индивидуальный маршрут?", answer: "Да. Маршрут может включать побережье, рестораны, beach clubs, события, купание и частные праздники в зависимости от яхты и условий." },
+      { question: "Можно ли совместить яхту с автомобильным трансфером?", answer: "Да. Yacht charter можно связать с премиальным автомобилем, chauffeur service, встречей в аэропорту и пересадкой yacht-to-car." },
+      { question: "Какая информация нужна для запроса яхты?", answer: "Обычно нужны даты, количество гостей, место посадки, желаемый маршрут, стиль яхты, ожидания по сервису на борту и трансферам." },
+    ],
+    ro: [
+      { question: "Pot rezerva un yacht charter privat pe Riviera Franceză?", answer: "Da. Trans Yacht Group coordonează charter privat din Cannes, Monaco, Nisa, Antibes și Saint-Tropez cu suport concierge personalizat." },
+      { question: "Charterul poate include un itinerariu personalizat?", answer: "Da. Itinerariul poate include coastă, restaurante, beach cluburi, evenimente, opriri pentru înot și celebrări private, în funcție de iaht și condiții." },
+      { question: "Puteți combina yacht charter cu transferuri auto?", answer: "Da. Charterul poate fi combinat cu automobil de lux, șofer privat, transfer de aeroport și transferuri yacht-to-car." },
+      { question: "Ce informații sunt necesare pentru o cerere de iaht?", answer: "De obicei sunt necesare datele, numărul de invitați, punctul de îmbarcare, ruta dorită, stilul iahtului, serviciile la bord și transferurile." },
+    ],
+    ar: [
+      { question: "هل يمكن حجز يخت خاص في الريفييرا الفرنسية؟", answer: "نعم. تنسق Trans Yacht Group رحلات يخوت خاصة من كان وموناكو ونيس وأنتيب وسان تروبيه مع دعم كونسيرج مخصص." },
+      { question: "هل يمكن أن يشمل charter مساراً مخصصاً؟", answer: "نعم. يمكن أن يشمل المسار الساحل والمطاعم والنوادي الشاطئية والفعاليات والتوقف للسباحة والاحتفالات الخاصة حسب اليخت والظروف." },
+      { question: "هل يمكن الجمع بين اليخت وانتقالات السيارات؟", answer: "نعم. يمكن دمج yacht charter مع سيارة فاخرة وخدمة سائق واستقبال في المطار وانتقال yacht-to-car." },
+      { question: "ما المعلومات المطلوبة لطلب يخت؟", answer: "عادة يحتاج الفريق إلى التواريخ وعدد الضيوف ونقطة الصعود والوجهات المفضلة ونمط اليخت والخدمة المطلوبة على المتن والانتقالات." },
+    ],
+  },
+} as const;
+
 export default function Catalog({ category }: CatalogProps) {
   const [, setLocation] = useLocation();
   const [allCollection, setAllCollection] = useState<any[]>([]);
@@ -117,10 +331,34 @@ export default function Catalog({ category }: CatalogProps) {
   const hasMoreItems = visibleCount < items.length;
 
   const isYacht = category === "yacht";
+  const seoSections = SEO_SECTIONS[category][lang];
+  const faqSections = FAQ_SECTIONS[category][lang];
+  const faqTitle = {
+    en: "Frequently Asked Questions",
+    fr: "Questions fréquentes",
+    ru: "Частые вопросы",
+    ro: "Întrebări frecvente",
+    ar: "الأسئلة الشائعة",
+  }[lang];
 
   const title = isYacht
     ? siteContent.yacht_section_title || "Ocean Prestige"
     : siteContent.car_section_title || "Road Sovereign";
+  const seoTitle = isYacht
+    ? {
+        en: "Luxury Yacht Charter on the French Riviera",
+        fr: "Location de yachts de luxe sur la Côte d’Azur",
+        ru: "Аренда яхт на Лазурном Берегу",
+        ro: "Închirieri iahturi de lux pe Riviera Franceză",
+        ar: "تأجير اليخوت الفاخرة في الريفييرا الفرنسية",
+      }[lang]
+    : {
+        en: "Luxury Car Rental on the French Riviera",
+        fr: "Location de voitures de luxe sur la Côte d’Azur",
+        ru: "Аренда люксовых автомобилей на Лазурном Берегу",
+        ro: "Închirieri automobile de lux pe Riviera Franceză",
+        ar: "تأجير السيارات الفاخرة في الريفييرا الفرنسية",
+      }[lang];
 
   const subtitle = isYacht
     ? siteContent.yacht_section_subtitle || "Superyacht Collection"
@@ -135,10 +373,6 @@ export default function Catalog({ category }: CatalogProps) {
   const subtitleSize = isYacht
     ? getFontSize(siteContent.yacht_section_subtitle_size, "10px")
     : getFontSize(siteContent.car_section_subtitle_size, "10px");
-
-  const titleSize = isYacht
-    ? getFontSize(siteContent.yacht_section_title_size, "72px")
-    : getFontSize(siteContent.car_section_title_size, "72px");
 
   const descriptionSize = isYacht
     ? getFontSize(siteContent.yacht_section_desc_size, "14px")
@@ -213,9 +447,15 @@ export default function Catalog({ category }: CatalogProps) {
 
             <CmsContent
               as="h1"
+              html={seoTitle}
+              className="section-display-title mx-auto max-w-5xl text-balance font-serif text-white"
+            />
+
+            <CmsContent
+              as="p"
               html={title}
-              className="font-serif text-white mb-6 tracking-tight leading-none"
-              style={{ fontSize: titleSize }}
+              className="mt-5 uppercase tracking-[0.4em] text-white/30 font-light"
+              style={{ fontSize: subtitleSize }}
             />
 
             <div className="flex items-center justify-center gap-3 mb-8">
@@ -308,6 +548,45 @@ export default function Catalog({ category }: CatalogProps) {
               </button>
             </div>
           )}
+
+          <section className="mt-20 border-t border-white/[0.06] pt-14">
+            <div className="grid gap-6 lg:grid-cols-3">
+              {seoSections.map((section) => (
+                <article
+                  key={section.title}
+                  className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 md:p-7"
+                >
+                  <h2 className="mb-4 font-serif text-2xl leading-tight text-white">
+                    {section.title}
+                  </h2>
+                  <p className="text-sm font-light leading-7 text-white/55">
+                    {section.body}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="mt-14 rounded-2xl border border-gold/15 bg-gold/[0.03] p-6 md:p-8">
+            <h2 className="mb-8 font-serif text-3xl leading-tight text-white">
+              {faqTitle}
+            </h2>
+            <div className="grid gap-5 md:grid-cols-2">
+              {faqSections.map((item) => (
+                <article
+                  key={item.question}
+                  className="rounded-xl border border-white/[0.06] bg-black/20 p-5"
+                >
+                  <h3 className="mb-3 text-base font-medium leading-snug text-gold">
+                    {item.question}
+                  </h3>
+                  <p className="text-sm font-light leading-7 text-white/55">
+                    {item.answer}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </section>
         </div>
       </section>
 

@@ -184,6 +184,104 @@ const organization = {
   areaServed: ["Cannes", "Monaco", "Nice", "Antibes", "Saint-Tropez"],
 };
 
+const ROUTE_FAQ: Partial<
+  Record<
+    LangCode,
+    Record<"cars" | "yachts", { question: string; answer: string }[]>
+  >
+> = {
+  en: {
+    cars: [
+      {
+        question: "Can I rent a luxury car with a chauffeur?",
+        answer:
+          "Yes. Trans Yacht Group can arrange chauffeur-driven luxury cars, VIP transfers and self-drive rentals depending on the route, vehicle and availability.",
+      },
+      {
+        question: "Where can the car be delivered?",
+        answer:
+          "Cars can be coordinated for Cannes, Monaco, Nice, Saint-Tropez, Antibes, Courchevel, hotels, villas, ports, airports and private aviation terminals.",
+      },
+      {
+        question: "Which luxury car brands are available?",
+        answer:
+          "Requests can include Mercedes-Benz, Rolls-Royce, Ferrari, Lamborghini, luxury SUVs, supercars and executive vehicles, subject to availability.",
+      },
+    ],
+    yachts: [
+      {
+        question: "Can I book a private yacht charter on the French Riviera?",
+        answer:
+          "Yes. Trans Yacht Group coordinates private yacht charters from Cannes, Monaco, Nice, Antibes and Saint-Tropez with tailored concierge support.",
+      },
+      {
+        question: "Can the yacht charter include a custom itinerary?",
+        answer:
+          "Yes. The itinerary can include coastal cruising, restaurants, beach clubs, events, swimming stops and private celebrations depending on the yacht and conditions.",
+      },
+      {
+        question: "Can you combine yacht charter with car transfers?",
+        answer:
+          "Yes. Yacht charter can be paired with luxury car rental, chauffeur service, airport pickup and yacht-to-car transfers for a complete private journey.",
+      },
+    ],
+  },
+  fr: {
+    cars: [
+      {
+        question: "Puis-je louer une voiture de luxe avec chauffeur ?",
+        answer:
+          "Oui. Trans Yacht Group peut organiser voitures avec chauffeur, transferts VIP et location sans chauffeur selon le trajet, le véhicule et la disponibilité.",
+      },
+      {
+        question: "Où la voiture peut-elle être livrée ?",
+        answer:
+          "La livraison peut être coordonnée à Cannes, Monaco, Nice, Saint-Tropez, Antibes, Courchevel, hôtels, villas, ports, aéroports et terminaux privés.",
+      },
+      {
+        question: "Quelles marques de voitures de luxe sont disponibles ?",
+        answer:
+          "Les demandes peuvent inclure Mercedes-Benz, Rolls-Royce, Ferrari, Lamborghini, SUV de luxe et supercars, selon la disponibilité.",
+      },
+    ],
+    yachts: [
+      {
+        question: "Puis-je réserver un yacht privé sur la Côte d’Azur ?",
+        answer:
+          "Oui. Trans Yacht Group coordonne des charters privés depuis Cannes, Monaco, Nice, Antibes et Saint-Tropez avec conciergerie dédiée.",
+      },
+      {
+        question: "Le charter peut-il inclure un itinéraire sur mesure ?",
+        answer:
+          "Oui. L’itinéraire peut inclure croisière côtière, restaurants, beach clubs, événements, baignade et célébrations privées selon le yacht et les conditions.",
+      },
+      {
+        question: "Peut-on combiner yacht et transferts voiture ?",
+        answer:
+          "Oui. Le yacht charter peut être associé à une voiture de luxe, chauffeur privé, accueil aéroport et transferts yacht-to-car.",
+      },
+    ],
+  },
+};
+
+const buildFaqSchema = (
+  faqs: { question: string; answer: string }[] | undefined,
+) =>
+  faqs
+    ? {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: faqs.map((item) => ({
+          "@type": "Question",
+          name: item.question,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: item.answer,
+          },
+        })),
+      }
+    : null;
+
 export function RouteSeo() {
   const [location] = useLocation();
   const { lang } = useLanguage();
@@ -208,6 +306,10 @@ export function RouteSeo() {
               ? "legal"
               : "home";
   const copy = COPY[lang][key];
+  const faqSchema =
+    key === "cars" || key === "yachts"
+      ? buildFaqSchema(ROUTE_FAQ[lang]?.[key] || ROUTE_FAQ.en?.[key])
+      : null;
 
   if (isVehicle || isLocation || isService || isGuide) return null;
   if (isAdmin) {
@@ -238,6 +340,7 @@ export function RouteSeo() {
           inLanguage: lang,
           publisher: { "@id": `${SITE_URL}/#organization` },
         },
+        ...(faqSchema ? [faqSchema] : []),
       ]}
     />
   );

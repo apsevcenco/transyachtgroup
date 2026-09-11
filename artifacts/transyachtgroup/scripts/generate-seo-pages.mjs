@@ -97,9 +97,13 @@ function compactDescription(...values) {
   return text.length > 155 ? `${text.slice(0, 152).trim()}…` : text;
 }
 
+function cleanUrl(path) {
+  return `${siteUrl}${path === "/" ? "/" : `${path.replace(/\/$/, "")}/`}`;
+}
+
 function renderPage(page) {
   const lang = page.lang || "en";
-  const canonical = `${siteUrl}${page.path}/?lang=${lang}`;
+  const canonical = cleanUrl(page.path);
   const title = escapeHtml(page.title);
   const description = escapeHtml(page.description);
   let html = source
@@ -116,7 +120,7 @@ function renderPage(page) {
 
   for (const lang of [...languages, "x-default"]) {
     const targetLang = lang === "x-default" ? "en" : lang;
-    const href = `${siteUrl}${page.path}/?lang=${targetLang}`;
+    const href = `${cleanUrl(page.path)}?lang=${targetLang}`;
     const pattern = new RegExp(`(<link\\s+rel="alternate"\\s+hreflang="${lang}"\\s+href=")[^"]*("\\s*\\/?>)`, "s");
     html = html.replace(pattern, `$1${href}$2`);
   }

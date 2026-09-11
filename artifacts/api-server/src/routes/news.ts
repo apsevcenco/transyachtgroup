@@ -52,6 +52,27 @@ function slugify(value: string): string {
     .slice(0, 160);
 }
 
+function inferNewsTargetPage(value: string): string {
+  const text = value.toLocaleLowerCase("en");
+  if (text.includes("courchevel") || text.includes("куршев")) return "/services/courchevel-private-transfers/";
+  if (text.includes("monaco") || text.includes("монако")) return "/services/luxury-car-rental-monaco/";
+  if (text.includes("nice") || text.includes("ницца") || text.includes("ницца")) return "/services/luxury-car-rental-nice/";
+  if (text.includes("saint-tropez") || text.includes("st tropez") || text.includes("сен-троп")) return "/services/luxury-car-rental-saint-tropez/";
+  if (text.includes("cannes") || text.includes("канн")) return "/services/luxury-car-rental-cannes/";
+  if (text.includes("yacht") || text.includes("яхт")) return "/yachts/";
+  return "/cars/";
+}
+
+function inferNewsCluster(value: string): string {
+  const text = value.toLocaleLowerCase("en");
+  if (text.includes("courchevel") || text.includes("куршев")) return "Courchevel VIP transfers";
+  if (text.includes("monaco") || text.includes("монако")) return "Monaco luxury mobility";
+  if (text.includes("cannes") || text.includes("канн")) return "Cannes luxury car rental";
+  if (text.includes("saint-tropez") || text.includes("st tropez") || text.includes("сен-троп")) return "Saint-Tropez luxury car rental";
+  if (text.includes("yacht") || text.includes("яхт")) return "French Riviera yacht charter";
+  return "French Riviera luxury mobility";
+}
+
 function extractJson(text: string): unknown {
   return JSON.parse(text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, ""));
 }
@@ -113,37 +134,50 @@ function parseNewsInput(body: unknown) {
   const text = (key: string, max: number) => typeof value[key] === "string" ? value[key].trim().slice(0, max) : "";
   const optional = (key: string, max: number) => text(key, max) || null;
   const slug = slugify(text("slug", 180) || text("title", 180));
+  const title = text("title", 180);
+  const excerpt = text("excerpt", 600);
+  const content = text("content", 120_000);
+  const primaryKeyword = optional("primaryKeyword", 180);
+  const brief = optional("brief", 4_000);
+  const targetingText = [title, excerpt, primaryKeyword || "", brief || ""].join(" ");
   const gallery = Array.isArray(value.gallery)
     ? value.gallery.filter((item): item is string => typeof item === "string" && item.trim().length > 0).slice(0, 10)
     : [];
-  if (!slug || !text("title", 180) || !text("excerpt", 600) || !text("content", 120_000)) throw new Error("INVALID_NEWS");
+  if (!slug || !title || !excerpt || !content) throw new Error("INVALID_NEWS");
   return {
     slug,
-    title: text("title", 180),
-    excerpt: text("excerpt", 600),
-    content: text("content", 120_000),
+    title,
+    excerpt,
+    content,
     coverImage: optional("coverImage", 2_000),
     gallery,
     metaTitle: optional("metaTitle", 180),
     metaDescription: optional("metaDescription", 320),
     translations: value.translations && typeof value.translations === "object" ? value.translations : {},
-    primaryKeyword: optional("primaryKeyword", 180),
-    brief: optional("brief", 4_000),
+    primaryKeyword,
+    contentCluster: optional("contentCluster", 180) || inferNewsCluster(targetingText),
+    targetPage: optional("targetPage", 500) || inferNewsTargetPage(targetingText),
+    brief,
     scheduledAt: text("scheduledAt", 80) ? new Date(text("scheduledAt", 80)) : null,
     published: Boolean(value.published),
   };
 }
 
-function auditNews(data: ReturnType<typeof parseNewsInput>) {
+function auditNews(
+  data: ReturnType<typeof parseNewsInput>,
+  existing: Array<{ id: number; title: string; slug: string; primaryKeyword?: string | null; content: string }> = [],
+) {
   return auditGuide({
     title: data.title,
     excerpt: data.excerpt,
     content: data.content,
     metaTitle: data.metaTitle,
     metaDescription: data.metaDescription,
+    coverImage: data.coverImage,
     translations: data.translations as SeoAuditInput["translations"],
     primaryKeyword: data.primaryKeyword,
-  });
+    targetPage: data.targetPage,
+  }, existing);
 }
 
 function fixableNewsIssues(issues: ReturnType<typeof auditNews>["issues"]) {
@@ -160,9 +194,22 @@ function fixableNewsIssues(issues: ReturnType<typeof auditNews>["issues"]) {
     "headings",
     "internal_links",
     "faq",
-    "translations",
   ]);
   return issues.filter((issue) => automaticCodes.has(issue.code));
+}
+
+async function existingNewsForAudit(currentSlug?: string) {
+  const rows = await db
+    .select({
+      id: newsTable.id,
+      title: newsTable.title,
+      slug: newsTable.slug,
+      primaryKeyword: newsTable.primaryKeyword,
+      content: newsTable.content,
+    })
+    .from(newsTable)
+    .orderBy(desc(newsTable.updatedAt));
+  return rows.filter((item) => item.slug !== currentSlug);
 }
 
 async function translateNewsCopy(copy: NewsCopy): Promise<Record<string, NewsCopy>> {
@@ -272,7 +319,7 @@ router.get("/admin/news", adminAuth, async (_req, res) => {
 router.post("/admin/news/audit", adminAuth, async (req, res) => {
   try {
     const data = parseNewsInput({ ...(req.body || {}), published: false });
-    res.json(auditNews(data));
+    res.json(auditNews(data, await existingNewsForAudit(data.slug)));
   } catch (err) {
     req.log?.error?.({ err }, "News SEO audit failed");
     if (err instanceof Error && err.message === "INVALID_NEWS") return void res.status(400).json({ error: "Complete the required news fields before auditing SEO" });
@@ -283,7 +330,8 @@ router.post("/admin/news/audit", adminAuth, async (req, res) => {
 router.post("/admin/news/fix-seo", adminAuth, newsAiLimiter, async (req, res) => {
   try {
     const data = parseNewsInput({ ...(req.body?.news || {}), published: false });
-    const before = auditNews(data);
+    const existing = await existingNewsForAudit(data.slug);
+    const before = auditNews(data, existing);
     if (!before.issues.length) {
       return void res.json({ draft: { ...data, published: false }, audit: before, unresolvedAutoFixes: [] });
     }
@@ -323,7 +371,7 @@ NEWS BRIEF=${JSON.stringify(data.brief || "")}
 CURRENT ARTICLE=${JSON.stringify(current)}`,
       ));
       current = corrected;
-      const audit = auditNews({ ...data, ...corrected, translations: data.translations });
+      const audit = auditNews({ ...data, ...corrected, translations: data.translations }, existing);
       if (audit.score > best.audit.score || fixableNewsIssues(audit.issues).length < fixableNewsIssues(best.audit.issues).length) {
         best = { copy: corrected, audit };
       }
@@ -337,7 +385,7 @@ CURRENT ARTICLE=${JSON.stringify(current)}`,
 
     const translations = await translateNewsCopy(best.copy);
     const draft = { ...data, ...best.copy, translations, published: false };
-    const audit = auditNews(draft);
+    const audit = auditNews(draft, existing);
     res.json({ draft, audit, unresolvedAutoFixes: fixableNewsIssues(audit.issues).map((issue) => issue.code) });
   } catch (err) {
     req.log?.error?.({ err }, "AI news SEO correction failed");
@@ -407,7 +455,7 @@ Return {"title":"...","excerpt":"...","content":"...","metaTitle":"...","metaDes
 router.post("/admin/news", adminAuth, async (req, res) => {
   try {
     const data = parseNewsInput(req.body);
-    const seoAudit = auditNews(data);
+    const seoAudit = auditNews(data, await existingNewsForAudit(data.slug));
     const now = new Date();
     const [created] = await db.insert(newsTable).values({ ...data, seoScore: seoAudit.score, seoAudit, publishedAt: data.published ? now : null, updatedAt: now }).returning();
     res.status(201).json(created);
@@ -423,9 +471,9 @@ router.put("/admin/news/:id", adminAuth, async (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id < 1) return void res.status(400).json({ error: "Invalid id" });
     const data = parseNewsInput(req.body);
-    const seoAudit = auditNews(data);
     const [current] = await db.select().from(newsTable).where(eq(newsTable.id, id)).limit(1);
     if (!current) return void res.status(404).json({ error: "News not found" });
+    const seoAudit = auditNews(data, (await existingNewsForAudit(data.slug)).filter((item) => item.id !== id));
     const [updated] = await db.update(newsTable).set({
       ...data,
       seoScore: seoAudit.score,

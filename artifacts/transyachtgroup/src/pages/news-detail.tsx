@@ -16,7 +16,7 @@ export default function NewsDetail({ slug }: { slug: string }) {
   }, [slug, lang]);
 
   const canonicalPath = `/news/${slug}`;
-  const articleUrl = `${SITE_URL}${canonicalPath}/?lang=${lang}`;
+  const articleUrl = `${SITE_URL}${canonicalPath}/`;
   const articleImage = item?.coverImage ? new URL(item.coverImage, `${SITE_URL}/`).toString() : `${SITE_URL}/opengraph.jpg`;
   const publishedDate = item?.publishedAt || item?.createdAt || undefined;
   const modifiedDate = item?.updatedAt || publishedDate;

@@ -24,6 +24,8 @@ const empty: NewsInput = {
   metaDescription: null,
   translations: {},
   primaryKeyword: null,
+  contentCluster: null,
+  targetPage: null,
   brief: null,
   scheduledAt: null,
   published: false,
@@ -69,6 +71,8 @@ export default function AdminNews() {
       metaDescription: item.metaDescription,
       translations: item.translations || {},
       primaryKeyword: item.primaryKeyword,
+      contentCluster: item.contentCluster,
+      targetPage: item.targetPage,
       brief: item.brief,
       scheduledAt: item.scheduledAt,
       published: item.published,
@@ -81,7 +85,7 @@ export default function AdminNews() {
   const save = async () => {
     setBusy(true); setMessage("");
     try {
-      const prepared = { ...form, slug: form.slug || slugify(form.title), primaryKeyword: form.primaryKeyword || ai.keyword || null, brief: form.brief || ai.brief || null };
+      const prepared = { ...form, slug: form.slug || slugify(form.title), primaryKeyword: form.primaryKeyword || ai.keyword || null, contentCluster: form.contentCluster || null, targetPage: form.targetPage || null, brief: form.brief || ai.brief || null };
       editing ? await updateNews(editing, prepared) : await createNews(prepared);
       await load();
       reset();
@@ -193,7 +197,7 @@ export default function AdminNews() {
   const runAudit = async () => {
     setBusy(true); setMessage("");
     try {
-      const result = await auditNewsSeo({ ...form, slug: form.slug || slugify(form.title), primaryKeyword: form.primaryKeyword || ai.keyword || ai.topic || null, brief: form.brief || ai.brief || null, published: false });
+      const result = await auditNewsSeo({ ...form, slug: form.slug || slugify(form.title), primaryKeyword: form.primaryKeyword || ai.keyword || ai.topic || null, contentCluster: form.contentCluster || null, targetPage: form.targetPage || null, brief: form.brief || ai.brief || null, published: false });
       setSeoAudit(result);
       setMessage(`News SEO audit completed: ${result.score}/100`);
     } catch (err) {
@@ -207,7 +211,7 @@ export default function AdminNews() {
     setBusy(true); setMessage("");
     try {
       const previousScore = seoAudit?.score ?? 0;
-      const result = await fixNewsSeoWithAi({ ...form, slug: form.slug || slugify(form.title), primaryKeyword: form.primaryKeyword || ai.keyword || ai.topic || null, brief: form.brief || ai.brief || null, published: false });
+      const result = await fixNewsSeoWithAi({ ...form, slug: form.slug || slugify(form.title), primaryKeyword: form.primaryKeyword || ai.keyword || ai.topic || null, contentCluster: form.contentCluster || null, targetPage: form.targetPage || null, brief: form.brief || ai.brief || null, published: false });
       setForm(result.draft);
       setSeoAudit(result.audit);
       if (result.unresolvedAutoFixes?.length) {
@@ -256,6 +260,8 @@ export default function AdminNews() {
             <label className="text-xs text-white/55 md:col-span-2">Excerpt<textarea value={form.excerpt} onChange={(e) => set("excerpt", e.target.value)} rows={2} className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white" /></label>
             <label className="text-xs text-white/55">SEO title<input value={form.metaTitle || ""} onChange={(e) => set("metaTitle", e.target.value)} className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white" /></label>
             <label className="text-xs text-white/55">SEO description<input value={form.metaDescription || ""} onChange={(e) => set("metaDescription", e.target.value)} className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white" /></label>
+            <label className="text-xs text-white/55">SEO cluster<input value={form.contentCluster || ""} onChange={(e) => set("contentCluster", e.target.value || null)} className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white" placeholder="Courchevel transfers / Riviera luxury cars" /></label>
+            <label className="text-xs text-white/55">Target commercial page<input value={form.targetPage || ""} onChange={(e) => set("targetPage", e.target.value || null)} className="mt-2 w-full rounded border border-white/10 bg-black/40 px-3 py-3 text-white" placeholder="/services/courchevel-private-transfers/" /></label>
             <div className="md:col-span-2"><p className="mb-2 text-xs text-white/55">Article</p><RichTextEditor content={form.content} onChange={(html) => set("content", html)} /></div>
           </div>
 
@@ -321,7 +327,7 @@ export default function AdminNews() {
             <div key={item.id} className="flex flex-col gap-4 rounded-xl border border-white/10 bg-white/[0.02] p-5 sm:flex-row sm:items-center">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-3"><h2 className="truncate font-serif text-xl">{item.title}</h2><span className={`rounded-full px-2 py-1 text-[9px] uppercase ${item.published ? "bg-emerald-500/10 text-emerald-400" : "bg-white/5 text-white/40"}`}>{item.published ? "Published" : "Draft"}</span>{item.seoScore != null && <span className="text-xs text-gold/60">SEO {item.seoScore}</span>}</div>
-                <p className="mt-1 truncate text-xs text-white/35">/news/{item.slug}/ · {item.primaryKeyword || "no keyword"}</p>
+                <p className="mt-1 truncate text-xs text-white/35">/news/{item.slug}/ · {item.primaryKeyword || "no keyword"} · {item.targetPage || "no target page"}</p>
               </div>
               <div className="flex gap-2"><button onClick={() => edit(item)} className="rounded border border-white/10 p-2 text-white/60 hover:text-gold"><Pencil size={17} /></button><button onClick={() => remove(item.id)} className="rounded border border-white/10 p-2 text-red-400/60 hover:text-red-400"><Trash2 size={17} /></button></div>
             </div>

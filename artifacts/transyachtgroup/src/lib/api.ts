@@ -46,17 +46,20 @@ export type News = {
   metaDescription: string | null;
   translations: Record<string, Record<string, string>> | null;
   primaryKeyword: string | null;
+  contentCluster: string | null;
+  targetPage: string | null;
   brief: string | null;
   scheduledAt: string | null;
   seoScore: number | null;
   seoAudit: SeoAuditResult | null;
+  searchMetrics: { clicks?: number; impressions?: number; ctr?: number; position?: number; source?: string; importedAt?: string } | null;
   published: boolean;
   publishedAt: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 };
 
-export type NewsInput = Pick<News, "slug" | "title" | "excerpt" | "content" | "coverImage" | "gallery" | "metaTitle" | "metaDescription" | "translations" | "primaryKeyword" | "brief" | "scheduledAt" | "published">;
+export type NewsInput = Pick<News, "slug" | "title" | "excerpt" | "content" | "coverImage" | "gallery" | "metaTitle" | "metaDescription" | "translations" | "primaryKeyword" | "contentCluster" | "targetPage" | "brief" | "scheduledAt" | "published">;
 
 export type GeneratedNewsDraft = Omit<NewsInput, "coverImage" | "gallery" | "published" | "scheduledAt" | "brief" | "primaryKeyword">;
 

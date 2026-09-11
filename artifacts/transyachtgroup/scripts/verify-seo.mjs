@@ -46,23 +46,24 @@ assert.match(sitemap, /\/api\/news-sitemap\.xml/);
 assert.match(pagesSitemap, /<urlset[\s>]/);
 assert.match(pagesSitemap, /<loc>https:\/\/www\.transyachtgroup\.com\//);
 assert.doesNotMatch(pagesSitemap, /https:\/\/transyachtgroup\.com/);
-assert.match(pagesSitemap, /\/cars\/\?lang=en/);
-assert.match(pagesSitemap, /\/yachts\/\?lang=en/);
-assert.match(pagesSitemap, /\/guides\/\?lang=en/);
-assert.match(pagesSitemap, /\/locations\/cannes\/\?lang=en/);
-assert.match(pagesSitemap, /\/services\/luxury-car-rental-cannes\/\?lang=en/);
-assert.match(pagesSitemap, /\/services\/yacht-charter-monaco\/\?lang=en/);
-assert.match(pagesSitemap, /\/services\/rolls-royce-rental-french-riviera\/\?lang=en/);
+assert.doesNotMatch(pagesSitemap, /\?lang=/);
+assert.match(pagesSitemap, /\/cars\//);
+assert.match(pagesSitemap, /\/yachts\//);
+assert.match(pagesSitemap, /\/guides\//);
+assert.match(pagesSitemap, /\/locations\/cannes\//);
+assert.match(pagesSitemap, /\/services\/luxury-car-rental-cannes\//);
+assert.match(pagesSitemap, /\/services\/yacht-charter-monaco\//);
+assert.match(pagesSitemap, /\/services\/rolls-royce-rental-french-riviera\//);
 
 for (const [name, routeHtml, canonical] of [
-  ["cars", carsHtml, "https://www.transyachtgroup.com/cars/?lang=en"],
-  ["yachts", yachtsHtml, "https://www.transyachtgroup.com/yachts/?lang=en"],
-  ["about", aboutHtml, "https://www.transyachtgroup.com/about/?lang=en"],
-  ["service", serviceHtml, "https://www.transyachtgroup.com/services/luxury-car-rental-cannes/?lang=en"],
+  ["cars", carsHtml, "https://www.transyachtgroup.com/cars/"],
+  ["yachts", yachtsHtml, "https://www.transyachtgroup.com/yachts/"],
+  ["about", aboutHtml, "https://www.transyachtgroup.com/about/"],
+  ["service", serviceHtml, "https://www.transyachtgroup.com/services/luxury-car-rental-cannes/"],
 ]) {
   assert.ok(routeHtml.includes(`<link rel="canonical" href="${canonical}"`), `${name} canonical is incorrect`);
   assert.match(routeHtml, /<h1[^>]*>[^<]+<\/h1>/, `${name} H1 is missing`);
-  assert.ok(!routeHtml.includes('<link rel="canonical" href="https://www.transyachtgroup.com/?lang=en"'), `${name} retained homepage canonical`);
+  assert.doesNotMatch(routeHtml, /<link rel="canonical" href="[^"]*\?lang=/, `${name} canonical retained lang parameter`);
 }
 
 console.log("SEO verification passed");

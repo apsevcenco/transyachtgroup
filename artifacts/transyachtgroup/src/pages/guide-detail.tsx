@@ -20,8 +20,8 @@ export default function GuideDetail({ slug }: { slug: string }) {
   const path = `/guides/${guide.slug}`;
   return <div className="min-h-screen bg-background text-white">
     <SeoHead title={title} description={description} path={path} lang={lang} image={guide.coverImage || undefined} type="website" jsonLd={[
-      { "@context": "https://schema.org", "@type": "Article", headline: guide.title, description, image: guide.coverImage || `${SITE_URL}/opengraph.jpg`, datePublished: guide.publishedAt, dateModified: guide.updatedAt, author: { "@id": `${SITE_URL}/#organization` }, publisher: { "@id": `${SITE_URL}/#organization` }, mainEntityOfPage: `${SITE_URL}${path}/?lang=${lang}` },
-      { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/?lang=${lang}` }, { "@type": "ListItem", position: 2, name: "Guides", item: `${SITE_URL}/guides/?lang=${lang}` }, { "@type": "ListItem", position: 3, name: guide.title }] },
+      { "@context": "https://schema.org", "@type": "Article", headline: guide.title, description, image: guide.coverImage || `${SITE_URL}/opengraph.jpg`, datePublished: guide.publishedAt, dateModified: guide.updatedAt, author: { "@id": `${SITE_URL}/#organization` }, publisher: { "@id": `${SITE_URL}/#organization` }, mainEntityOfPage: `${SITE_URL}${path}/` },
+      { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` }, { "@type": "ListItem", position: 2, name: "Guides", item: `${SITE_URL}/guides/` }, { "@type": "ListItem", position: 3, name: guide.title }] },
     ]}/>
     <Navbar/><main className="px-5 pb-24 pt-36 md:pt-44"><article className="mx-auto max-w-4xl">
       <a href={`/guides/?lang=${lang}`} className="mb-10 inline-flex items-center gap-2 text-sm text-white/45 hover:text-gold"><ArrowLeft size={16}/> All guides</a>

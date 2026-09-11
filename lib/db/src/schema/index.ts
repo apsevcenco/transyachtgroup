@@ -116,10 +116,13 @@ export const newsTable = pgTable(
     metaDescription: text("meta_description"),
     translations: jsonb("translations").default({}),
     primaryKeyword: text("primary_keyword"),
+    contentCluster: text("content_cluster"),
+    targetPage: text("target_page"),
     brief: text("brief"),
     scheduledAt: timestamp("scheduled_at"),
     seoScore: integer("seo_score"),
     seoAudit: jsonb("seo_audit").default({}),
+    searchMetrics: jsonb("search_metrics").default({}),
     published: boolean("published").notNull().default(false),
     publishedAt: timestamp("published_at"),
     createdAt: timestamp("created_at").defaultNow(),
@@ -128,6 +131,7 @@ export const newsTable = pgTable(
   (table) => [
     index("news_published_at_idx").on(table.published, table.publishedAt),
     index("news_schedule_idx").on(table.scheduledAt),
+    index("news_cluster_idx").on(table.contentCluster),
   ],
 );
 
