@@ -118,6 +118,8 @@ export const newsTable = pgTable(
     primaryKeyword: text("primary_keyword"),
     brief: text("brief"),
     scheduledAt: timestamp("scheduled_at"),
+    seoScore: integer("seo_score"),
+    seoAudit: jsonb("seo_audit").default({}),
     published: boolean("published").notNull().default(false),
     publishedAt: timestamp("published_at"),
     createdAt: timestamp("created_at").defaultNow(),

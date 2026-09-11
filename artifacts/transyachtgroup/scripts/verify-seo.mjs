@@ -36,10 +36,13 @@ assert.match(
   /Sitemap:\s*https:\/\/www\.transyachtgroup\.com\/sitemap\.xml/,
 );
 assert.match(robots, /Allow:\s*\/api\/vehicles-sitemap\.xml/);
+assert.match(robots, /Allow:\s*\/api\/guides-sitemap\.xml/);
+assert.match(robots, /Allow:\s*\/api\/news-sitemap\.xml/);
 assert.match(sitemap, /<sitemapindex[\s>]/);
 assert.match(sitemap, /\/pages-sitemap\.xml/);
 assert.match(sitemap, /\/api\/vehicles-sitemap\.xml/);
 assert.match(sitemap, /\/api\/guides-sitemap\.xml/);
+assert.match(sitemap, /\/api\/news-sitemap\.xml/);
 assert.match(pagesSitemap, /<urlset[\s>]/);
 assert.match(pagesSitemap, /<loc>https:\/\/www\.transyachtgroup\.com\//);
 assert.doesNotMatch(pagesSitemap, /https:\/\/transyachtgroup\.com/);

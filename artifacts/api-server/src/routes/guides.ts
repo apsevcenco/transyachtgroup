@@ -473,6 +473,37 @@ async function generateGuideDraft(input: {
   notes: string;
   linkCandidates: InternalLinkCandidate[];
 }): Promise<GeneratedGuideDraft> {
+  const seoIntentMap = {
+    commercialIntent: [
+      "who the service is for",
+      "where the service is delivered",
+      "which vehicle or yacht category fits the trip",
+      "how booking, delivery or concierge coordination works in general terms",
+      "what makes the service suitable for premium travellers without claiming guaranteed availability",
+    ],
+    informationalIntent: [
+      "what the traveller needs to compare before booking",
+      "route, airport, resort or event context when relevant",
+      "practical timing, luggage, guest-count and comfort considerations without inventing schedules",
+      "clear decision criteria that lead naturally to the relevant Trans Yacht Group service page",
+    ],
+    requiredCoverage: [
+      "primary keyword and close semantic variants",
+      "target city or region",
+      "service category",
+      "audience segment",
+      "seasonal context when supplied",
+      "at least one section that answers a high-intent booking question",
+      "at least one section that links the article to the fleet or service category",
+      "FAQ focused on buying/booking objections, not generic tourism trivia",
+    ],
+    avoidCannibalization: [
+      "do not create a generic article that could fit every city",
+      "do not repeat the same angle in multiple sections",
+      "do not turn a vehicle rental article into a yacht charter article unless the brief asks for both",
+      "do not turn a Courchevel transfer article into a generic French Riviera article",
+    ],
+  };
   const rules = `You are the senior multilingual editor for Trans Yacht Group, a luxury car rental and yacht charter company on the French Riviera.
 Return only valid JSON.
 
@@ -483,10 +514,12 @@ NON-NEGOTIABLE EDITORIAL RULES:
 - Write for humans first: specific, useful and locally relevant, with no filler, no generic AI phrases, no exaggerated superlatives and no keyword stuffing.
 - Use the primary keyword naturally in the title, introduction and at least one relevant subheading when editorially appropriate. Do not force an exact-match phrase repeatedly.
 - Use one clear search intent per article and avoid creating claims that require live verification.
+- Before writing, classify the article as mostly commercial or informational from the topic, service, location, audience and keyword. Then follow the supplied SEO INTENT MAP. The final article must answer the real searcher's booking problem, not just describe the brand.
+- Make the angle narrow enough to avoid cannibalization: the title, introduction, h2 sections and FAQ must clearly match the supplied city/region, service and primary keyword.
 - The body must be safe semantic HTML using only p, h2, h3, ul, ol, li, strong, em and a tags. Links may use only relative paths beginning with / or https://www.transyachtgroup.com/ URLs supplied in APPROVED INTERNAL LINKS.
 - Select at least three distinct, genuinely relevant URLs from APPROVED INTERNAL LINKS and insert them naturally into the article: one near the introduction, one in the middle and one near the conclusion. Use the exact supplied URL and meaningful anchor text; never invent or modify a URL.
 - Do not include h1 because the page title is already the only h1. Do not use markdown, tables, inline styles, scripts, images or external links.
-- Include a practical introduction, logically ordered sections, 3-5 concise FAQ questions with answers, and a natural non-aggressive call to action.
+- Include a practical introduction, logically ordered sections, one concise decision checklist or comparison section, 3-5 concise FAQ questions with answers, and a natural non-aggressive call to action.
 - Keep metaTitle at most 60 characters and metaDescription at most 155 characters. Each must accurately represent the article.
 - Maintain Trans Yacht Group's premium, discreet, knowledgeable voice. Do not claim the company is the best, leading or number one.
 - Return exactly the requested JSON schema and nothing else.`;
@@ -507,6 +540,7 @@ Location: ${JSON.stringify(input.city || "French Riviera")}
 Target audience: ${JSON.stringify(input.audience || "international luxury travellers")}
 Desired tone: ${JSON.stringify(input.tone || "premium, discreet and expert")}
 Vehicles or yachts that may be mentioned only when supported by verified notes: ${JSON.stringify(input.featuredAssets || "None specified")}
+SEO INTENT MAP: ${JSON.stringify(seoIntentMap)}
 APPROVED INTERNAL LINKS: ${JSON.stringify(input.linkCandidates)}
 VERIFIED NOTES: ${JSON.stringify(input.notes || "None supplied")}
 Return exactly this object shape: {"title":"...","excerpt":"...","content":"<p>...</p>","metaTitle":"...","metaDescription":"..."}`);
@@ -813,6 +847,8 @@ router.post("/admin/guides/fix-seo", adminAuth, guideAiLimiter, async (req, res)
 Revise an existing English article only enough to resolve the supplied deterministic SEO audit issues.
 Never invent or alter prices, specifications, availability, dates, locations, contact details, legal terms, vehicle or yacht names, or any other factual claim.
 Preserve the article's search intent, verified facts, useful details, approved internal URLs and safe semantic HTML.
+When adding or expanding content, follow this SEO intent repair map: identify the searcher problem, confirm the city/region and service category, add practical decision criteria, connect naturally to the relevant fleet or service page, answer 3-5 booking objections in FAQ, and finish with a discreet enquiry call to action.
+Do not add generic tourism filler. Every added paragraph must support the primary keyword, the supplied target page or a likely booking decision.
 Select at least three distinct, genuinely relevant links from APPROVED INTERNAL LINKS. Place them naturally near the introduction, middle and conclusion using meaningful anchor text and the exact supplied URLs. Never invent or modify a URL.
 Remove or replace every existing article link that is not present in APPROVED INTERNAL LINKS.
 The body may use only p, h2, h3, ul, ol, li, strong, em and a tags. Do not add h1, markdown, tables, scripts, images, inline styles or external links.
@@ -848,6 +884,8 @@ AUTOMATIC FIX TARGETS:
 ${targetedInstructions}
 ${lengthRequirement}
 PRIMARY KEYWORD=${JSON.stringify(data.primaryKeyword || "")}
+TARGET PAGE=${JSON.stringify(data.targetPage || "")}
+CONTENT CLUSTER=${JSON.stringify(data.contentCluster || "")}
 VERIFIED NOTES=${JSON.stringify(verifiedNotes)}
 APPROVED INTERNAL LINKS=${JSON.stringify(linkCandidates)}
 CURRENT ARTICLE=${JSON.stringify(checkedSource)}`));

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 
 import { Navbar } from "@/components/Navbar";
-import { SeoHead } from "@/components/SeoHead";
+import { SeoHead, SITE_URL } from "@/components/SeoHead";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { fetchNewsItem, type News } from "@/lib/api";
 
@@ -15,9 +15,34 @@ export default function NewsDetail({ slug }: { slug: string }) {
     fetchNewsItem(slug, lang).then(setItem).catch(() => setItem(null)).finally(() => setLoading(false));
   }, [slug, lang]);
 
+  const canonicalPath = `/news/${slug}`;
+  const articleUrl = `${SITE_URL}${canonicalPath}/?lang=${lang}`;
+  const articleImage = item?.coverImage ? new URL(item.coverImage, `${SITE_URL}/`).toString() : `${SITE_URL}/opengraph.jpg`;
+  const publishedDate = item?.publishedAt || item?.createdAt || undefined;
+  const modifiedDate = item?.updatedAt || publishedDate;
+  const newsArticleJsonLd = item ? {
+    "@context": "https://schema.org",
+    "@type": "NewsArticle",
+    "@id": `${articleUrl}#newsarticle`,
+    mainEntityOfPage: { "@type": "WebPage", "@id": articleUrl },
+    headline: item.title,
+    description: item.metaDescription || item.excerpt,
+    image: [articleImage],
+    datePublished: publishedDate,
+    dateModified: modifiedDate,
+    inLanguage: lang,
+    author: { "@type": "Organization", name: "Trans Yacht Group", url: SITE_URL },
+    publisher: {
+      "@type": "Organization",
+      name: "Trans Yacht Group",
+      url: SITE_URL,
+      logo: { "@type": "ImageObject", url: `${SITE_URL}/images/logo-transparent.png` },
+    },
+  } : undefined;
+
   return (
     <div className="min-h-screen bg-background text-white">
-      <SeoHead title={item?.metaTitle || item?.title || "News"} description={item?.metaDescription || item?.excerpt || ""} path={`/news/${slug}`} lang={lang} />
+      <SeoHead title={item?.metaTitle || item?.title || "News"} description={item?.metaDescription || item?.excerpt || ""} path={canonicalPath} lang={lang} image={articleImage} type="website" jsonLd={newsArticleJsonLd} />
       <Navbar />
       <main className="px-5 pb-24 pt-36">
         <article className="mx-auto max-w-4xl">

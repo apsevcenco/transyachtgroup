@@ -6,6 +6,7 @@ const projectDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const outputDir = join(projectDir, "dist", "public");
 const source = await readFile(join(outputDir, "index.html"), "utf8");
 const siteUrl = "https://www.transyachtgroup.com";
+const apiBase = process.env.VITE_API_URL || process.env.API_URL || "";
 const languages = ["en", "fr", "ru", "ro", "ar"];
 const servicePages = [
   ["luxury-car-rental-cannes", "Luxury Car Rental in Cannes", "Luxury car rental in Cannes with discreet delivery to hotels, villas, Port Canto and the Croisette, supported by a dedicated concierge."],
@@ -62,7 +63,7 @@ const pages = [
     description: "Legal information and company details for Trans Yacht Group.",
     heading: "Legal Notice",
   },
-  ...["cannes", "monaco", "nice", "antibes", "saint-tropez"].map((city) => {
+  ...["cannes", "monaco", "nice", "antibes", "saint-tropez", "courchevel"].map((city) => {
     const label = city.split("-").map((part) => part[0].toUpperCase() + part.slice(1)).join("-");
     return {
       path: `/locations/${city}`,
@@ -75,15 +76,30 @@ const pages = [
 ];
 
 function escapeHtml(value) {
-  return value
+  return String(value || "")
     .replaceAll("&", "&amp;")
     .replaceAll('"', "&quot;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;");
 }
 
+function stripHtml(value) {
+  return String(value || "")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function compactDescription(...values) {
+  const text = values.map(stripHtml).find(Boolean) || "Luxury mobility insights from Trans Yacht Group.";
+  return text.length > 155 ? `${text.slice(0, 152).trim()}…` : text;
+}
+
 function renderPage(page) {
-  const canonical = `${siteUrl}${page.path}/?lang=en`;
+  const lang = page.lang || "en";
+  const canonical = `${siteUrl}${page.path}/?lang=${lang}`;
   const title = escapeHtml(page.title);
   const description = escapeHtml(page.description);
   let html = source
@@ -112,9 +128,10 @@ function renderPage(page) {
     url: canonical,
     name: page.title,
     description: page.description,
-    inLanguage: "en",
+    inLanguage: lang,
     isPartOf: { "@id": `${siteUrl}/#website` },
     about: { "@id": `${siteUrl}/#organization` },
+    ...(page.image ? { image: page.image } : {}),
   });
   return html.replace(
     /<script type="application\/ld\+json" data-seo="true">[\s\S]*?<\/script>/,
@@ -122,12 +139,53 @@ function renderPage(page) {
   );
 }
 
+function isAbsoluteHttpUrl(value) {
+  return /^https?:\/\//i.test(String(value || ""));
+}
+
+function publicAssetUrl(value) {
+  if (!value) return undefined;
+  if (isAbsoluteHttpUrl(value)) return value;
+  if (String(value).startsWith("/")) return `${siteUrl}${value}`;
+  return undefined;
+}
+
+async function fetchJson(path) {
+  if (!apiBase || apiBase.startsWith("/")) return [];
+  const response = await fetch(`${apiBase}${path}`);
+  if (!response.ok) throw new Error(`${path} returned ${response.status}`);
+  return response.json();
+}
+
+async function loadContentPages(kind) {
+  try {
+    const items = await fetchJson(`/${kind}?lang=en`);
+    return items
+      .filter((item) => item?.slug && item?.title)
+      .map((item) => ({
+        path: `/${kind}/${item.slug}`,
+        title: `${item.metaTitle || item.title} | Trans Yacht Group`,
+        description: compactDescription(item.metaDescription, item.excerpt, item.content),
+        heading: item.title,
+        image: publicAssetUrl(item.coverImage),
+      }));
+  } catch (err) {
+    console.warn(`Skipping ${kind} SEO detail pages: ${err instanceof Error ? err.message : String(err)}`);
+    return [];
+  }
+}
+
+const dynamicContentPages = [
+  ...(await loadContentPages("guides")),
+  ...(await loadContentPages("news")),
+];
+
 await Promise.all(
-  pages.map(async (page) => {
+  [...pages, ...dynamicContentPages].map(async (page) => {
     const directory = join(outputDir, page.path.slice(1));
     await mkdir(directory, { recursive: true });
     await writeFile(join(directory, "index.html"), renderPage(page), "utf8");
   }),
 );
 
-console.log(`Generated ${pages.length} route-specific SEO pages`);
+console.log(`Generated ${pages.length + dynamicContentPages.length} route-specific SEO pages`);

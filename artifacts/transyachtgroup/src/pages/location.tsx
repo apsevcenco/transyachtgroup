@@ -30,6 +30,11 @@ const LOCATIONS = {
     detail:
       "the port of Saint-Tropez, Ramatuelle, Pampelonne and private villas across the peninsula",
   },
+  courchevel: {
+    name: "Courchevel",
+    detail:
+      "Courchevel 1850, luxury chalets, private hotels and airport transfers from Geneva, Lyon, Chambéry and Nice",
+  },
 } as const;
 
 type LocationKey = keyof typeof LOCATIONS;
@@ -45,6 +50,10 @@ const LOCATION_SERVICES: Partial<Record<LocationKey, { slug: string; label: stri
   ],
   nice: [{ slug: "luxury-car-rental-nice", label: "Luxury car rental in Nice" }],
   "saint-tropez": [{ slug: "luxury-car-rental-saint-tropez", label: "Luxury car rental in Saint-Tropez" }],
+  courchevel: [
+    { slug: "private-jet-to-car-transfer-courchevel", label: "Private jet to car transfer in Courchevel" },
+    { slug: "courchevel-private-transfers", label: "Private transfers to Courchevel" },
+  ],
 };
 
 const TEXT: Record<
@@ -58,6 +67,9 @@ const TEXT: Record<
     yachts: string;
     concierge: string;
     contact: string;
+    commercialTitle: (city: string) => string;
+    commercialCopy: (city: string) => string;
+    faq: (city: string) => { question: string; answer: string }[];
   }
 > = {
   en: {
@@ -72,6 +84,23 @@ const TEXT: Record<
     concierge:
       "Tell us your dates, destination and preferences. Our concierge will prepare a tailored selection from the available fleet.",
     contact: "Request a private selection",
+    commercialTitle: (city) => `Private luxury transport in ${city}`,
+    commercialCopy: (city) =>
+      `Book chauffeured luxury cars, self-drive supercars, VIP airport transfers and private yacht connections in ${city}. We focus on discreet service, premium vehicles, flexible delivery and fast concierge response for high-value private and corporate clients.`,
+    faq: (city) => [
+      {
+        question: `Can I book a luxury car with chauffeur in ${city}?`,
+        answer: `Yes. Trans Yacht Group arranges chauffeured luxury vehicles, executive transfers and private car rental in ${city} with concierge support.`,
+      },
+      {
+        question: `Do you offer airport transfers to ${city}?`,
+        answer: `Yes. We coordinate VIP transfers from the main regional airports, private terminals and hotels, depending on your itinerary.`,
+      },
+      {
+        question: `Can I request a yacht or car together in ${city}?`,
+        answer: `Yes. Our team can combine a premium car, yacht charter and concierge services into one private itinerary.`,
+      },
+    ],
   },
   fr: {
     title: (city) => `Location de voitures de luxe et yachts à ${city}`,
@@ -85,6 +114,23 @@ const TEXT: Record<
     concierge:
       "Indiquez-nous vos dates, votre destination et vos préférences. Notre concierge préparera une sélection personnalisée.",
     contact: "Demander une sélection privée",
+    commercialTitle: (city) => `Transport privé de luxe à ${city}`,
+    commercialCopy: (city) =>
+      `Réservez voitures de luxe avec chauffeur, supercars, transferts VIP aéroport et connexions yacht privées à ${city}. Notre service privilégie la discrétion, les véhicules premium, la livraison flexible et une réponse rapide pour clients privés et corporate.`,
+    faq: (city) => [
+      {
+        question: `Puis-je réserver une voiture de luxe avec chauffeur à ${city} ?`,
+        answer: `Oui. Trans Yacht Group organise voitures de luxe avec chauffeur, transferts exécutifs et location privée à ${city}.`,
+      },
+      {
+        question: `Proposez-vous des transferts aéroport vers ${city} ?`,
+        answer: `Oui. Nous coordonnons les transferts VIP depuis les principaux aéroports, terminaux privés et hôtels selon votre itinéraire.`,
+      },
+      {
+        question: `Puis-je demander un yacht et une voiture à ${city} ?`,
+        answer: `Oui. Notre équipe peut combiner voiture premium, yacht charter et conciergerie dans un itinéraire privé.`,
+      },
+    ],
   },
   ru: {
     title: (city) => `Аренда премиальных авто и яхт в ${city}`,
@@ -98,6 +144,23 @@ const TEXT: Record<
     concierge:
       "Сообщите даты, маршрут и пожелания. Консьерж подготовит персональную подборку доступного транспорта.",
     contact: "Получить персональную подборку",
+    commercialTitle: (city) => `Частный люксовый транспорт в ${city}`,
+    commercialCopy: (city) =>
+      `Забронируйте премиальный автомобиль с водителем, суперкар, VIP-трансфер из аэропорта или связку авто и яхты в ${city}. Мы делаем акцент на приватность, высокий уровень машин, гибкую доставку и быстрый консьерж-сервис для частных и корпоративных клиентов.`,
+    faq: (city) => [
+      {
+        question: `Можно ли заказать премиальное авто с водителем в ${city}?`,
+        answer: `Да. Trans Yacht Group организует автомобили с водителем, VIP-трансферы и частную аренду премиальных машин в ${city}.`,
+      },
+      {
+        question: `Есть ли трансферы из аэропорта в ${city}?`,
+        answer: `Да. Мы организуем VIP-трансферы из основных аэропортов, частных терминалов и отелей по вашему маршруту.`,
+      },
+      {
+        question: `Можно ли заказать авто и яхту вместе в ${city}?`,
+        answer: `Да. Команда может объединить премиальное авто, яхт-чартер и консьерж-сервис в один частный маршрут.`,
+      },
+    ],
   },
   ro: {
     title: (city) => `Închirieri auto de lux și iahturi în ${city}`,
@@ -111,6 +174,23 @@ const TEXT: Record<
     concierge:
       "Comunicați-ne datele și preferințele, iar concierge-ul nostru va pregăti o selecție personalizată.",
     contact: "Solicitați o selecție privată",
+    commercialTitle: (city) => `Transport privat de lux în ${city}`,
+    commercialCopy: (city) =>
+      `Rezervați automobile de lux cu șofer, supercaruri, transferuri VIP de la aeroport și conexiuni private cu iahturi în ${city}. Serviciul nostru pune accent pe discreție, vehicule premium, livrare flexibilă și concierge rapid.`,
+    faq: (city) => [
+      {
+        question: `Pot rezerva o mașină de lux cu șofer în ${city}?`,
+        answer: `Da. Trans Yacht Group organizează automobile de lux cu șofer, transferuri executive și închirieri private în ${city}.`,
+      },
+      {
+        question: `Oferiți transferuri de la aeroport către ${city}?`,
+        answer: `Da. Coordonăm transferuri VIP de la aeroporturi, terminale private și hoteluri în funcție de itinerariu.`,
+      },
+      {
+        question: `Pot solicita iaht și mașină împreună în ${city}?`,
+        answer: `Da. Echipa poate combina automobil premium, yacht charter și concierge într-un itinerariu privat.`,
+      },
+    ],
   },
   ar: {
     title: (city) => `تأجير السيارات الفاخرة واليخوت في ${city}`,
@@ -124,6 +204,23 @@ const TEXT: Record<
     concierge:
       "أرسل لنا التواريخ والوجهة والتفضيلات، وسيقوم فريق الكونسيرج بإعداد مجموعة مخصصة.",
     contact: "اطلب مجموعة خاصة",
+    commercialTitle: (city) => `تنقل فاخر خاص في ${city}`,
+    commercialCopy: (city) =>
+      `احجز سيارات فاخرة مع سائق، سيارات سوبركار، انتقالات VIP من المطار وخدمات ربط خاصة باليخوت في ${city}. نركز على الخصوصية، السيارات الراقية، التسليم المرن والاستجابة السريعة لعملاء النخبة والشركات.`,
+    faq: (city) => [
+      {
+        question: `هل يمكن حجز سيارة فاخرة مع سائق في ${city}؟`,
+        answer: `نعم. تنظم Trans Yacht Group سيارات فاخرة مع سائق، انتقالات تنفيذية وتأجير سيارات خاص في ${city}.`,
+      },
+      {
+        question: `هل تقدمون انتقالات من المطار إلى ${city}؟`,
+        answer: `نعم. ننسق انتقالات VIP من المطارات الرئيسية والمحطات الخاصة والفنادق حسب خط سير الرحلة.`,
+      },
+      {
+        question: `هل يمكن طلب يخت وسيارة معاً في ${city}؟`,
+        answer: `نعم. يمكن لفريقنا دمج سيارة فاخرة ويخت وخدمات كونسيرج ضمن برنامج خاص واحد.`,
+      },
+    ],
   },
 };
 
@@ -148,6 +245,7 @@ export default function LocationPage({ city }: { city: string }) {
   const title = text.title(location.name);
   const description = text.description(location.name);
   const path = `/locations/${key}`;
+  const faqItems = text.faq(location.name);
 
   return (
     <div className="min-h-screen bg-background text-white">
@@ -190,6 +288,18 @@ export default function LocationPage({ city }: { city: string }) {
                 name: location.name,
               },
             ],
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: faqItems.map((item) => ({
+              "@type": "Question",
+              name: item.question,
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: item.answer,
+              },
+            })),
           },
         ]}
       />
@@ -246,6 +356,28 @@ export default function LocationPage({ city }: { city: string }) {
               ))}
             </nav>
           ) : null}
+
+          <section className="mt-14 rounded-xl border border-white/10 bg-white/[0.02] p-8 md:p-10">
+            <h2 className="mb-4 font-serif text-2xl sm:text-3xl">
+              {text.commercialTitle(location.name)}
+            </h2>
+            <p className="max-w-3xl font-light leading-8 text-white/60">
+              {text.commercialCopy(location.name)}
+            </p>
+          </section>
+
+          <section className="mt-10 grid gap-4 md:grid-cols-3">
+            {faqItems.map((item) => (
+              <article key={item.question} className="rounded-xl border border-white/10 bg-black/20 p-6">
+                <h2 className="mb-3 font-serif text-lg leading-snug text-white">
+                  {item.question}
+                </h2>
+                <p className="text-sm font-light leading-7 text-white/55">
+                  {item.answer}
+                </p>
+              </article>
+            ))}
+          </section>
 
           <section className="mt-14 rounded-xl border border-gold/20 bg-gold/[0.04] p-8 md:p-10">
             <h2 className="mb-4 font-serif text-2xl sm:text-3xl">{text.contact}</h2>

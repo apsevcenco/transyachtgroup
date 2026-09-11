@@ -48,6 +48,8 @@ export type News = {
   primaryKeyword: string | null;
   brief: string | null;
   scheduledAt: string | null;
+  seoScore: number | null;
+  seoAudit: SeoAuditResult | null;
   published: boolean;
   publishedAt: string | null;
   createdAt: string | null;
@@ -200,6 +202,16 @@ export async function translateNewsDraftWithAi(input: {
   });
   if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "AI news translation failed");
   return (await res.json()).translations;
+}
+
+export async function auditNewsSeo(data: NewsInput): Promise<SeoAuditResult> {
+  const res = await fetch(`${API_BASE}/admin/news/audit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "News SEO audit failed");
+  return res.json();
 }
 
 export async function createNews(data: NewsInput): Promise<News> {

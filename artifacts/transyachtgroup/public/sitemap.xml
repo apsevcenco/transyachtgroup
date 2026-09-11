@@ -9,4 +9,7 @@
   <sitemap>
     <loc>https://www.transyachtgroup.com/api/guides-sitemap.xml</loc>
   </sitemap>
+  <sitemap>
+    <loc>https://www.transyachtgroup.com/api/news-sitemap.xml</loc>
+  </sitemap>
 </sitemapindex>

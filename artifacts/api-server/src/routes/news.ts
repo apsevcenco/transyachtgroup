@@ -5,6 +5,7 @@ import rateLimit from "express-rate-limit";
 import { db } from "@workspace/db";
 import { newsTable } from "@workspace/db/schema";
 import { adminAuth } from "../middleware/auth";
+import { auditGuide, type SeoAuditInput } from "../lib/guideSeoAudit";
 
 const router: IRouter = Router();
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -133,6 +134,18 @@ function parseNewsInput(body: unknown) {
   };
 }
 
+function auditNews(data: ReturnType<typeof parseNewsInput>) {
+  return auditGuide({
+    title: data.title,
+    excerpt: data.excerpt,
+    content: data.content,
+    metaTitle: data.metaTitle,
+    metaDescription: data.metaDescription,
+    translations: data.translations as SeoAuditInput["translations"],
+    primaryKeyword: data.primaryKeyword,
+  });
+}
+
 function publiclyVisible() {
   return or(
     eq(newsTable.published, true),
@@ -220,6 +233,17 @@ router.get("/admin/news", adminAuth, async (_req, res) => {
   res.json(items.map(effectiveNewsState));
 });
 
+router.post("/admin/news/audit", adminAuth, async (req, res) => {
+  try {
+    const data = parseNewsInput({ ...(req.body || {}), published: false });
+    res.json(auditNews(data));
+  } catch (err) {
+    req.log?.error?.({ err }, "News SEO audit failed");
+    if (err instanceof Error && err.message === "INVALID_NEWS") return void res.status(400).json({ error: "Complete the required news fields before auditing SEO" });
+    res.status(500).json({ error: "News SEO audit failed" });
+  }
+});
+
 router.post("/admin/news/generate", adminAuth, newsAiLimiter, async (req, res) => {
   try {
     const value = req.body && typeof req.body === "object" ? req.body as Record<string, unknown> : {};
@@ -273,8 +297,9 @@ Return {"title":"...","excerpt":"...","content":"...","metaTitle":"...","metaDes
 router.post("/admin/news", adminAuth, async (req, res) => {
   try {
     const data = parseNewsInput(req.body);
+    const seoAudit = auditNews(data);
     const now = new Date();
-    const [created] = await db.insert(newsTable).values({ ...data, publishedAt: data.published ? now : null, updatedAt: now }).returning();
+    const [created] = await db.insert(newsTable).values({ ...data, seoScore: seoAudit.score, seoAudit, publishedAt: data.published ? now : null, updatedAt: now }).returning();
     res.status(201).json(created);
   } catch (err) {
     if (err instanceof Error && err.message === "INVALID_NEWS") return void res.status(400).json({ error: "Invalid news" });
@@ -288,10 +313,13 @@ router.put("/admin/news/:id", adminAuth, async (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id < 1) return void res.status(400).json({ error: "Invalid id" });
     const data = parseNewsInput(req.body);
+    const seoAudit = auditNews(data);
     const [current] = await db.select().from(newsTable).where(eq(newsTable.id, id)).limit(1);
     if (!current) return void res.status(404).json({ error: "News not found" });
     const [updated] = await db.update(newsTable).set({
       ...data,
+      seoScore: seoAudit.score,
+      seoAudit,
       publishedAt: data.published ? current.publishedAt || new Date() : null,
       updatedAt: new Date(),
     }).where(eq(newsTable.id, id)).returning();

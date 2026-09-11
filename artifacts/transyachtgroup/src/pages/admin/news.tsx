@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Pencil, Plus, Sparkles, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, ShieldCheck, Sparkles, Trash2, Upload } from "lucide-react";
 import { useLocation } from "wouter";
 
 import RichTextEditor from "@/components/RichTextEditor";
-import { checkAuth, createNews, deleteNews, fetchAdminNews, generateNewsWithAi, translateNewsDraftWithAi, updateNews, uploadAdminPublicImage, type News, type NewsInput } from "@/lib/api";
+import { auditNewsSeo, checkAuth, createNews, deleteNews, fetchAdminNews, generateNewsWithAi, translateNewsDraftWithAi, updateNews, uploadAdminPublicImage, type News, type NewsInput, type SeoAuditResult } from "@/lib/api";
 import { compressImage } from "@/lib/imageCompress";
 
 const translationLanguages = [
@@ -41,6 +41,7 @@ export default function AdminNews() {
   const [message, setMessage] = useState("");
   const [ai, setAi] = useState({ topic: "", keyword: "", brief: "", wordCount: 1200 });
   const [translationLang, setTranslationLang] = useState<(typeof translationLanguages)[number]["code"]>("fr");
+  const [seoAudit, setSeoAudit] = useState<SeoAuditResult | null>(null);
 
   const load = async () => setItems(await fetchAdminNews());
   useEffect(() => {
@@ -54,7 +55,7 @@ export default function AdminNews() {
   }, [setLocation]);
 
   const set = <K extends keyof NewsInput>(key: K, value: NewsInput[K]) => setForm((current) => ({ ...current, [key]: value }));
-  const reset = () => { setEditing(null); setForm(empty); setMessage(""); };
+  const reset = () => { setEditing(null); setForm(empty); setSeoAudit(null); setMessage(""); };
   const edit = (item: News) => {
     setEditing(item.id);
     setForm({
@@ -72,6 +73,7 @@ export default function AdminNews() {
       scheduledAt: item.scheduledAt,
       published: item.published,
     });
+    setSeoAudit(item.seoAudit);
     setAi((current) => ({ ...current, topic: item.title, keyword: item.primaryKeyword || "", brief: item.brief || "" }));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -104,6 +106,7 @@ export default function AdminNews() {
         published: false,
       }));
       setEditing(null);
+      setSeoAudit(null);
       setMessage("AI news draft and translations are ready. Review it, add photos, then publish.");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "AI news generation failed");
@@ -182,6 +185,19 @@ export default function AdminNews() {
       await deleteNews(id);
       await load();
       if (editing === id) reset();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const runAudit = async () => {
+    setBusy(true); setMessage("");
+    try {
+      const result = await auditNewsSeo({ ...form, slug: form.slug || slugify(form.title), primaryKeyword: form.primaryKeyword || ai.keyword || ai.topic || null, brief: form.brief || ai.brief || null, published: false });
+      setSeoAudit(result);
+      setMessage(`News SEO audit completed: ${result.score}/100`);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "News SEO audit failed");
     } finally {
       setBusy(false);
     }
@@ -273,8 +289,10 @@ export default function AdminNews() {
 
           <div className="mt-6 flex flex-wrap items-center gap-4">
             <label className="flex items-center gap-3 text-sm text-white/70"><input type="checkbox" checked={form.published} onChange={(e) => set("published", e.target.checked)} /> Published and visible</label>
+            <button disabled={busy || !form.title || !form.excerpt || !form.content} onClick={runAudit} className="inline-flex items-center gap-2 rounded border border-white/15 px-5 py-3 text-sm text-white/70 hover:border-gold/30 hover:text-gold disabled:opacity-40"><ShieldCheck size={16} /> Audit SEO</button>
             <button disabled={busy || !form.title || !form.slug || !form.excerpt || !form.content} onClick={save} className="rounded bg-gold px-6 py-3 text-sm font-medium text-black disabled:opacity-40">{busy ? "Working…" : editing ? "Save changes" : "Create news"}</button>
           </div>
+          {seoAudit && <div className="mt-6 rounded-lg border border-white/10 bg-black/30 p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs uppercase tracking-wider text-white/35">News SEO readiness</p><p className={`mt-1 text-4xl font-semibold ${seoAudit.score >= 80 ? "text-emerald-400" : seoAudit.score >= 60 ? "text-gold" : "text-red-400"}`}>{seoAudit.score}/100</p></div><div className="text-right text-xs text-white/40"><p>{seoAudit.stats.wordCount || 0} words</p><p>{seoAudit.stats.internalLinks || 0} internal links</p><p>{seoAudit.stats.completeTranslations || 0}/4 translations</p></div></div><div className="mt-5 space-y-2">{seoAudit.issues.map((issue) => <div key={issue.code} className={`rounded px-3 py-2 text-xs ${issue.severity === "error" ? "bg-red-500/10 text-red-300" : "bg-gold/5 text-gold/80"}`}>{issue.message} <span className="opacity-40">−{issue.points}</span></div>)}{!seoAudit.issues.length && <p className="text-sm text-emerald-400">Ready to publish.</p>}</div></div>}
           {message && <p className="mt-4 rounded border border-white/10 bg-black/25 px-3 py-2 text-xs text-gold/80">{message}</p>}
         </section>
 
@@ -282,7 +300,7 @@ export default function AdminNews() {
           {items.map((item) => (
             <div key={item.id} className="flex flex-col gap-4 rounded-xl border border-white/10 bg-white/[0.02] p-5 sm:flex-row sm:items-center">
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-3"><h2 className="truncate font-serif text-xl">{item.title}</h2><span className={`rounded-full px-2 py-1 text-[9px] uppercase ${item.published ? "bg-emerald-500/10 text-emerald-400" : "bg-white/5 text-white/40"}`}>{item.published ? "Published" : "Draft"}</span></div>
+                <div className="flex items-center gap-3"><h2 className="truncate font-serif text-xl">{item.title}</h2><span className={`rounded-full px-2 py-1 text-[9px] uppercase ${item.published ? "bg-emerald-500/10 text-emerald-400" : "bg-white/5 text-white/40"}`}>{item.published ? "Published" : "Draft"}</span>{item.seoScore != null && <span className="text-xs text-gold/60">SEO {item.seoScore}</span>}</div>
                 <p className="mt-1 truncate text-xs text-white/35">/news/{item.slug}/ · {item.primaryKeyword || "no keyword"}</p>
               </div>
               <div className="flex gap-2"><button onClick={() => edit(item)} className="rounded border border-white/10 p-2 text-white/60 hover:text-gold"><Pencil size={17} /></button><button onClick={() => remove(item.id)} className="rounded border border-white/10 p-2 text-red-400/60 hover:text-red-400"><Trash2 size={17} /></button></div>
