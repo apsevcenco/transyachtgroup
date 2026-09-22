@@ -225,28 +225,33 @@ async function correctNewsSeoLoop(
   before: ReturnType<typeof auditNews>,
   maxAttempts = 3,
 ): Promise<{ copy: NewsCopy; audit: ReturnType<typeof auditNews> }> {
-  let current = initial;
-  let best = { copy: current, audit: before };
-  let remainingIssues = before.issues;
+  // Always build the next attempt on the best draft seen so far, not the
+  // latest one — an attempt that fixes one issue but regresses another
+  // (e.g. trims content while inserting the keyword) must not become the
+  // base for the next attempt, or the loop can walk itself backwards.
+  let best = { copy: initial, audit: before };
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const fixable = fixableNewsIssues(remainingIssues);
+    const fixable = fixableNewsIssues(best.audit.issues);
     if (!fixable.length) break;
+    // A generic "expand it" instruction is easy for the model to under-deliver
+    // on once it's the only remaining issue — it tends to lightly edit rather
+    // than materially lengthen the piece. Give it the exact deficit.
+    const shortfall = fixable.some((issue) => issue.code === "content_short")
+      ? `\nThe article is currently ${best.audit.stats.wordCount} words. You must add at least ${Math.max(150, 1000 - best.audit.stats.wordCount + 100)} words of genuinely new, useful content — expand existing sections with more practical detail, or add another relevant H2 section. Do not just lightly edit sentences; the word count must materially increase.`
+      : "";
     const corrected = cleanCopy(await requestOpenAiJson(
       NEWS_SEO_FIX_RULES,
       `SEO AUDIT ISSUES=${JSON.stringify(fixable)}
 CURRENT SEO STATS=${JSON.stringify(best.audit.stats)}
 PRIMARY KEYWORD=${JSON.stringify(context.primaryKeyword || "")}
 NEWS BRIEF=${JSON.stringify(context.brief || "")}
-CURRENT ARTICLE=${JSON.stringify(current)}`,
+CURRENT ARTICLE=${JSON.stringify(best.copy)}${shortfall}`,
     ));
-    current = corrected;
     const audit = auditNews({ ...corrected, primaryKeyword: context.primaryKeyword, targetPage: context.targetPage }, existing);
     if (audit.score > best.audit.score || fixableNewsIssues(audit.issues).length < fixableNewsIssues(best.audit.issues).length) {
       best = { copy: corrected, audit };
     }
-    remainingIssues = audit.issues;
-    if (!fixableNewsIssues(remainingIssues).length) break;
   }
   return best;
 }
