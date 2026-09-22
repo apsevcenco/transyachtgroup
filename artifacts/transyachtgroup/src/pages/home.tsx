@@ -84,7 +84,7 @@ export default function Home() {
     gcTime: 30 * 60 * 1000,
   });
 
-  const { data: siteContent = {} } = useQuery<Record<string, string>>({
+  const { data: siteContent = {}, isSuccess: contentLoaded } = useQuery<Record<string, string>>({
     queryKey: ["content", lang],
     queryFn: () => fetchContent(lang),
     staleTime: 5 * 60 * 1000,
@@ -96,10 +96,17 @@ export default function Home() {
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
   });
-  const contentBackground = (key: string, fallback: string): string =>
-    Object.prototype.hasOwnProperty.call(siteContent, key)
+  // Before the CMS content query resolves, siteContent is {} — hasOwnProperty
+  // would be false and this would fall through to the bundled placeholder
+  // image, which then gets replaced by the real one a moment later (visible
+  // as a flash of the wrong background on first load). Render nothing until
+  // we actually know whether the CMS has an override.
+  const contentBackground = (key: string, fallback: string): string => {
+    if (!contentLoaded) return "";
+    return Object.prototype.hasOwnProperty.call(siteContent, key)
       ? (siteContent[key] || "").trim()
       : fallback;
+  };
   const heroBackground = contentBackground(
     "hero_background",
     `${import.meta.env.BASE_URL}images/hero-bg.jpg`,

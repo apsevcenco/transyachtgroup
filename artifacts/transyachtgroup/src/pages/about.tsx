@@ -48,24 +48,29 @@ Today, we serve a private circle of clients across Europe, the Middle East, and 
 export default function About() {
   const [, setLocation] = useLocation();
   const [content, setContent] = useState<Record<string, string>>({});
+  // Guards against flashing the bundled placeholder image before the CMS
+  // content query resolves — see the matching fix in home.tsx. The
+  // background doesn't vary by language, so this only needs to flip once,
+  // not reset on every language switch.
+  const [contentLoaded, setContentLoaded] = useState(false);
   const { lang, t } = useLanguage();
   usePageView();
 
   useEffect(() => {
     fetchContent(lang)
       .then(setContent)
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setContentLoaded(true));
   }, [lang]);
 
   const aboutTitle = content.about_title || "About Us";
   const slogan = content.about_slogan || DEFAULT_SLOGAN;
   const text = content.about_text || DEFAULT_TEXT;
-  const aboutBackground = Object.prototype.hasOwnProperty.call(
-    content,
-    "about_background",
-  )
-    ? (content.about_background || "").trim()
-    : `${import.meta.env.BASE_URL}images/hero-bg.jpg`;
+  const aboutBackground = !contentLoaded
+    ? ""
+    : Object.prototype.hasOwnProperty.call(content, "about_background")
+      ? (content.about_background || "").trim()
+      : `${import.meta.env.BASE_URL}images/hero-bg.jpg`;
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
