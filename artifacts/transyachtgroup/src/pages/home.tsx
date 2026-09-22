@@ -167,7 +167,23 @@ export default function Home() {
       <section className="relative h-screen w-full flex items-center justify-center overflow-hidden">
         <motion.div className="absolute inset-0 z-0">
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="hero-bg-mask relative w-[95vw] h-[95vh] md:w-[90vw] md:h-[82vh] max-w-[1300px] max-h-[850px]">
+            {/*
+              The hero photo is portrait (taller than wide). Below md, width
+              and height both track the viewport so the box always matches
+              the screen's own aspect ratio. At md+ this used to size width
+              and height independently (vw/vh with separate max-w/max-h
+              caps), which let the box's shape drift anywhere from ~1.2 to
+              ~1.9 (width:height) depending on the browser window's own
+              aspect ratio — on most ordinary desktop windows that's wide
+              enough to crop out roughly half the photo's height.
+              w-[min(90vw,1300px,102vh)] + aspect-[6/5] locks the box to a
+              constant 1.2 ratio: whichever of "90% of the window width",
+              "1300px" or "85% of the window height, converted to width via
+              the ratio" is smallest becomes the width, and height always
+              follows from the ratio — so the shape never drifts, only the
+              overall scale does.
+            */}
+            <div className="hero-bg-mask relative w-[95vw] h-[95vh] md:w-[min(90vw,1300px,102vh)] md:aspect-[6/5] md:h-auto">
               {heroBackground ? (
                 <img
                   src={heroBackground}
