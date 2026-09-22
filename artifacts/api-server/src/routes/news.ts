@@ -208,7 +208,7 @@ Revise the existing English news article to resolve the supplied deterministic S
 Never invent fake awards, fake partners, fake client names, prices, availability, legal claims, contact details or vehicle/yacht specifications.
 Preserve useful facts from the current article and brief. Make the article commercially useful for premium clients interested in luxury car rental, chauffeur service, VIP transfers, Monaco, the French Riviera and Courchevel when relevant.
 If the article is short, expand it to 1,100-1,500 visible English words after HTML tags are removed.
-Use the primary keyword naturally in the title, introduction and body when supplied. If no primary keyword is supplied, infer one from the title and brief.
+When keyword_title or keyword_body is in the audit issues, the primary keyword must appear as an exact, verbatim, contiguous phrase (case-insensitive) at least once in that field — the audit does a literal substring match, not a fuzzy one, so a paraphrase, reordering or splitting the words across a sentence will still fail it. Fit the exact phrase in once, even if the sentence around it is a little less elegant, then write naturally everywhere else. If no primary keyword is supplied, infer one from the title and brief.
 The site appends " | Trans Yacht Group" to the page title automatically, so metaTitle must NOT already include the brand name. Keep metaTitle to roughly 10-40 characters so it renders to 30-60 characters once the suffix is added. Meta description must be 110-155 characters.
 The body must include at least three useful H2 sections, at least three relevant internal links to transyachtgroup.com paths, and a concise FAQ section with practical booking questions.
 Allowed internal links include /cars/, /yachts/, /services/courchevel-private-transfers/, /services/luxury-car-rental-cannes/, /services/luxury-car-rental-monaco/, /services/luxury-car-rental-nice/, /services/luxury-car-rental-saint-tropez/, /locations/cannes/, /locations/monaco/, /locations/nice/, /locations/saint-tropez/, /locations/courchevel/.
@@ -329,7 +329,7 @@ Topic: ${input.topic}
 Primary keyword: ${input.keyword}
 Brief: ${input.brief}
 Target visible length: ${input.wordCount} words.
-The title should contain the primary keyword naturally when possible.
+The title must contain the primary keyword as an exact, verbatim, contiguous phrase (case-insensitive), and the body must also contain that exact phrase at least once — not a paraphrase, reordering, or the words split across a sentence. Fit the exact phrase in once even if the surrounding sentence is a little less elegant, then write naturally everywhere else.
 The site appends " | Trans Yacht Group" to the page title automatically, so metaTitle must NOT already include the brand name. Keep metaTitle to roughly 10-40 characters so it renders to 30-60 characters once the suffix is added.
 Meta description must be 110-155 characters.
 Return {"title":"...","excerpt":"...","content":"...","metaTitle":"...","metaDescription":"..."}.`,
