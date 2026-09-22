@@ -52,6 +52,21 @@ function slugify(value: string): string {
     .slice(0, 160);
 }
 
+const MAX_KEYWORD_WORDS = 6;
+
+// A primary keyword must be a short search phrase the AI can weave into a sentence.
+// The AI brief form is free text, so operators sometimes paste a full SEO title
+// (e.g. "Luxury Car Rental Courchevel & Private Transfers | TransYachtGroup") into
+// this field. That string can never appear verbatim in natural prose, so the SEO
+// auditor's keyword_title/keyword_body checks fail forever and "Fix SEO issues with
+// AI" burns its retries without ever being able to close them. Normalize at the
+// boundary so the audit target stays achievable.
+function sanitizeKeyword(raw: string): string {
+  const withoutBrandSuffix = raw.split("|")[0].trim();
+  const meaningfulWords = withoutBrandSuffix.split(/\s+/).filter((word) => /[\p{L}\p{N}]/u.test(word));
+  return meaningfulWords.slice(0, MAX_KEYWORD_WORDS).join(" ");
+}
+
 function inferNewsTargetPage(value: string): string {
   const text = value.toLocaleLowerCase("en");
   if (text.includes("courchevel") || text.includes("куршев")) return "/services/courchevel-private-transfers/";
@@ -137,7 +152,8 @@ function parseNewsInput(body: unknown) {
   const title = text("title", 180);
   const excerpt = text("excerpt", 600);
   const content = text("content", 120_000);
-  const primaryKeyword = optional("primaryKeyword", 180);
+  const rawPrimaryKeyword = optional("primaryKeyword", 180);
+  const primaryKeyword = rawPrimaryKeyword ? sanitizeKeyword(rawPrimaryKeyword) || null : null;
   const brief = optional("brief", 4_000);
   const targetingText = [title, excerpt, primaryKeyword || "", brief || ""].join(" ");
   const gallery = Array.isArray(value.gallery)
@@ -417,7 +433,8 @@ router.post("/admin/news/generate", adminAuth, newsAiLimiter, async (req, res) =
     const value = req.body && typeof req.body === "object" ? req.body as Record<string, unknown> : {};
     const topic = typeof value.topic === "string" ? value.topic.trim().slice(0, 240) : "";
     if (topic.length < 5) return void res.status(400).json({ error: "Enter a more specific topic" });
-    const keyword = typeof value.keyword === "string" ? value.keyword.trim().slice(0, 180) : topic;
+    const rawKeyword = typeof value.keyword === "string" ? value.keyword.trim().slice(0, 180) : topic;
+    const keyword = sanitizeKeyword(rawKeyword) || topic;
     const brief = typeof value.brief === "string" ? value.brief.trim().slice(0, 4_000) : "";
     const requestedWordCount = Number(value.wordCount);
     const wordCount = Number.isFinite(requestedWordCount) ? Math.min(1_500, Math.max(1_000, Math.round(requestedWordCount))) : 1_200;
