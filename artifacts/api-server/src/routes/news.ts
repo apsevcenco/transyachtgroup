@@ -212,6 +212,15 @@ async function existingNewsForAudit(currentSlug?: string) {
   return rows.filter((item) => item.slug !== currentSlug);
 }
 
+function excludeCurrentNews(
+  rows: Awaited<ReturnType<typeof existingNewsForAudit>>,
+  currentId: unknown,
+) {
+  const id = Number(currentId);
+  if (!Number.isInteger(id) || id < 1) return rows;
+  return rows.filter((item) => item.id !== id);
+}
+
 async function translateNewsCopy(copy: NewsCopy): Promise<Record<string, NewsCopy>> {
   const translations: Record<string, NewsCopy> = {};
   for (const [code, language] of Object.entries(TARGET_LANGUAGES)) {
@@ -319,7 +328,8 @@ router.get("/admin/news", adminAuth, async (_req, res) => {
 router.post("/admin/news/audit", adminAuth, async (req, res) => {
   try {
     const data = parseNewsInput({ ...(req.body || {}), published: false });
-    res.json(auditNews(data, await existingNewsForAudit(data.slug)));
+    const existing = excludeCurrentNews(await existingNewsForAudit(data.slug), (req.body as Record<string, unknown> | undefined)?.excludeId);
+    res.json(auditNews(data, existing));
   } catch (err) {
     req.log?.error?.({ err }, "News SEO audit failed");
     if (err instanceof Error && err.message === "INVALID_NEWS") return void res.status(400).json({ error: "Complete the required news fields before auditing SEO" });
@@ -330,7 +340,7 @@ router.post("/admin/news/audit", adminAuth, async (req, res) => {
 router.post("/admin/news/fix-seo", adminAuth, newsAiLimiter, async (req, res) => {
   try {
     const data = parseNewsInput({ ...(req.body?.news || {}), published: false });
-    const existing = await existingNewsForAudit(data.slug);
+    const existing = excludeCurrentNews(await existingNewsForAudit(data.slug), req.body?.excludeId);
     const before = auditNews(data, existing);
     if (!before.issues.length) {
       return void res.json({ draft: { ...data, published: false }, audit: before, unresolvedAutoFixes: [] });

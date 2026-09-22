@@ -207,21 +207,21 @@ export async function translateNewsDraftWithAi(input: {
   return (await res.json()).translations;
 }
 
-export async function auditNewsSeo(data: NewsInput): Promise<SeoAuditResult> {
+export async function auditNewsSeo(data: NewsInput, excludeId?: number): Promise<SeoAuditResult> {
   const res = await fetch(`${API_BASE}/admin/news/audit`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify(data),
+    body: JSON.stringify({ ...data, excludeId }),
   });
   if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "News SEO audit failed");
   return res.json();
 }
 
-export async function fixNewsSeoWithAi(data: NewsInput): Promise<{ draft: NewsInput; audit: SeoAuditResult; unresolvedAutoFixes?: string[] }> {
+export async function fixNewsSeoWithAi(data: NewsInput, excludeId?: number): Promise<{ draft: NewsInput; audit: SeoAuditResult; unresolvedAutoFixes?: string[] }> {
   const res = await fetch(`${API_BASE}/admin/news/fix-seo`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({ news: data }),
+    body: JSON.stringify({ news: data, excludeId }),
   });
   if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "AI news SEO correction failed");
   return res.json();

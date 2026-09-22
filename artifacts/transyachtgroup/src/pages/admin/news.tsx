@@ -197,7 +197,7 @@ export default function AdminNews() {
   const runAudit = async () => {
     setBusy(true); setMessage("");
     try {
-      const result = await auditNewsSeo({ ...form, slug: form.slug || slugify(form.title), primaryKeyword: form.primaryKeyword || ai.keyword || ai.topic || null, contentCluster: form.contentCluster || null, targetPage: form.targetPage || null, brief: form.brief || ai.brief || null, published: false });
+      const result = await auditNewsSeo({ ...form, slug: form.slug || slugify(form.title), primaryKeyword: form.primaryKeyword || ai.keyword || ai.topic || null, contentCluster: form.contentCluster || null, targetPage: form.targetPage || null, brief: form.brief || ai.brief || null, published: false }, editing ?? undefined);
       setSeoAudit(result);
       setMessage(`News SEO audit completed: ${result.score}/100`);
     } catch (err) {
@@ -211,7 +211,7 @@ export default function AdminNews() {
     setBusy(true); setMessage("");
     try {
       const previousScore = seoAudit?.score ?? 0;
-      const result = await fixNewsSeoWithAi({ ...form, slug: form.slug || slugify(form.title), primaryKeyword: form.primaryKeyword || ai.keyword || ai.topic || null, contentCluster: form.contentCluster || null, targetPage: form.targetPage || null, brief: form.brief || ai.brief || null, published: false });
+      const result = await fixNewsSeoWithAi({ ...form, slug: form.slug || slugify(form.title), primaryKeyword: form.primaryKeyword || ai.keyword || ai.topic || null, contentCluster: form.contentCluster || null, targetPage: form.targetPage || null, brief: form.brief || ai.brief || null, published: false }, editing ?? undefined);
       setForm(result.draft);
       setSeoAudit(result.audit);
       if (result.unresolvedAutoFixes?.length) {
