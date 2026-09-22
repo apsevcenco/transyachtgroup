@@ -56,14 +56,14 @@ export default function NewsDetail({ slug }: { slug: string }) {
               <p className="text-[10px] uppercase tracking-[0.25em] text-gold/70">{item.publishedAt ? new Date(item.publishedAt).toLocaleDateString(lang) : "Trans Yacht Group News"}</p>
               <h1 className="section-display-title mt-5 max-w-3xl text-balance break-words font-serif text-white">{item.title}</h1>
               <p className="mt-6 text-lg font-light leading-8 text-white/60">{item.excerpt}</p>
-              {item.coverImage && <img src={item.coverImage} alt="" className="mt-10 aspect-[16/9] w-full rounded-xl object-cover" />}
+              {item.coverImage && <img src={item.coverImage} alt={item.title} className="mt-10 aspect-[16/9] w-full rounded-xl object-cover" />}
               <div className="prose prose-invert prose-a:text-gold prose-headings:font-serif prose-headings:text-white prose-p:font-light prose-p:leading-8 prose-p:text-white/65 mt-12 max-w-none" dangerouslySetInnerHTML={{ __html: item.content }} />
               {item.gallery?.length > 0 && (
                 <section className="mt-14">
                   <h2 className="font-serif text-2xl">Gallery</h2>
                   <div className="mt-5 grid gap-4 sm:grid-cols-2">
                     {item.gallery.slice(0, 10).map((url, index) => (
-                      <img key={`${url}-${index}`} src={url} alt="" className="aspect-[4/3] rounded-lg object-cover" loading="lazy" />
+                      <img key={`${url}-${index}`} src={url} alt={`${item.title} — photo ${index + 1}`} className="aspect-[4/3] rounded-lg object-cover" loading="lazy" />
                     ))}
                   </div>
                 </section>
