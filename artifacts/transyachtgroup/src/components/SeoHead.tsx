@@ -76,7 +76,13 @@ export function SeoHead({
 }: SeoHeadProps) {
   useEffect(() => {
     const canonical = canonicalUrl(path);
-    const fullTitle = title.includes("Trans Yacht Group")
+    // Editors (and the AI news/guides writer) don't always spell the brand the
+    // same way ("TransYachtGroup", "Trans Yacht Group", different casing). A
+    // strict substring check misses those and appends the suffix a second
+    // time, producing titles like "...| TransYachtGroup | Trans Yacht Group"
+    // that Google truncates. Compare on letters only.
+    const normalize = (value: string) => value.toLowerCase().replace(/[^a-z]/g, "");
+    const fullTitle = normalize(title).includes("transyachtgroup")
       ? title
       : `${title} | Trans Yacht Group`;
     const absoluteImage = new URL(image, `${SITE_URL}/`).toString();

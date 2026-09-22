@@ -71,7 +71,15 @@ export function auditGuide(input: SeoAuditInput, existing: Array<{ id: number; t
   }
   if (bodyWords.length < 1000) add("content_short", "error", `Article is too short (${bodyWords.length} words). Target 1,000-1,500 words.`, 12);
   if (bodyWords.length > 1900) add("content_long", "warning", `Article is unusually long (${bodyWords.length} words).`, 3);
-  if ((input.metaTitle || "").length < 30 || (input.metaTitle || "").length > 60) add("meta_title", "error", "SEO title should contain 30–60 characters.", 8);
+  // The public site (SeoHead.tsx) appends " | Trans Yacht Group" to <title> unless the
+  // supplied title already mentions the brand, so a metaTitle that is itself 30-60
+  // characters can still render as a 70-80 character <title> that Google truncates.
+  // Audit the length Google will actually see, not the raw field.
+  const metaTitle = input.metaTitle || "";
+  const BRAND_SUFFIX = " | Trans Yacht Group";
+  const metaTitleHasBrand = /transyachtgroup/.test(metaTitle.toLocaleLowerCase("en").replace(/[^a-z]/g, ""));
+  const renderedTitleLength = metaTitle.length + (metaTitleHasBrand ? 0 : BRAND_SUFFIX.length);
+  if (!metaTitle || renderedTitleLength < 30 || renderedTitleLength > 60) add("meta_title", "error", `SEO title should render to 30–60 characters once the site appends "${BRAND_SUFFIX.trim()}" (currently ${renderedTitleLength || 0}). Leave the brand name out and keep the field itself to roughly ${30 - BRAND_SUFFIX.length}–${60 - BRAND_SUFFIX.length} characters.`, 8);
   if ((input.metaDescription || "").length < 110 || (input.metaDescription || "").length > 155) add("meta_description", "error", "SEO description should contain 110–155 characters.", 8);
   if (h1Count) add("extra_h1", "error", "Remove H1 from the body; the page title is already H1.", 10);
   if (h2Count < 3) add("headings", "warning", "Use at least three useful H2 sections.", 5);
