@@ -1558,7 +1558,7 @@ function CarBookingFormModal({
                           : "Issued contract"}
                       </span>
                     </span>
-                    {onGenerateContract && contract.snapshot && (
+                    {onGenerateContract && (
                       <button
                         type="button"
                         onClick={() => {

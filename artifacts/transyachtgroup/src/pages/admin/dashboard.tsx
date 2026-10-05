@@ -405,42 +405,46 @@ export default function AdminDashboard() {
     const base = buildContractPrefillFromBooking(booking);
     const snapshot = contract?.snapshot;
     setContractPrefill(
-      contract && snapshot
+      contract
         ? {
             ...base,
             editContractNumber: contract.contractNumber,
-            renterName: snapshot.renter?.name,
-            renterLegalEntity: snapshot.renter?.legalEntity || undefined,
-            renterDob: snapshot.renter?.dob,
-            renterPob: snapshot.renter?.pob,
-            renterNationality: snapshot.renter?.nationality,
-            renterPassport: snapshot.renter?.passport,
-            renterPassportExpiry: snapshot.renter?.passportExpiry,
-            renterLicence: snapshot.renter?.licence,
-            renterLicenceExpiry: snapshot.renter?.licenceExpiry,
-            renterLicenceIssuedBy: snapshot.renter?.licenceIssuedBy,
-            renterPhone: snapshot.renter?.phone,
-            renterEmail: snapshot.renter?.email,
-            additionalDriverName: snapshot.additionalDriver?.name,
-            additionalDriverDob: snapshot.additionalDriver?.dob,
-            additionalDriverLicence: snapshot.additionalDriver?.licence,
-            additionalDriverLicenceExpiry:
-              snapshot.additionalDriver?.licenceExpiry,
-            additionalDriverLicenceIssuedBy:
-              snapshot.additionalDriver?.licenceIssuedBy,
-            pickupDate: snapshot.pickupDate,
-            returnDate: snapshot.returnDate,
-            pickupTime: snapshot.pickupTime || base.pickupTime,
-            returnTime: snapshot.returnTime || base.returnTime,
-            pickupLocation: snapshot.pickupLocation,
-            returnLocation: snapshot.returnLocation,
-            totalAmount: snapshot.totalAmount,
-            deliveryCost: snapshot.deliveryCost ?? base.deliveryCost,
-            vatPercent: snapshot.vatPercent ?? base.vatPercent,
-            depositAmount: snapshot.depositAmount,
-            kmPerDay: snapshot.kmPerDay,
-            extraKmPrice: snapshot.extraKmPrice,
-            representativeName: snapshot.representativeName,
+            ...(snapshot
+              ? {
+                  renterName: snapshot.renter?.name,
+                  renterLegalEntity: snapshot.renter?.legalEntity || undefined,
+                  renterDob: snapshot.renter?.dob,
+                  renterPob: snapshot.renter?.pob,
+                  renterNationality: snapshot.renter?.nationality,
+                  renterPassport: snapshot.renter?.passport,
+                  renterPassportExpiry: snapshot.renter?.passportExpiry,
+                  renterLicence: snapshot.renter?.licence,
+                  renterLicenceExpiry: snapshot.renter?.licenceExpiry,
+                  renterLicenceIssuedBy: snapshot.renter?.licenceIssuedBy,
+                  renterPhone: snapshot.renter?.phone,
+                  renterEmail: snapshot.renter?.email,
+                  additionalDriverName: snapshot.additionalDriver?.name,
+                  additionalDriverDob: snapshot.additionalDriver?.dob,
+                  additionalDriverLicence: snapshot.additionalDriver?.licence,
+                  additionalDriverLicenceExpiry:
+                    snapshot.additionalDriver?.licenceExpiry,
+                  additionalDriverLicenceIssuedBy:
+                    snapshot.additionalDriver?.licenceIssuedBy,
+                  pickupDate: snapshot.pickupDate,
+                  returnDate: snapshot.returnDate,
+                  pickupTime: snapshot.pickupTime || base.pickupTime,
+                  returnTime: snapshot.returnTime || base.returnTime,
+                  pickupLocation: snapshot.pickupLocation,
+                  returnLocation: snapshot.returnLocation,
+                  totalAmount: snapshot.totalAmount,
+                  deliveryCost: snapshot.deliveryCost ?? base.deliveryCost,
+                  vatPercent: snapshot.vatPercent ?? base.vatPercent,
+                  depositAmount: snapshot.depositAmount,
+                  kmPerDay: snapshot.kmPerDay,
+                  extraKmPrice: snapshot.extraKmPrice,
+                  representativeName: snapshot.representativeName,
+                }
+              : {}),
           }
         : base,
     );
