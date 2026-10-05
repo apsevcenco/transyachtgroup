@@ -445,6 +445,7 @@ export default function AdminDashboard() {
         : base,
     );
     setTab("contracts");
+    setLocation("/admin/contracts");
   };
 
   // On mobile, the URL's :section param drives which content shows in the
@@ -459,6 +460,10 @@ export default function AdminDashboard() {
       mobileSection === "content" ||
       mobileSection === "requests" ||
       mobileSection === "analytics" ||
+      mobileSection === "contracts" ||
+      mobileSection === "crm" ||
+      mobileSection === "agents" ||
+      mobileSection === "proposals" ||
       mobileSection === "reviews" ||
       mobileSection === "trash"
     ) {
