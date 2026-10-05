@@ -2,13 +2,29 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { checkAuth } from "@/lib/api";
-import { ContractGenerator } from "@/components/admin/ContractGenerator";
+import {
+  CONTRACT_PREFILL_STORAGE_KEY,
+  ContractGenerator,
+  type ContractPrefill,
+} from "@/components/admin/ContractGenerator";
 
 export default function ContractsPage() {
   const [, setLocation] = useLocation();
   const [loading, setLoading] = useState(true);
+  const [prefill, setPrefill] = useState<ContractPrefill | null>(null);
 
   useEffect(() => {
+    const storedPrefill = sessionStorage.getItem(CONTRACT_PREFILL_STORAGE_KEY);
+    if (storedPrefill) {
+      try {
+        setPrefill(JSON.parse(storedPrefill) as ContractPrefill);
+      } catch (error) {
+        console.warn("Unable to restore contract prefill", error);
+      } finally {
+        sessionStorage.removeItem(CONTRACT_PREFILL_STORAGE_KEY);
+      }
+    }
+
     checkAuth().then((ok) => {
       if (!ok) {
         setLocation("/admin");
@@ -41,7 +57,7 @@ export default function ContractsPage() {
       </header>
 
       <div className="px-4 py-6">
-        <ContractGenerator />
+        <ContractGenerator prefill={prefill} />
       </div>
     </div>
   );

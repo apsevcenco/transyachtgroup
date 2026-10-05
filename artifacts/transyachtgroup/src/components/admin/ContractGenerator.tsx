@@ -9,6 +9,7 @@ import {
   type Booking,
   type ContractGenerateRequest,
   type Customer,
+  type StoredContract,
 } from "@/lib/api";
 import { stripTags, vehiclePhotos, type VehicleLite } from "./bookingShared";
 import { VehicleThumb } from "./VehicleThumb";
@@ -50,6 +51,8 @@ export interface ContractPrefill {
   representativeName?: string;
 }
 
+export const CONTRACT_PREFILL_STORAGE_KEY = "tyg_contract_prefill";
+
 /** Shared with CarBookingCalendar's "Generate Contract" button so both entry points fill the form identically. */
 export function buildContractPrefillFromBooking(
   booking: Booking,
@@ -71,6 +74,59 @@ export function buildContractPrefillFromBooking(
     depositAmount: booking.depositAmount ?? null,
     kmPerDay: booking.kmIncluded ?? null,
     extraKmPrice: booking.pricePerExtraKm ?? null,
+  };
+}
+
+export function buildContractPrefillFromStoredContract(
+  booking: Booking,
+  contract?: StoredContract,
+): ContractPrefill {
+  const base = buildContractPrefillFromBooking(booking);
+  const snapshot = contract?.snapshot;
+
+  if (!contract) {
+    return base;
+  }
+
+  return {
+    ...base,
+    editContractNumber: contract.contractNumber,
+    ...(snapshot
+      ? {
+          renterName: snapshot.renter?.name,
+          renterLegalEntity: snapshot.renter?.legalEntity || undefined,
+          renterDob: snapshot.renter?.dob,
+          renterPob: snapshot.renter?.pob,
+          renterNationality: snapshot.renter?.nationality,
+          renterPassport: snapshot.renter?.passport,
+          renterPassportExpiry: snapshot.renter?.passportExpiry,
+          renterLicence: snapshot.renter?.licence,
+          renterLicenceExpiry: snapshot.renter?.licenceExpiry,
+          renterLicenceIssuedBy: snapshot.renter?.licenceIssuedBy,
+          renterPhone: snapshot.renter?.phone,
+          renterEmail: snapshot.renter?.email,
+          additionalDriverName: snapshot.additionalDriver?.name,
+          additionalDriverDob: snapshot.additionalDriver?.dob,
+          additionalDriverLicence: snapshot.additionalDriver?.licence,
+          additionalDriverLicenceExpiry:
+            snapshot.additionalDriver?.licenceExpiry,
+          additionalDriverLicenceIssuedBy:
+            snapshot.additionalDriver?.licenceIssuedBy,
+          pickupDate: snapshot.pickupDate,
+          returnDate: snapshot.returnDate,
+          pickupTime: snapshot.pickupTime || base.pickupTime,
+          returnTime: snapshot.returnTime || base.returnTime,
+          pickupLocation: snapshot.pickupLocation,
+          returnLocation: snapshot.returnLocation,
+          totalAmount: snapshot.totalAmount,
+          deliveryCost: snapshot.deliveryCost ?? base.deliveryCost,
+          vatPercent: snapshot.vatPercent ?? base.vatPercent,
+          depositAmount: snapshot.depositAmount,
+          kmPerDay: snapshot.kmPerDay,
+          extraKmPrice: snapshot.extraKmPrice,
+          representativeName: snapshot.representativeName,
+        }
+      : {}),
   };
 }
 

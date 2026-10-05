@@ -1,12 +1,28 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { ArrowLeft } from "lucide-react";
-import { checkAuth } from "@/lib/api";
+import { checkAuth, type Booking, type StoredContract } from "@/lib/api";
 import { CarBookingCalendar } from "@/components/admin/CarBookingCalendar";
+import {
+  CONTRACT_PREFILL_STORAGE_KEY,
+  buildContractPrefillFromStoredContract,
+} from "@/components/admin/ContractGenerator";
 
 export default function CarBookingsPage() {
   const [, setLocation] = useLocation();
   const [loading, setLoading] = useState(true);
+
+  const handleGenerateContract = (
+    booking: Booking,
+    contract?: StoredContract,
+  ) => {
+    const nextPrefill = buildContractPrefillFromStoredContract(booking, contract);
+    sessionStorage.setItem(
+      CONTRACT_PREFILL_STORAGE_KEY,
+      JSON.stringify(nextPrefill),
+    );
+    setLocation("/admin/contracts");
+  };
 
   useEffect(() => {
     checkAuth().then((ok) => {
@@ -42,7 +58,7 @@ export default function CarBookingsPage() {
 
       <div className="px-4 py-6">
         <h1 className="font-porter text-white text-lg mb-5">Car Bookings</h1>
-        <CarBookingCalendar />
+        <CarBookingCalendar onGenerateContract={handleGenerateContract} />
       </div>
     </div>
   );
