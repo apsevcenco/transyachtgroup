@@ -940,24 +940,39 @@ router.post("/admin/proposals/business-letters/:id/send", adminAuth, async (req,
       };
     }
 
-    await sendBusinessLetterEmail({
-      to: recipients,
-      subject,
-      copy,
-      coverMessage: coverMessage || undefined,
-      attachment,
-    });
+    const failedRecipients: string[] = [];
+    for (const recipient of recipients) {
+      try {
+        await sendBusinessLetterEmail({
+          to: [recipient],
+          subject,
+          copy,
+          coverMessage: coverMessage || undefined,
+          attachment,
+        });
+      } catch (err) {
+        logger.error({ err, recipient }, "business letter recipient send error");
+        failedRecipients.push(recipient);
+      }
+    }
+
+    if (failedRecipients.length === recipients.length) {
+      throw new Error("Email provider rejected all recipient messages");
+    }
+
     const [updated] = await db
       .update(businessLettersTable)
       .set({
         lastSentTo: recipients.join(", "),
         lastSentAt: new Date(),
-        sendError: null,
+        sendError: failedRecipients.length
+          ? `Failed for ${failedRecipients.length}/${recipients.length}: ${failedRecipients.join(", ")}`
+          : null,
         updatedAt: new Date(),
       })
       .where(eq(businessLettersTable.id, id))
       .returning();
-    res.json(updated);
+    res.json({ ...updated, sentCount: recipients.length - failedRecipients.length, failedRecipients });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     logger.error({ err: msg }, "business letter send error");

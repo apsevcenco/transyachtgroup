@@ -1394,7 +1394,7 @@ export async function sendBusinessLetter(
   id: number,
   recipients: string,
   options?: { subject?: string; coverMessage?: string; attachPdf?: boolean; sendMode?: "body_only" | "cover_with_pdf" },
-): Promise<BusinessLetterRecord> {
+): Promise<BusinessLetterRecord & { sentCount?: number; failedRecipients?: string[] }> {
   const res = await fetch(`${API_BASE}/admin/proposals/business-letters/${id}/send`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },

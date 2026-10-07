@@ -16,9 +16,11 @@ import {
   saveBusinessLetter,
   deleteBusinessLetter,
   sendBusinessLetter,
+  fetchPartnerContacts,
   type Booking,
   type BusinessLetterRecord,
   type BusinessLetterCopy,
+  type PartnerContact,
   uploadAdminPublicImage,
 } from "@/lib/api";
 import { compressImage } from "@/lib/imageCompress";
@@ -146,6 +148,9 @@ export function ProposalsDashboard() {
   const [businessCoverMessage, setBusinessCoverMessage] = useState("");
   const [businessSendMode, setBusinessSendMode] = useState<"body_only" | "cover_with_pdf">("cover_with_pdf");
   const [businessNotice, setBusinessNotice] = useState("");
+  const [partnerContacts, setPartnerContacts] = useState<PartnerContact[]>([]);
+  const [selectedPartnerContactId, setSelectedPartnerContactId] = useState("");
+  const [selectedPartnerContactIds, setSelectedPartnerContactIds] = useState<string[]>([]);
   const [uploadingBusinessImage, setUploadingBusinessImage] = useState(false);
 
   useEffect(() => {
@@ -176,6 +181,12 @@ export function ProposalsDashboard() {
     loadBusinessLetters();
   }, [loadBusinessLetters]);
 
+  useEffect(() => {
+    fetchPartnerContacts({ limit: 1000 })
+      .then(setPartnerContacts)
+      .catch(() => setPartnerContacts([]));
+  }, []);
+
   const carVehicles = useMemo(
     () => vehicles.filter((v) => v.category === "car"),
     [vehicles],
@@ -185,6 +196,61 @@ export function ProposalsDashboard() {
     [vehicles],
   );
   const selectedVehicle = vehicles.find((v) => v.id === vehicleId) ?? null;
+
+  const sortedPartnerContacts = useMemo(
+    () =>
+      [...partnerContacts].sort((a, b) =>
+        `${a.city} ${a.organization} ${a.email}`.localeCompare(
+          `${b.city} ${b.organization} ${b.email}`,
+        ),
+      ),
+    [partnerContacts],
+  );
+
+  const applyPartnerContact = (contactId: string) => {
+    setSelectedPartnerContactId(contactId);
+    const contact = partnerContacts.find((item) => String(item.id) === contactId);
+    if (!contact) return;
+    setBusinessRecipients(contact.email);
+    setSelectedPartnerContactIds([contactId]);
+    setBusinessRecipientName(
+      [contact.contactPerson, contact.organization, contact.city]
+        .filter(Boolean)
+        .join("\n"),
+    );
+    const labelByCategory: Record<string, string> = {
+      hotel: "Hotel partner",
+      concierge: "Concierge service",
+      travel_agency: "Travel agency",
+      luxury_rental: "Luxury mobility partner",
+    };
+    setBusinessRecipientType(labelByCategory[contact.category] || "Business partner");
+    if (!businessTopic.trim()) {
+      setBusinessTopic(`Partnership proposal for ${contact.organization}`);
+    }
+  };
+
+  const partnerEmailsFromIds = (ids: string[]) =>
+    Array.from(
+      new Set(
+        ids
+          .map((id) => partnerContacts.find((contact) => String(contact.id) === id)?.email)
+          .filter((email): email is string => Boolean(email)),
+      ),
+    );
+
+  const setRecipientsFromPartnerIds = (ids: string[]) => {
+    setSelectedPartnerContactIds(ids);
+    setSelectedPartnerContactId(ids.length === 1 ? ids[0] : "");
+    setBusinessRecipients(partnerEmailsFromIds(ids).join("\n"));
+  };
+
+  const togglePartnerRecipient = (contactId: string) => {
+    const next = selectedPartnerContactIds.includes(contactId)
+      ? selectedPartnerContactIds.filter((id) => id !== contactId)
+      : [...selectedPartnerContactIds, contactId];
+    setRecipientsFromPartnerIds(next);
+  };
 
   // Prefill both rates from the vehicle's own specs whenever the selected
   // vehicle changes — still freely editable afterwards for a one-off quote.
@@ -473,13 +539,19 @@ export function ProposalsDashboard() {
         id = saved.id;
         setBusinessLetterId(saved.id);
       }
-      await sendBusinessLetter(id, businessRecipients, {
+      const result = await sendBusinessLetter(id, businessRecipients, {
         subject: businessEmailSubject || businessTopic || businessCopy?.headline,
         coverMessage: businessCoverMessage,
         attachPdf: businessSendMode === "cover_with_pdf",
         sendMode: businessSendMode,
       });
-      setBusinessNotice("Letter sent.");
+      const sentCount = result.sentCount ?? 1;
+      const failedCount = result.failedRecipients?.length || 0;
+      setBusinessNotice(
+        failedCount
+          ? `Sent ${sentCount} individual letters. Failed: ${failedCount}.`
+          : `Sent ${sentCount} individual letter${sentCount === 1 ? "" : "s"}.`,
+      );
       loadBusinessLetters();
     } catch (err: any) {
       setError(err.message || "Failed to send business letter");
@@ -809,6 +881,78 @@ export function ProposalsDashboard() {
             >
               Save letter
             </button>
+            <label className="block mt-5 text-[10px] uppercase tracking-wide text-white/40">
+              Select from Partner CRM
+              <select
+                value={selectedPartnerContactId}
+                onChange={(e) => applyPartnerContact(e.target.value)}
+                className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white min-h-[44px]"
+              >
+                <option value="">Manual recipient</option>
+                {sortedPartnerContacts.map((contact) => (
+                  <option key={contact.id} value={contact.id}>
+                    {contact.city} · {contact.organization} · {contact.email}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1 block normal-case tracking-normal text-[11px] text-white/35">
+                Choosing a contact fills the recipient block and email address. You can still edit both manually before sending.
+              </span>
+            </label>
+            <div className="mt-3 rounded-md border border-white/[0.08] bg-white/[0.025] p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[10px] uppercase tracking-wide text-white/40">
+                  Bulk recipients · {selectedPartnerContactIds.length} selected
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRecipientsFromPartnerIds(sortedPartnerContacts.map((contact) => String(contact.id)))}
+                    className="text-[10px] uppercase tracking-[0.12em] text-gold hover:text-white transition-colors"
+                  >
+                    Add all
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRecipientsFromPartnerIds([])}
+                    className="text-[10px] uppercase tracking-[0.12em] text-white/45 hover:text-white transition-colors"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+              <div className="mt-3 max-h-44 overflow-y-auto space-y-2 pr-1">
+                {sortedPartnerContacts.length ? (
+                  sortedPartnerContacts.map((contact) => {
+                    const id = String(contact.id);
+                    const checked = selectedPartnerContactIds.includes(id);
+                    return (
+                      <label
+                        key={contact.id}
+                        className="flex items-start gap-2 rounded border border-white/[0.06] bg-black/20 p-2 text-xs text-white/70"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => togglePartnerRecipient(id)}
+                          className="mt-0.5 accent-[hsl(43,67%,55%)]"
+                        />
+                        <span>
+                          <span className="block text-white/85">{contact.organization}</span>
+                          <span className="block text-white/45">
+                            {contact.city} · {contact.category} · {contact.email}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })
+                ) : (
+                  <p className="text-xs text-white/35">
+                    Partner CRM contacts will appear here after the migration is applied.
+                  </p>
+                )}
+              </div>
+            </div>
             <label className="block mt-5 text-[10px] uppercase tracking-wide text-white/40">
               Send to email addresses
               <textarea
