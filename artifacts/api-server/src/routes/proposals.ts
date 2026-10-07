@@ -200,6 +200,7 @@ async function sendBusinessLetterEmail(input: {
   copy: BusinessLetterCopy;
   coverMessage?: string;
   attachment?: { filename: string; content: string };
+  language?: string;
 }): Promise<string | null> {
   const bodyText = input.coverMessage?.trim()
     ? input.coverMessage.trim()
@@ -222,6 +223,7 @@ async function sendBusinessLetterEmail(input: {
     html: input.coverMessage?.trim()
       ? emailHtmlForCoverMessage(input.coverMessage.trim())
       : emailHtmlForBusinessLetter(input.copy),
+    language: input.language,
     attachment: input.attachment,
     tag: "business-letter",
   });
@@ -966,6 +968,7 @@ router.post("/admin/proposals/business-letters/:id/send", adminAuth, async (req,
           copy,
           coverMessage: coverMessage || undefined,
           attachment,
+          language: letter.language,
         });
         sentRecipients.push(recipient);
       } catch (err) {

@@ -1,5 +1,5 @@
 import { logger } from "./logger";
-import { appendHtmlFooter, listUnsubscribeHeaders, optOutFooterHtml, optOutFooterText, retryDelayMs } from "./partnerMailUtils";
+import { appendHtmlFooter, listUnsubscribeHeaders, normalizeLanguage, optOutFooterHtml, optOutFooterText, retryDelayMs } from "./partnerMailUtils";
 
 export const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -26,6 +26,8 @@ export type PartnerEmail = {
   html: string;
   attachment?: { filename: string; content: string };
   tag: string;
+  // Language of the message; the opt-out line follows it. Defaults to English.
+  language?: string;
 };
 
 // Single place that talks to Resend for partner outreach. Returns Resend's
@@ -36,6 +38,7 @@ export async function sendPartnerEmail(email: PartnerEmail): Promise<string | nu
   if (!key || !from) throw new Error("Email delivery is not configured (RESEND_API_KEY / REVIEW_EMAIL_FROM)");
 
   const replyTo = process.env.PARTNER_REPLY_TO || undefined;
+  const language = normalizeLanguage(email.language);
   const body = JSON.stringify({
     from,
     to: email.to,
@@ -44,8 +47,8 @@ export async function sendPartnerEmail(email: PartnerEmail): Promise<string | nu
     reply_to: replyTo,
     subject: email.subject,
     // Every outreach email carries a one-step way to opt out.
-    text: email.text + optOutFooterText,
-    html: appendHtmlFooter(email.html, optOutFooterHtml),
+    text: email.text + optOutFooterText(language),
+    html: appendHtmlFooter(email.html, optOutFooterHtml(language)),
     headers: listUnsubscribeHeaders(replyTo),
     attachments: email.attachment ? [email.attachment] : undefined,
     tags: [{ name: "workflow", value: email.tag }],

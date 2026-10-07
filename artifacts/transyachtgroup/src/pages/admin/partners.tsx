@@ -91,6 +91,25 @@ const intentLabels: Record<PartnerIntent, string> = {
   no_reply: "No reply yet",
 };
 
+const draftLanguages = [
+  { value: "auto", label: "Auto — partner's language" },
+  { value: "en", label: "English" },
+  { value: "fr", label: "Français" },
+  { value: "ru", label: "Русский" },
+  { value: "ro", label: "Română" },
+  { value: "ar", label: "العربية" },
+];
+const LANGUAGE_KEY = "partnerAssistLanguage";
+
+const savedLanguage = () => {
+  try {
+    const value = window.localStorage.getItem(LANGUAGE_KEY);
+    return draftLanguages.some((entry) => entry.value === value) ? (value as string) : "auto";
+  } catch {
+    return "auto";
+  }
+};
+
 // Drafts a reply or follow-up from the thread, shows what the partner said,
 // and lets the owner edit and send it. Nothing is sent without pressing Send.
 function AssistPanel({
@@ -105,6 +124,7 @@ function AssistPanel({
   onStatus: (status: string) => Promise<void>;
 }) {
   const [instructions, setInstructions] = useState("");
+  const [language, setLanguage] = useState(savedLanguage);
   const [loading, setLoading] = useState<"reply" | "follow_up" | null>(null);
   const [error, setError] = useState("");
   const [draft, setDraft] = useState<PartnerAssistDraft | null>(null);
@@ -117,7 +137,7 @@ function AssistPanel({
     setLoading(mode);
     setError("");
     try {
-      const result = await assistPartnerContact(contact.id, { mode, instructions });
+      const result = await assistPartnerContact(contact.id, { mode, instructions, language });
       setDraft(result);
       setSubject(result.subject);
       setBody(result.body);
@@ -133,7 +153,7 @@ function AssistPanel({
     setSending(true);
     setError("");
     try {
-      await sendPartnerMessage(contact.id, { subject, body });
+      await sendPartnerMessage(contact.id, { subject, body, language: draft?.language });
       setDraft(null);
       setInstructions("");
       await onSent();
@@ -153,6 +173,23 @@ function AssistPanel({
         placeholder="Optional guidance, e.g. propose a call next week"
         className="mt-3 w-full rounded border border-white/10 bg-black/40 p-3 text-white"
       />
+      <label className="mt-3 block text-white/45">
+        Reply language
+        <select
+          value={language}
+          onChange={(e) => {
+            setLanguage(e.target.value);
+            try {
+              window.localStorage.setItem(LANGUAGE_KEY, e.target.value);
+            } catch {
+              // remembering the choice is a convenience only
+            }
+          }}
+          className="mt-1 w-full rounded border border-white/10 bg-black/40 p-3 text-white md:max-w-xs"
+        >
+          {draftLanguages.map((entry) => <option key={entry.value} value={entry.value}>{entry.label}</option>)}
+        </select>
+      </label>
       <div className="mt-3 flex flex-wrap gap-2">
         <button disabled={loading !== null || !hasReply} onClick={() => void generate("reply")} title={hasReply ? "" : "No reply from this contact yet"} className="rounded border border-gold/30 px-4 py-2 text-gold disabled:opacity-40">{loading === "reply" ? "Writing…" : "Draft reply"}</button>
         <button disabled={loading !== null} onClick={() => void generate("follow_up")} className="rounded border border-white/15 px-4 py-2 text-white/70 hover:text-gold disabled:opacity-40">{loading === "follow_up" ? "Writing…" : "Draft follow-up"}</button>
@@ -169,8 +206,8 @@ function AssistPanel({
               </p>
             )}
           </div>
-          <input value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full rounded border border-white/10 bg-black/40 p-3 text-white" />
-          <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={10} className="w-full rounded border border-white/10 bg-black/40 p-3 text-white" />
+          <input dir="auto" value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full rounded border border-white/10 bg-black/40 p-3 text-white" />
+          <textarea dir="auto" value={body} onChange={(e) => setBody(e.target.value)} rows={10} className="w-full rounded border border-white/10 bg-black/40 p-3 text-white" />
           {blocked && <p className="text-red-300">This contact is marked do_not_contact — sending is disabled.</p>}
           <div className="flex gap-2">
             <button disabled={sending || blocked || !subject.trim() || !body.trim()} onClick={() => void send()} className="rounded bg-gold px-5 py-2.5 font-medium text-black disabled:opacity-40">{sending ? "Sending…" : `Send to ${contact.email}`}</button>

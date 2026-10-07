@@ -4,6 +4,8 @@ import {
   appendHtmlFooter,
   detectOptOut,
   listUnsubscribeHeaders,
+  normalizeLanguage,
+  optOutFooterHtml,
   optOutFooterText,
   classifyDeliveryEvent,
   cleanAssistantResult,
@@ -42,7 +44,26 @@ test("the opt-out footer goes inside <body> and the unsubscribe header points at
   assert.equal(appendHtmlFooter("<html><body><p>Hi</p></body></html>", "<i>F</i>"), "<html><body><p>Hi</p><i>F</i></body></html>");
   assert.deepEqual(listUnsubscribeHeaders("Trans Yacht <reply@x.resend.app>"), { "List-Unsubscribe": "<mailto:reply@x.resend.app?subject=unsubscribe>" });
   assert.equal(listUnsubscribeHeaders(undefined), undefined);
-  assert.ok(optOutFooterText.includes("unsubscribe") && optOutFooterText.includes("désinscription"));
+  assert.ok(optOutFooterText().includes("unsubscribe") && optOutFooterText().includes("désinscription"));
+});
+
+test("the opt-out footer follows the message language, and every language's keyword is recognised", () => {
+  // own language first, English second; English letters get French as well
+  assert.ok(optOutFooterText("fr").indexOf("désinscription") < optOutFooterText("fr").indexOf("unsubscribe"));
+  assert.ok(optOutFooterText("ru").includes("отписаться") && optOutFooterText("ru").includes("unsubscribe"));
+  assert.ok(optOutFooterText("ro").includes("dezabonare"));
+  assert.ok(optOutFooterHtml("ar").includes('dir="rtl"') && optOutFooterHtml("ar").includes("إلغاء الاشتراك"));
+  assert.equal(normalizeLanguage("FR"), "fr");
+  assert.equal(normalizeLanguage("de"), "en");
+  assert.equal(normalizeLanguage(undefined), "en");
+
+  // the word each footer asks the recipient to send must block the contact
+  assert.equal(detectOptOut("Re: x", "unsubscribe"), true);
+  assert.equal(detectOptOut("Re: x", "désinscription"), true);
+  assert.equal(detectOptOut("Re: x", "отписаться"), true);
+  assert.equal(detectOptOut("Re: x", "dezabonare"), true);
+  assert.equal(detectOptOut("Re: x", "إلغاء الاشتراك"), true);
+  assert.equal(detectOptOut("Re: x", "Nous aimerions en savoir plus, pouvez-vous nous envoyer vos tarifs ?"), false);
 });
 
 test("digest timing uses Paris time, summer and winter, and sends once per day", () => {

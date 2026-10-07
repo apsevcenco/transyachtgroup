@@ -976,7 +976,7 @@ export interface PartnerAssistDraft {
 
 export async function assistPartnerContact(
   contactId: number,
-  input: { mode: "reply" | "follow_up"; instructions?: string },
+  input: { mode: "reply" | "follow_up"; instructions?: string; language?: string },
 ): Promise<PartnerAssistDraft> {
   const res = await fetch(`${API_BASE}/admin/partner-contacts/${contactId}/ai-assist`, {
     method: "POST",
@@ -987,7 +987,7 @@ export async function assistPartnerContact(
   return res.json();
 }
 
-export async function sendPartnerMessage(contactId: number, input: { subject: string; body: string }): Promise<void> {
+export async function sendPartnerMessage(contactId: number, input: { subject: string; body: string; language?: string }): Promise<void> {
   const res = await fetch(`${API_BASE}/admin/partner-contacts/${contactId}/send-message`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },

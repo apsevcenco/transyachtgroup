@@ -163,11 +163,51 @@ export function shouldSendDigest(now: Date, lastSentDate: string | null, digestH
   return clock.hour >= digestHour && clock.date !== lastSentDate;
 }
 
-const OPT_OUT_FOOTER_EN = "If you would rather not receive further messages from Trans Yacht Group, just reply with “unsubscribe” and we will remove you from our list.";
-const OPT_OUT_FOOTER_FR = "Si vous ne souhaitez plus recevoir de messages de Trans Yacht Group, répondez simplement « désinscription » et nous vous retirerons de notre liste.";
+// The languages the site, the letters and the assistant work in.
+export const PARTNER_LANGUAGES = ["en", "fr", "ru", "ro", "ar"] as const;
+export type PartnerLanguage = (typeof PARTNER_LANGUAGES)[number];
 
-export const optOutFooterText = `\n\n--\n${OPT_OUT_FOOTER_EN}\n${OPT_OUT_FOOTER_FR}`;
-export const optOutFooterHtml = `<p style="font-family:Arial,sans-serif;color:#8a8a8a;font-size:12px;line-height:1.5;max-width:680px;margin:28px 0 0;border-top:1px solid #e5e5e5;padding-top:12px">${OPT_OUT_FOOTER_EN}<br/>${OPT_OUT_FOOTER_FR}</p>`;
+export const PARTNER_LANGUAGE_NAMES: Record<PartnerLanguage, string> = {
+  en: "English",
+  fr: "French",
+  ru: "Russian",
+  ro: "Romanian",
+  ar: "Arabic",
+};
+
+export function normalizeLanguage(value: unknown): PartnerLanguage {
+  return typeof value === "string" && (PARTNER_LANGUAGES as readonly string[]).includes(value.trim().toLowerCase())
+    ? (value.trim().toLowerCase() as PartnerLanguage)
+    : "en";
+}
+
+// Each line names the word to reply with, and every one of those words is
+// recognised by detectOptOut below — keep the two in step.
+const OPT_OUT_FOOTERS: Record<PartnerLanguage, string> = {
+  en: "If you would rather not receive further messages from Trans Yacht Group, just reply with “unsubscribe” and we will remove you from our list.",
+  fr: "Si vous ne souhaitez plus recevoir de messages de Trans Yacht Group, répondez simplement « désinscription » et nous vous retirerons de notre liste.",
+  ru: "Если вы не хотите получать дальнейшие сообщения от Trans Yacht Group, просто ответьте «отписаться», и мы удалим вас из нашего списка.",
+  ro: "Dacă nu mai doriți să primiți mesaje de la Trans Yacht Group, răspundeți simplu „dezabonare” și vă vom elimina din lista noastră.",
+  ar: "إذا كنت لا ترغب في تلقي مزيد من الرسائل من Trans Yacht Group، يكفي أن ترد بعبارة «إلغاء الاشتراك» وسنزيلك من قائمتنا.",
+};
+
+// The message's own language first, then English as a common fallback (French
+// for an English letter, which is what the Riviera audience expects).
+function optOutLanguages(language: PartnerLanguage): PartnerLanguage[] {
+  if (language === "en") return ["en", "fr"];
+  return [language, "en"];
+}
+
+export function optOutFooterText(language: PartnerLanguage = "en"): string {
+  return `\n\n--\n${optOutLanguages(language).map((code) => OPT_OUT_FOOTERS[code]).join("\n")}`;
+}
+
+export function optOutFooterHtml(language: PartnerLanguage = "en"): string {
+  const lines = optOutLanguages(language)
+    .map((code) => `<span dir="${code === "ar" ? "rtl" : "ltr"}" style="display:block">${OPT_OUT_FOOTERS[code]}</span>`)
+    .join("");
+  return `<div style="font-family:Arial,sans-serif;color:#8a8a8a;font-size:12px;line-height:1.5;max-width:680px;margin:28px 0 0;border-top:1px solid #e5e5e5;padding-top:12px">${lines}</div>`;
+}
 
 // Puts the footer inside <body> when the message is a full document.
 export function appendHtmlFooter(html: string, footerHtml: string): string {
@@ -183,7 +223,7 @@ export function listUnsubscribeHeaders(replyTo: string | undefined): Record<stri
 }
 
 const REPLY_PREFIX = /^(?:(?:re|fwd?|tr|aw|sv)\s*:\s*)+/i;
-const OPT_OUT_START = /^\W*(?:please\s+)?(?:unsubscribe|opt[\s-]?out|remove\s+me|d[ée]sabonn\w*|d[ée]sinscri\w*|se\s+d[ée]sabonner|отпи[сш]\w*)/i;
+const OPT_OUT_START = /^\W*(?:please\s+)?(?:unsubscribe|opt[\s-]?out|remove\s+me|d[ée]sabonn\w*|d[ée]sinscri\w*|se\s+d[ée]sabonner|отпи[сш]\w*|dezabon\w*|[إأا]لغاء\s*ال[إا]شتراك)/i;
 const OPT_OUT_EXACT = /^\W*(?:stop|remove|unsub|не\s+пишите)\W*$/i;
 
 // Deliberately narrow: only an unmistakable opt-out (the subject our
