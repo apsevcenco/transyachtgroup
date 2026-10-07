@@ -63,6 +63,8 @@ const LOCATION_SERVICES: Partial<Record<LocationKey, { slug: string; label: stri
   courchevel: [
     { slug: "private-jet-to-car-transfer-courchevel", label: "Private jet to car transfer in Courchevel" },
     { slug: "courchevel-private-transfers", label: "Private transfers to Courchevel" },
+    { slug: "geneva-airport-to-courchevel-transfer", label: "Geneva Airport to Courchevel transfer" },
+    { slug: "lyon-airport-to-courchevel-transfer", label: "Lyon Airport to Courchevel transfer" },
   ],
 };
 

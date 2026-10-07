@@ -15,6 +15,8 @@ const servicePages = [
   ["luxury-car-rental-saint-tropez", "Luxury Car Rental in Saint-Tropez", "Luxury car and supercar rental in Saint-Tropez with private delivery to villas, hotels, the port and Pampelonne."],
   ["luxury-car-rental-antibes", "Luxury Car Rental in Antibes", "Luxury car rental in Antibes and Cap d’Antibes with discreet delivery to hotels, villas, marinas and private residences."],
   ["courchevel-private-transfers", "Private Transfers to Courchevel", "Private luxury transfers to Courchevel from Geneva, Lyon, Chambery and Turin airports with executive vehicles and personal journey coordination."],
+  ["geneva-airport-to-courchevel-transfer", "Geneva Airport to Courchevel Transfer", "Private transfer from Geneva Airport to Courchevel with executive vehicles, luggage planning and discreet concierge coordination."],
+  ["lyon-airport-to-courchevel-transfer", "Lyon Airport to Courchevel Transfer", "Private transfer from Lyon Airport to Courchevel with executive vehicles, route planning and personal concierge support."],
   ["private-jet-to-car-transfer-courchevel", "Private Jet to Car Transfer in Courchevel", "Private jet to car transfer in Courchevel with executive vehicles, flight-aware pickup planning and discreet chalet coordination."],
   ["yacht-charter-cannes", "Luxury Yacht Charter in Cannes", "Private luxury yacht charter in Cannes with tailored itineraries, a curated fleet and dedicated concierge support."],
   ["yacht-charter-monaco", "Luxury Yacht Charter in Monaco", "Luxury yacht charter in Monaco with a curated selection, tailored itineraries and discreet concierge coordination."],
