@@ -93,6 +93,9 @@ const CORE_INTERNAL_LINKS: InternalLinkCandidate[] = [
     ["ferrari-rental-courchevel", "Ferrari rental in Courchevel"],
   ].map(([slug, label]) => ({ url: `/services/${slug}/?lang=en`, label, kind: "service" as const })),
 ];
+const CORE_PAGE_CONTEXT = CORE_INTERNAL_LINKS
+  .map((item) => item.url.replace(/\?lang=en$/, ""))
+  .filter((value, index, values) => values.indexOf(value) === index);
 
 type SeoPlanItem = {
   week: number;
@@ -836,7 +839,7 @@ router.get("/admin/guides/context", adminAuth, async (req, res) => {
     res.json({
       vehicles,
       guides,
-      corePages: ["/cars/", "/yachts/", "/about/", "/locations/cannes/", "/locations/monaco/", "/locations/nice/", "/locations/antibes/", "/locations/saint-tropez/", "/locations/courchevel/"],
+      corePages: CORE_PAGE_CONTEXT,
     });
   } catch (err) { req.log?.error?.({ err }, "Guide context failed"); res.status(500).json({ error: "Failed to load SEO context" }); }
 });

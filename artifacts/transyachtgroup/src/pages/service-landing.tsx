@@ -240,12 +240,25 @@ const LANDINGS: Landing[] = [
   },
 ];
 
+const COURCHEVEL_CLUSTER_SLUGS = [
+  "luxury-car-rental-courchevel",
+  "courchevel-private-transfers",
+  "geneva-airport-to-courchevel-transfer",
+  "lyon-airport-to-courchevel-transfer",
+  "private-jet-to-car-transfer-courchevel",
+  "mercedes-rental-courchevel",
+  "rolls-royce-rental-courchevel",
+  "bentley-rental-courchevel",
+  "lamborghini-rental-courchevel",
+  "ferrari-rental-courchevel",
+];
+
 const UI: Record<LangCode, Record<string, string>> = {
-  en: { collection: "Relevant vehicles", process: "A service built around your plans", step1: "Share your dates, destination and preferences.", step2: "Receive a tailored selection with confirmed availability.", step3: "Approve the offer and coordinate delivery or embarkation.", view: "View details", catalog: "Explore the full collection", request: "Request a private offer", faq: "Frequently asked questions", q1: "Is availability guaranteed?", a1: "Availability is confirmed personally for your exact dates before any booking is finalised.", q2: "Can delivery or embarkation be arranged?", a2: "Yes. The precise location, time and any related charge are stated in your individual offer.", related: "Related services" },
-  fr: { collection: "Sélection pertinente", process: "Un service adapté à votre programme", step1: "Indiquez vos dates, votre destination et vos préférences.", step2: "Recevez une sélection personnalisée avec disponibilité confirmée.", step3: "Validez l’offre et organisez la livraison ou l’embarquement.", view: "Voir les détails", catalog: "Voir toute la collection", request: "Demander une offre privée", faq: "Questions fréquentes", q1: "La disponibilité est-elle garantie ?", a1: "La disponibilité est confirmée personnellement pour vos dates avant la réservation.", q2: "La livraison ou l’embarquement sont-ils possibles ?", a2: "Oui. Le lieu, l’heure et les éventuels frais figurent dans votre offre individuelle.", related: "Services associés" },
-  ru: { collection: "Подходящие варианты", process: "Сервис под ваш маршрут", step1: "Сообщите даты, направление и пожелания.", step2: "Получите персональную подборку с подтверждённой доступностью.", step3: "Подтвердите предложение и согласуйте доставку или посадку.", view: "Подробнее", catalog: "Смотреть весь каталог", request: "Запросить персональное предложение", faq: "Частые вопросы", q1: "Доступность гарантирована?", a1: "Мы лично подтверждаем доступность на ваши даты до окончательного бронирования.", q2: "Можно организовать доставку или посадку?", a2: "Да. Точное место, время и возможная стоимость указываются в индивидуальном предложении.", related: "Похожие услуги" },
-  ro: { collection: "Opțiuni relevante", process: "Un serviciu adaptat planului dvs.", step1: "Comunicați datele, destinația și preferințele.", step2: "Primiți o selecție personalizată cu disponibilitate confirmată.", step3: "Aprobați oferta și coordonați livrarea sau îmbarcarea.", view: "Detalii", catalog: "Vedeți întreaga colecție", request: "Solicitați o ofertă privată", faq: "Întrebări frecvente", q1: "Disponibilitatea este garantată?", a1: "Disponibilitatea este confirmată personal pentru datele dvs. înainte de rezervare.", q2: "Se poate organiza livrarea sau îmbarcarea?", a2: "Da. Locul, ora și eventualele costuri apar în oferta individuală.", related: "Servicii conexe" },
-  ar: { collection: "خيارات مناسبة", process: "خدمة مصممة وفق خطتكم", step1: "أرسلوا التواريخ والوجهة والتفضيلات.", step2: "احصلوا على مجموعة مخصصة مع تأكيد التوفر.", step3: "وافقوا على العرض ونسقوا التسليم أو الصعود.", view: "عرض التفاصيل", catalog: "استكشف المجموعة كاملة", request: "اطلب عرضاً خاصاً", faq: "الأسئلة الشائعة", q1: "هل التوفر مضمون؟", a1: "يتم تأكيد التوفر شخصياً لتواريخكم قبل إتمام الحجز.", q2: "هل يمكن ترتيب التسليم أو الصعود؟", a2: "نعم. يوضح العرض الفردي المكان والوقت وأي تكلفة مرتبطة.", related: "خدمات ذات صلة" },
+  en: { collection: "Relevant vehicles", process: "A service built around your plans", step1: "Share your dates, destination and preferences.", step2: "Receive a tailored selection with confirmed availability.", step3: "Approve the offer and coordinate delivery or embarkation.", view: "View details", catalog: "Explore the full collection", request: "Request a private offer", faq: "Frequently asked questions", q1: "Is availability guaranteed?", a1: "Availability is confirmed personally for your exact dates before any booking is finalised.", q2: "Can delivery or embarkation be arranged?", a2: "Yes. The precise location, time and any related charge are stated in your individual offer.", related: "Related services", cluster: "Courchevel service cluster", clusterIntro: "Compare the connected Courchevel pages for airport transfers, private aviation arrivals and prestige vehicle requests." },
+  fr: { collection: "Sélection pertinente", process: "Un service adapté à votre programme", step1: "Indiquez vos dates, votre destination et vos préférences.", step2: "Recevez une sélection personnalisée avec disponibilité confirmée.", step3: "Validez l’offre et organisez la livraison ou l’embarquement.", view: "Voir les détails", catalog: "Voir toute la collection", request: "Demander une offre privée", faq: "Questions fréquentes", q1: "La disponibilité est-elle garantie ?", a1: "La disponibilité est confirmée personnellement pour vos dates avant la réservation.", q2: "La livraison ou l’embarquement sont-ils possibles ?", a2: "Oui. Le lieu, l’heure et les éventuels frais figurent dans votre offre individuelle.", related: "Services associés", cluster: "Services Courchevel associés", clusterIntro: "Comparez les pages Courchevel liées aux transferts aéroport, arrivées privées et demandes de véhicules prestige." },
+  ru: { collection: "Подходящие варианты", process: "Сервис под ваш маршрут", step1: "Сообщите даты, направление и пожелания.", step2: "Получите персональную подборку с подтверждённой доступностью.", step3: "Подтвердите предложение и согласуйте доставку или посадку.", view: "Подробнее", catalog: "Смотреть весь каталог", request: "Запросить персональное предложение", faq: "Частые вопросы", q1: "Доступность гарантирована?", a1: "Мы лично подтверждаем доступность на ваши даты до окончательного бронирования.", q2: "Можно организовать доставку или посадку?", a2: "Да. Точное место, время и возможная стоимость указываются в индивидуальном предложении.", related: "Похожие услуги", cluster: "Связанные услуги Courchevel", clusterIntro: "Сравните связанные страницы Courchevel: трансферы из аэропорта, private aviation и запросы на престижные автомобили." },
+  ro: { collection: "Opțiuni relevante", process: "Un serviciu adaptat planului dvs.", step1: "Comunicați datele, destinația și preferințele.", step2: "Primiți o selecție personalizată cu disponibilitate confirmată.", step3: "Aprobați oferta și coordonați livrarea sau îmbarcarea.", view: "Detalii", catalog: "Vedeți întreaga colecție", request: "Solicitați o ofertă privată", faq: "Întrebări frecvente", q1: "Disponibilitatea este garantată?", a1: "Disponibilitatea este confirmată personal pentru datele dvs. înainte de rezervare.", q2: "Se poate organiza livrarea sau îmbarcarea?", a2: "Da. Locul, ora și eventualele costuri apar în oferta individuală.", related: "Servicii conexe", cluster: "Servicii Courchevel conexe", clusterIntro: "Comparați paginile Courchevel pentru transferuri de aeroport, sosiri cu aviație privată și cereri de vehicule premium." },
+  ar: { collection: "خيارات مناسبة", process: "خدمة مصممة وفق خطتكم", step1: "أرسلوا التواريخ والوجهة والتفضيلات.", step2: "احصلوا على مجموعة مخصصة مع تأكيد التوفر.", step3: "وافقوا على العرض ونسقوا التسليم أو الصعود.", view: "عرض التفاصيل", catalog: "استكشف المجموعة كاملة", request: "اطلب عرضاً خاصاً", faq: "الأسئلة الشائعة", q1: "هل التوفر مضمون؟", a1: "يتم تأكيد التوفر شخصياً لتواريخكم قبل إتمام الحجز.", q2: "هل يمكن ترتيب التسليم أو الصعود؟", a2: "نعم. يوضح العرض الفردي المكان والوقت وأي تكلفة مرتبطة.", related: "خدمات ذات صلة", cluster: "خدمات كورشوفيل المرتبطة", clusterIntro: "قارنوا صفحات كورشوفيل الخاصة بالنقل من المطارات، والوصول بالطيران الخاص، وطلبات السيارات الفاخرة." },
 };
 
 export default function ServiceLanding({ slug }: { slug: string }) {
@@ -272,6 +285,12 @@ export default function ServiceLanding({ slug }: { slug: string }) {
   const path = `/services/${page.slug}`;
   const Icon = page.kind === "yacht" ? Ship : Car;
   const faq = page.faq || [{ q: text.q1, a: text.a1 }, { q: text.q2, a: text.a2 }];
+  const clusterLinks = page.area === "Courchevel"
+    ? COURCHEVEL_CLUSTER_SLUGS
+      .filter((clusterSlug) => clusterSlug !== page.slug)
+      .map((clusterSlug) => LANDINGS.find((item) => item.slug === clusterSlug))
+      .filter((item): item is Landing => Boolean(item))
+    : [];
 
   return (
     <div className="min-h-screen bg-background text-white">
@@ -334,6 +353,23 @@ export default function ServiceLanding({ slug }: { slug: string }) {
           )}
 
           <section className="mt-20 grid gap-10 border-y border-white/10 py-12 md:grid-cols-2"><div><h2 className="mb-5 font-serif text-2xl sm:text-3xl">{text.faq}</h2>{faq.map((item) => <div key={item.q} className="mb-6"><h3 className="mb-2 text-sm font-medium text-gold">{item.q}</h3><p className="font-light leading-7 text-white/55">{item.a}</p></div>)}</div><div><h2 className="mb-5 font-serif text-2xl sm:text-3xl">{text.related}</h2><div className="space-y-3">{page.related.map((relatedSlug) => { const related = LANDINGS.find((item) => item.slug === relatedSlug)!; return <a key={relatedSlug} href={`/services/${relatedSlug}/?lang=${lang}`} className="flex items-center justify-between border-b border-white/10 py-3 text-white/70 transition hover:text-gold"><span>{related.title}</span><ChevronRight size={16} /></a>; })}</div></div></section>
+
+          {clusterLinks.length > 0 && (
+            <section className="mt-14 rounded-xl border border-white/10 bg-white/[0.02] p-6 sm:p-8">
+              <div className="mb-6 max-w-3xl">
+                <h2 className="font-serif text-2xl sm:text-3xl">{text.cluster}</h2>
+                <p className="mt-3 font-light leading-7 text-white/50">{text.clusterIntro}</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {clusterLinks.map((clusterPage) => (
+                  <a key={clusterPage.slug} href={`/services/${clusterPage.slug}/?lang=${lang}`} className="flex min-h-20 items-center justify-between gap-4 rounded-lg border border-white/10 bg-black/20 px-4 py-3 text-sm text-white/65 transition hover:border-gold/40 hover:text-gold">
+                    <span>{clusterPage.title}</span>
+                    <ChevronRight size={16} className="shrink-0" />
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
 
           <section className="mt-14 rounded-xl border border-gold/20 bg-gold/[0.04] p-8 md:flex md:items-center md:justify-between md:p-10"><div><h2 className="font-serif text-2xl sm:text-3xl">{text.request}</h2><p className="mt-3 text-sm text-white/50">{text.process}</p></div><div className="mt-7 flex flex-wrap gap-3 md:mt-0"><a href={`/${page.kind === "yacht" ? "yachts" : "cars"}/?lang=${lang}`} className="rounded border border-white/20 px-5 py-3 text-xs uppercase tracking-wider">{text.catalog}</a><a href={`/?lang=${lang}#request`} className="rounded bg-gold px-5 py-3 text-xs uppercase tracking-wider text-black">{text.request}</a></div></section>
         </article>
