@@ -345,6 +345,35 @@ export const customersTable = pgTable(
   ],
 );
 
+export const partnerContactsTable = pgTable(
+  "partner_contacts",
+  {
+    id: serial("id").primaryKey(),
+    city: text("city").notNull(),
+    category: varchar("category", { length: 40 }).notNull(),
+    organization: text("organization").notNull(),
+    email: text("email").notNull(),
+    phone: text("phone"),
+    contactPerson: text("contact_person"),
+    notes: text("notes"),
+    sourceStatus: text("source_status"),
+    sourceCheckedAt: date("source_checked_at"),
+    sourceUrl: text("source_url"),
+    status: varchar("status", { length: 30 }).notNull().default("new"),
+    lastContactedAt: timestamp("last_contacted_at"),
+    nextFollowUpAt: timestamp("next_follow_up_at"),
+    tags: jsonb("tags").notNull().default([]),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("partner_contacts_city_idx").on(table.city),
+    index("partner_contacts_category_idx").on(table.category),
+    index("partner_contacts_email_idx").on(table.email),
+    index("partner_contacts_status_idx").on(table.status, table.updatedAt),
+  ],
+);
+
 export const bookingsTable = pgTable(
   "bookings",
   {
@@ -582,6 +611,14 @@ export const insertCustomerSchema = createInsertSchema(customersTable).omit({
 });
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
 export type Customer = typeof customersTable.$inferSelect;
+
+export const insertPartnerContactSchema = createInsertSchema(partnerContactsTable).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertPartnerContact = z.infer<typeof insertPartnerContactSchema>;
+export type PartnerContact = typeof partnerContactsTable.$inferSelect;
 
 export const insertVehicleSchema = createInsertSchema(vehiclesTable, {
   // .optional() only — the column is NOT NULL at the DB level (default

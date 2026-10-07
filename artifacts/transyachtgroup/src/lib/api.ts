@@ -887,6 +887,65 @@ export async function updateCustomer(id: number, data: Partial<CustomerInput>): 
   return res.json();
 }
 
+export interface PartnerContact {
+  id: number;
+  city: string;
+  category: string;
+  organization: string;
+  email: string;
+  phone?: string | null;
+  contactPerson?: string | null;
+  notes?: string | null;
+  sourceStatus?: string | null;
+  sourceCheckedAt?: string | null;
+  sourceUrl?: string | null;
+  status: string;
+  lastContactedAt?: string | null;
+  nextFollowUpAt?: string | null;
+  tags: string[];
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export type PartnerContactInput = Omit<PartnerContact, "id" | "createdAt" | "updatedAt">;
+
+export async function fetchPartnerContacts(params?: { q?: string; city?: string; category?: string; status?: string; limit?: number }): Promise<PartnerContact[]> {
+  const qs = new URLSearchParams();
+  if (params?.q) qs.set("q", params.q);
+  if (params?.city) qs.set("city", params.city);
+  if (params?.category) qs.set("category", params.category);
+  if (params?.status) qs.set("status", params.status);
+  if (params?.limit) qs.set("limit", String(params.limit));
+  const res = await fetch(`${API_BASE}/admin/partner-contacts?${qs}`, { headers: authHeaders() });
+  if (!res.ok) throw new Error("Failed to fetch partner contacts");
+  return res.json();
+}
+
+export async function createPartnerContact(data: PartnerContactInput): Promise<PartnerContact> {
+  const res = await fetch(`${API_BASE}/admin/partner-contacts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "Failed to create partner contact");
+  return res.json();
+}
+
+export async function updatePartnerContact(id: number, data: Partial<PartnerContactInput>): Promise<PartnerContact> {
+  const res = await fetch(`${API_BASE}/admin/partner-contacts/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "Failed to update partner contact");
+  return res.json();
+}
+
+export async function deletePartnerContact(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/admin/partner-contacts/${id}`, { method: "DELETE", headers: authHeaders() });
+  if (!res.ok) throw new Error("Failed to delete partner contact");
+}
+
 export async function fetchBookings(params?: {
   vehicleId?: number;
   start?: string;

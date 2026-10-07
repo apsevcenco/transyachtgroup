@@ -717,6 +717,7 @@ export default function AdminDashboard() {
       go: () => setLocation("/admin/bookings/yachts"),
     },
     { label: "CRM", icon: "💼", go: () => setLocation("/admin/crm") },
+    { label: "Partner CRM", icon: "🏨", go: () => setLocation("/admin/partners") },
     { label: "Agents", icon: "🤝", go: () => setLocation("/admin/agents") },
     {
       label: "Proposals",

@@ -37,6 +37,7 @@ const AdminDashboard = lazy(() => import("@/pages/admin/dashboard"));
 const AdminCarBookings = lazy(() => import("@/pages/admin/car-bookings"));
 const AdminYachtBookings = lazy(() => import("@/pages/admin/yacht-bookings"));
 const AdminCrm = lazy(() => import("@/pages/admin/crm"));
+const AdminPartners = lazy(() => import("@/pages/admin/partners"));
 const AdminAgents = lazy(() => import("@/pages/admin/agents"));
 const AdminProposals = lazy(() => import("@/pages/admin/proposals"));
 const AdminContracts = lazy(() => import("@/pages/admin/contracts"));
@@ -169,6 +170,7 @@ function Router() {
               component={AdminYachtBookings}
             />
             <Route path="/admin/crm" component={AdminCrm} />
+            <Route path="/admin/partners" component={AdminPartners} />
             <Route path="/admin/agents" component={AdminAgents} />
             <Route path="/admin/proposals" component={AdminProposals} />
             <Route path="/admin/contracts" component={AdminContracts} />
