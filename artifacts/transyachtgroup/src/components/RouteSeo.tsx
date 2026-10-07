@@ -282,6 +282,69 @@ const buildFaqSchema = (
       }
     : null;
 
+const buildCatalogServiceSchema = (
+  key: string,
+  copy: { title: string; description: string },
+  lang: LangCode,
+) => {
+  if (key !== "cars" && key !== "yachts") return null;
+
+  const path = key === "cars" ? "/cars" : "/yachts";
+  const serviceType =
+    key === "cars"
+      ? "Luxury car rental and chauffeur service"
+      : "Luxury yacht charter";
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "@id": `${SITE_URL}${path}/#service`,
+    name: copy.title,
+    description: copy.description,
+    serviceType,
+    provider: { "@id": `${SITE_URL}/#organization` },
+    areaServed: [
+      "Cannes",
+      "Monaco",
+      "Nice",
+      "Saint-Tropez",
+      "Antibes",
+      "Courchevel",
+      "French Riviera",
+    ],
+    url: `${SITE_URL}${path}/?lang=${lang}`,
+    inLanguage: lang,
+  };
+};
+
+const buildBreadcrumbSchema = (
+  key: string,
+  copy: { title: string; description: string },
+  lang: LangCode,
+) => {
+  if (key !== "cars" && key !== "yachts") return null;
+
+  const path = key === "cars" ? "/cars" : "/yachts";
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: `${SITE_URL}/?lang=${lang}`,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: copy.title,
+        item: `${SITE_URL}${path}/?lang=${lang}`,
+      },
+    ],
+  };
+};
+
 export function RouteSeo() {
   const [location] = useLocation();
   const { lang } = useLanguage();
@@ -310,6 +373,8 @@ export function RouteSeo() {
     key === "cars" || key === "yachts"
       ? buildFaqSchema(ROUTE_FAQ[lang]?.[key] || ROUTE_FAQ.en?.[key])
       : null;
+  const catalogServiceSchema = buildCatalogServiceSchema(key, copy, lang);
+  const breadcrumbSchema = buildBreadcrumbSchema(key, copy, lang);
 
   if (isVehicle || isLocation || isService || isGuide) return null;
   if (isAdmin) {
@@ -340,6 +405,8 @@ export function RouteSeo() {
           inLanguage: lang,
           publisher: { "@id": `${SITE_URL}/#organization` },
         },
+        ...(catalogServiceSchema ? [catalogServiceSchema] : []),
+        ...(breadcrumbSchema ? [breadcrumbSchema] : []),
         ...(faqSchema ? [faqSchema] : []),
       ]}
     />
