@@ -59,7 +59,7 @@ assert.match(pagesSitemap, /\/services\/lyon-airport-to-courchevel-transfer\//);
 assert.match(pagesSitemap, /\/services\/yacht-charter-monaco\//);
 assert.match(pagesSitemap, /\/services\/rolls-royce-rental-french-riviera\//);
 assert.match(pagesSitemap, /\/services\/rolls-royce-rental-courchevel\//);
-assert.match(pagesSitemap, /hreflang="x-default"/);
+assert.doesNotMatch(pagesSitemap, /\/\/(guides|news|answers|cars|yachts)\//, "sitemap contains a double slash");
 
 for (const [name, routeHtml, canonical] of [
   ["cars", carsHtml, "https://www.transyachtgroup.com/cars/"],
@@ -71,5 +71,11 @@ for (const [name, routeHtml, canonical] of [
   assert.match(routeHtml, /<h1[^>]*>[^<]+<\/h1>/, `${name} H1 is missing`);
   assert.doesNotMatch(routeHtml, /<link rel="canonical" href="[^"]*\?lang=/, `${name} canonical retained lang parameter`);
 }
+
+const homeBody = html.includes('id="seo-content"');
+assert.ok(homeBody, "Homepage has no prerendered body");
+const notFound = await readFile(new URL("404.html", publicDir), "utf8");
+assert.match(notFound, /noindex/, "404.html must be noindex");
+assert.doesNotMatch(notFound, /rel="canonical"/, "404.html must not have a canonical");
 
 console.log("SEO verification passed");
