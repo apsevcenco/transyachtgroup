@@ -396,14 +396,14 @@ export default function Home() {
                 key={item.id}
                 variants={fadeInUp}
                 className="relative group bg-card/50 rounded-xl overflow-hidden border border-white/[0.04] hover-glow-gold flex flex-col h-full cursor-pointer"
-                onClick={() => setLocation(`${vehiclePath(item)}?lang=${lang}`)}
+                onClick={() => setLocation(vehiclePath(item))}
               >
                 <a
-                  href={`${vehiclePath(item)}/?lang=${lang}`}
+                  href={`${vehiclePath(item)}/`}
                   aria-label={`${t("view_details")}: ${stripCmsText(item.name)}`}
                   onClick={(event) => {
                     event.preventDefault();
-                    setLocation(`${vehiclePath(item)}?lang=${lang}`);
+                    setLocation(vehiclePath(item));
                   }}
                   className="absolute inset-0 z-[11]"
                 />
@@ -650,7 +650,7 @@ export default function Home() {
                 </h2>
               </div>
               <a
-                href={`/news/?lang=${lang}`}
+                href="/news/"
                 className="inline-flex items-center text-gold/70 hover:text-gold text-[11px] uppercase tracking-[0.25em] transition-colors"
               >
                 View all news <ChevronRight size={13} className="ml-1" />
@@ -660,7 +660,7 @@ export default function Home() {
               {latestNews.map((item) => (
                 <article key={item.id} className="overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.02]">
                   {item.coverImage && (
-                    <a href={`/news/${item.slug}/?lang=${lang}`}>
+                    <a href={`/news/${item.slug}/`}>
                       <img src={item.coverImage} alt="" className="aspect-[16/10] w-full object-cover" loading="lazy" />
                     </a>
                   )}
@@ -674,7 +674,7 @@ export default function Home() {
                     <p className="mt-4 line-clamp-3 text-sm font-light leading-6 text-white/45">
                       {item.excerpt}
                     </p>
-                    <a href={`/news/${item.slug}/?lang=${lang}`} className="mt-6 inline-flex items-center text-sm text-gold">
+                    <a href={`/news/${item.slug}/`} className="mt-6 inline-flex items-center text-sm text-gold">
                       Read more <ChevronRight size={13} className="ml-1" />
                     </a>
                   </div>
@@ -906,7 +906,7 @@ export default function Home() {
                   <ul className="space-y-3">
                     <li>
                       <a
-                        href={`/yachts?lang=${lang}`}
+                        href="/yachts/"
                         className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                       >
                         {stripCmsText(siteContent.yacht_section_title) ||
@@ -916,7 +916,7 @@ export default function Home() {
 
                     <li>
                       <a
-                        href={`/cars?lang=${lang}`}
+                        href="/cars/"
                         className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                       >
                         {stripCmsText(siteContent.car_section_title) ||
@@ -925,7 +925,7 @@ export default function Home() {
                     </li>
                     <li>
                       <a
-                        href={`/about?lang=${lang}`}
+                        href="/about/"
                         className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                       >
                         {t("off_market")}
@@ -967,7 +967,7 @@ export default function Home() {
 
                     <li>
                       <a
-                        href={`/privacy?lang=${lang}`}
+                        href="/privacy/"
                         className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                       >
                         Privacy Policy
@@ -976,7 +976,7 @@ export default function Home() {
 
                     <li>
                       <a
-                        href={`/legal?lang=${lang}`}
+                        href="/legal/"
                         className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                       >
                         Legal Notice
@@ -998,7 +998,7 @@ export default function Home() {
                     ].map(([slug, city]) => (
                       <li key={slug}>
                         <a
-                          href={`/locations/${slug}?lang=${lang}`}
+                          href={`/locations/${slug}/`}
                           className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                         >
                           {city}

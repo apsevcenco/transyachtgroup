@@ -46,7 +46,7 @@ export default function NewsDetail({ slug }: { slug: string }) {
       <Navbar />
       <main className="px-5 pb-24 pt-36">
         <article className="mx-auto max-w-4xl">
-          <a href={`/news/?lang=${lang}`} className="mb-8 inline-flex items-center gap-2 text-sm text-white/45 hover:text-gold"><ArrowLeft size={15} /> News</a>
+          <a href="/news/" className="mb-8 inline-flex items-center gap-2 text-sm text-white/45 hover:text-gold"><ArrowLeft size={15} /> News</a>
           {loading ? (
             <p className="text-white/35">Loading news…</p>
           ) : !item ? (

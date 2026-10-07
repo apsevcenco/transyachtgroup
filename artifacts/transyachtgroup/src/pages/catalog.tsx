@@ -684,7 +684,7 @@ function CatalogCard({
     setCurrentIdx((prev) => (prev + 1) % allImages.length);
   };
 
-  const goToDetail = () => setLocation(`${vehiclePath(item)}?lang=${lang}`);
+  const goToDetail = () => setLocation(vehiclePath(item));
 
   const phoneNumber = siteContent.phone_number || "";
   const whatsappNumber = siteContent.whatsapp_number || phoneNumber;
@@ -698,7 +698,7 @@ function CatalogCard({
       onClick={goToDetail}
     >
       <a
-        href={`${vehiclePath(item)}/?lang=${lang}`}
+        href={`${vehiclePath(item)}/`}
         aria-label={`${t("view_details")}: ${stripHtml(item.name || "")}`}
         onClick={(event) => {
           event.preventDefault();

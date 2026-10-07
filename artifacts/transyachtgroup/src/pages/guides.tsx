@@ -29,8 +29,8 @@ export default function GuidesPage() {
       <h1 className="section-display-title max-w-5xl text-balance font-serif text-white">{copy.title}</h1>
       <p className="mt-7 max-w-3xl text-base font-light leading-7 text-white/60 sm:text-lg sm:leading-8">{copy.intro}</p>
       {loading ? <p className="mt-16 text-white/35">{copy.loading}</p> : guides.length === 0 ? <p className="mt-16 text-white/35">{copy.empty}</p> : <section className="mt-14 grid gap-7 md:grid-cols-2 lg:grid-cols-3">{guides.map((guide) => <article key={guide.id} className="flex h-full flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
-        {guide.coverImage && <a href={`/guides/${guide.slug}/?lang=${lang}`}><img src={guide.coverImage} alt="" className="aspect-[16/10] w-full object-cover" loading="lazy"/></a>}
-        <div className="flex flex-1 flex-col p-6"><p className="mb-3 text-[10px] uppercase tracking-[0.2em] text-gold/65">{guide.publishedAt ? new Date(guide.publishedAt).toLocaleDateString(lang) : copy.guide}</p><h2 className="line-clamp-3 text-balance font-serif text-lg leading-[1.3] sm:text-xl">{guide.title}</h2><p className="mt-4 line-clamp-3 font-light leading-7 text-white/50">{guide.excerpt}</p><a href={`/guides/${guide.slug}/?lang=${lang}`} className="mt-auto inline-flex items-center gap-2 pt-6 text-sm text-gold">{copy.read} <ArrowRight size={15}/></a></div>
+        {guide.coverImage && <a href={`/guides/${guide.slug}/`}><img src={guide.coverImage} alt="" className="aspect-[16/10] w-full object-cover" loading="lazy"/></a>}
+        <div className="flex flex-1 flex-col p-6"><p className="mb-3 text-[10px] uppercase tracking-[0.2em] text-gold/65">{guide.publishedAt ? new Date(guide.publishedAt).toLocaleDateString(lang) : copy.guide}</p><h2 className="line-clamp-3 text-balance font-serif text-lg leading-[1.3] sm:text-xl">{guide.title}</h2><p className="mt-4 line-clamp-3 font-light leading-7 text-white/50">{guide.excerpt}</p><a href={`/guides/${guide.slug}/`} className="mt-auto inline-flex items-center gap-2 pt-6 text-sm text-gold">{copy.read} <ArrowRight size={15}/></a></div>
       </article>)}</section>}
     </div></main>
   </div>;

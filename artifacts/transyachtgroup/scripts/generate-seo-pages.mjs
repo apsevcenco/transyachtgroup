@@ -138,8 +138,7 @@ function renderPage(page) {
     .replace(/<noscript>[\s\S]*?<\/noscript>/, `<noscript><main><h1>${escapeHtml(page.heading)}</h1><p>${description}</p></main></noscript>`);
 
   for (const lang of [...languages, "x-default"]) {
-    const targetLang = lang === "x-default" ? "en" : lang;
-    const href = `${cleanUrl(page.path)}?lang=${targetLang}`;
+    const href = cleanUrl(page.path);
     const pattern = new RegExp(`(<link\\s+rel="alternate"\\s+hreflang="${lang}"\\s+href=")[^"]*("\\s*\\/?>)`, "s");
     html = html.replace(pattern, `$1${href}$2`);
   }
@@ -173,12 +172,12 @@ function sitemapEntry(page) {
       : page.path.startsWith("/locations/") ? "monthly"
         : "yearly";
   const alternates = languages
-    .map((lang) => `    <xhtml:link rel="alternate" hreflang="${lang}" href="${loc}?lang=${lang}"/>`)
+    .map((lang) => `    <xhtml:link rel="alternate" hreflang="${lang}" href="${loc}"/>`)
     .join("\n");
   return `  <url>
     <loc>${loc}</loc>
 ${alternates}
-    <xhtml:link rel="alternate" hreflang="x-default" href="${loc}?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="${loc}"/>
     <changefreq>${changefreq}</changefreq>
     <priority>${priority}</priority>
   </url>`;

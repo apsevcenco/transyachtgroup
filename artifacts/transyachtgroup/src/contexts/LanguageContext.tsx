@@ -538,7 +538,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     setLangState(newLang);
     localStorage.setItem("tyg_lang", newLang);
     const url = new URL(window.location.href);
-    url.searchParams.set("lang", newLang);
+    url.searchParams.delete("lang");
     window.history.replaceState(window.history.state, "", url);
   };
 

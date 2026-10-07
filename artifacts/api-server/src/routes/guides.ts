@@ -63,11 +63,11 @@ type InternalLinkCandidate = {
 };
 
 const CORE_INTERNAL_LINKS: InternalLinkCandidate[] = [
-  { url: "/cars/?lang=en", label: "Luxury car collection", kind: "catalog" },
-  { url: "/yachts/?lang=en", label: "Luxury yacht collection", kind: "catalog" },
-  { url: "/about/?lang=en", label: "About Trans Yacht Group", kind: "company" },
+  { url: "/cars/", label: "Luxury car collection", kind: "catalog" },
+  { url: "/yachts/", label: "Luxury yacht collection", kind: "catalog" },
+  { url: "/about/", label: "About Trans Yacht Group", kind: "company" },
   ...["cannes", "monaco", "nice", "antibes", "saint-tropez"].map((city) => ({
-    url: `/locations/${city}/?lang=en`, label: `${city.replaceAll("-", " ")} luxury mobility`, kind: "location" as const,
+    url: `/locations/${city}/`, label: `${city.replaceAll("-", " ")} luxury mobility`, kind: "location" as const,
   })),
   ...[
     ["luxury-car-rental-cannes", "Luxury car rental in Cannes"],
@@ -93,10 +93,10 @@ const CORE_INTERNAL_LINKS: InternalLinkCandidate[] = [
     ["bentley-rental-courchevel", "Bentley rental in Courchevel"],
     ["lamborghini-rental-courchevel", "Lamborghini rental in Courchevel"],
     ["ferrari-rental-courchevel", "Ferrari rental in Courchevel"],
-  ].map(([slug, label]) => ({ url: `/services/${slug}/?lang=en`, label, kind: "service" as const })),
+  ].map(([slug, label]) => ({ url: `/services/${slug}/`, label, kind: "service" as const })),
 ];
 const CORE_PAGE_CONTEXT = CORE_INTERNAL_LINKS
-  .map((item) => item.url.replace(/\?lang=en$/, ""))
+  .map((item) => item.url)
   .filter((value, index, values) => values.indexOf(value) === index);
 
 type SeoPlanItem = {
@@ -280,8 +280,8 @@ async function loadInternalLinkCandidates(extraLinks = "", excludeGuideId?: numb
   ]);
   const candidates: InternalLinkCandidate[] = [
     ...CORE_INTERNAL_LINKS,
-    ...vehicles.map((vehicle) => ({ url: `${vehiclePath(vehicle)}/?lang=en`, label: plainLabel(vehicle.name), kind: "vehicle" as const })),
-    ...guides.filter((guide) => guide.id !== excludeGuideId).map((guide) => ({ url: `/guides/${guide.slug}/?lang=en`, label: plainLabel(guide.title), kind: "guide" as const })),
+    ...vehicles.map((vehicle) => ({ url: `${vehiclePath(vehicle)}/`, label: plainLabel(vehicle.name), kind: "vehicle" as const })),
+    ...guides.filter((guide) => guide.id !== excludeGuideId).map((guide) => ({ url: `/guides/${guide.slug}/`, label: plainLabel(guide.title), kind: "guide" as const })),
   ];
   const preferred = new Set(extraLinks.split(/[\s,]+/).map((raw) => canonicalInternalHref(raw.trim())).filter(Boolean));
   candidates.sort((a, b) => Number(preferred.has(b.url)) - Number(preferred.has(a.url)));
@@ -395,7 +395,7 @@ function internalHrefsFromContent(content: string): string {
 }
 
 function localizeCopyLinks(copy: GeneratedCopy, lang: string): GeneratedCopy {
-  return { ...copy, content: copy.content.replace(/(href=["'][^"']*\?lang=)(?:en|fr|ru|ro|ar)(?=["'])/gi, `$1${lang}`) };
+  return { ...copy, content: copy.content.replace(/(href=["'][^"']*)\?lang=(?:en|fr|ru|ro|ar)(?=["'])/gi, "$1") };
 }
 
 function visibleWordCount(html: string): number {

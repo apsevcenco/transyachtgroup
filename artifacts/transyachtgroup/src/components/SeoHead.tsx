@@ -50,7 +50,6 @@ export function localizedUrl(path: string, lang: LangCode) {
   if (url.pathname !== "/" && !url.pathname.endsWith("/")) {
     url.pathname = `${url.pathname}/`;
   }
-  url.searchParams.set("lang", lang);
   return url.toString();
 }
 

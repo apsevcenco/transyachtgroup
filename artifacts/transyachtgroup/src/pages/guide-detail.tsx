@@ -24,7 +24,7 @@ export default function GuideDetail({ slug }: { slug: string }) {
       { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` }, { "@type": "ListItem", position: 2, name: "Guides", item: `${SITE_URL}/guides/` }, { "@type": "ListItem", position: 3, name: guide.title }] },
     ]}/>
     <Navbar/><main className="px-5 pb-24 pt-36 md:pt-44"><article className="mx-auto max-w-4xl">
-      <a href={`/guides/?lang=${lang}`} className="mb-10 inline-flex items-center gap-2 text-sm text-white/45 hover:text-gold"><ArrowLeft size={16}/> All guides</a>
+      <a href="/guides/" className="mb-10 inline-flex items-center gap-2 text-sm text-white/45 hover:text-gold"><ArrowLeft size={16}/> All guides</a>
       <h1 className="section-display-title max-w-3xl text-balance break-words font-serif text-white">{guide.title}</h1><p className="mt-7 text-base font-light leading-7 text-white/60 sm:text-lg sm:leading-8">{guide.excerpt}</p>
       {guide.coverImage && <img src={guide.coverImage} alt="" className="mt-10 aspect-[16/9] w-full rounded-xl object-cover"/>}
       <div onClick={(event) => { const anchor = (event.target as HTMLElement).closest("a"); if (anchor) trackEvent("click", { source: "guide", guide: guide.slug, destination: anchor.getAttribute("href") }); }}><CmsContent html={guide.content} as="div" className="guide-content prose prose-invert prose-lg mt-12 max-w-none prose-headings:font-serif prose-headings:font-normal prose-p:text-white/65 prose-li:text-white/65"/></div>

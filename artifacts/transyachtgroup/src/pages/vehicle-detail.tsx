@@ -397,7 +397,7 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
     `${seoName} available from Trans Yacht Group on the French Riviera.`;
   const seoImage = allImages[0] || vehicle.image || "/opengraph.jpg";
   const seoPath = vehiclePath(vehicle);
-  const vehicleUrl = `${SITE_URL}${seoPath}/?lang=${lang}`;
+  const vehicleUrl = `${SITE_URL}${seoPath}/`;
   const productJsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": isCar ? ["Product", "Vehicle"] : "Product",
@@ -448,13 +448,13 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
                 "@type": "ListItem",
                 position: 1,
                 name: "Home",
-                item: `${SITE_URL}/?lang=${lang}`,
+                item: `${SITE_URL}/`,
               },
               {
                 "@type": "ListItem",
                 position: 2,
                 name: isCar ? t("cars") : t("yachts"),
-                item: `${SITE_URL}${backPath}?lang=${lang}`,
+                item: `${SITE_URL}${backPath}/`,
               },
               { "@type": "ListItem", position: 3, name: seoName, item: vehicleUrl },
             ],

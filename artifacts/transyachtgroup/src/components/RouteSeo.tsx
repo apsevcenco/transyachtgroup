@@ -312,7 +312,7 @@ const buildCatalogServiceSchema = (
       "Courchevel",
       "French Riviera",
     ],
-    url: `${SITE_URL}${path}/?lang=${lang}`,
+    url: `${SITE_URL}${path}/`,
     inLanguage: lang,
   };
 };
@@ -333,13 +333,13 @@ const buildBreadcrumbSchema = (
         "@type": "ListItem",
         position: 1,
         name: "Home",
-        item: `${SITE_URL}/?lang=${lang}`,
+        item: `${SITE_URL}/`,
       },
       {
         "@type": "ListItem",
         position: 2,
         name: copy.title,
-        item: `${SITE_URL}${path}/?lang=${lang}`,
+        item: `${SITE_URL}${path}/`,
       },
     ],
   };

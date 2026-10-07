@@ -85,7 +85,7 @@ export function Navbar() {
 
   const languageHref = (code: typeof lang) => {
     const url = new URL(window.location.href);
-    url.searchParams.set("lang", code);
+    url.searchParams.delete("lang");
     return `${url.pathname}${url.search}${url.hash}`;
   };
 

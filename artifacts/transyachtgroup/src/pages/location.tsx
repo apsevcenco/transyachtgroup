@@ -288,7 +288,7 @@ export default function LocationPage({ city }: { city: string }) {
               "Yacht charter",
               "Private concierge",
             ],
-            url: `${SITE_URL}${path}/?lang=${lang}`,
+            url: `${SITE_URL}${path}/`,
           },
           {
             "@context": "https://schema.org",
@@ -298,7 +298,7 @@ export default function LocationPage({ city }: { city: string }) {
                 "@type": "ListItem",
                 position: 1,
                 name: "Home",
-                item: `${SITE_URL}/?lang=${lang}`,
+                item: `${SITE_URL}/`,
               },
               {
                 "@type": "ListItem",
@@ -340,7 +340,7 @@ export default function LocationPage({ city }: { city: string }) {
 
           <div className="mt-14 grid gap-5 md:grid-cols-2">
             <a
-              href={`/cars/?lang=${lang}`}
+              href="/cars/"
               className="group rounded-xl border border-white/10 bg-white/[0.02] p-7 transition hover:border-gold/40"
             >
               <Car className="mb-5 text-gold" />
@@ -350,7 +350,7 @@ export default function LocationPage({ city }: { city: string }) {
               </span>
             </a>
             <a
-              href={`/yachts/?lang=${lang}`}
+              href="/yachts/"
               className="group rounded-xl border border-white/10 bg-white/[0.02] p-7 transition hover:border-gold/40"
             >
               <Ship className="mb-5 text-gold" />
@@ -366,7 +366,7 @@ export default function LocationPage({ city }: { city: string }) {
               {LOCATION_SERVICES[key]!.map((service) => (
                 <a
                   key={service.slug}
-                  href={`/services/${service.slug}/?lang=${lang}`}
+                  href={`/services/${service.slug}/`}
                   className="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-sm text-white/65 transition hover:border-gold/40 hover:text-gold"
                 >
                   {service.label} <ChevronRight size={14} />
@@ -403,7 +403,7 @@ export default function LocationPage({ city }: { city: string }) {
               {text.concierge}
             </p>
             <a
-              href={`/?lang=${lang}#request`}
+              href="/#request"
               className="inline-flex items-center gap-2 rounded bg-gold px-6 py-3 font-porter text-[10px] uppercase tracking-[0.2em] text-black"
             >
               {text.contact} <ChevronRight size={15} />
