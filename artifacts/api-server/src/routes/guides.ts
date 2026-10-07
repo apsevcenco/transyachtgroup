@@ -4,7 +4,7 @@ import { and, desc, eq, isNotNull, lte, or } from "drizzle-orm";
 import rateLimit from "express-rate-limit";
 
 import { db } from "@workspace/db";
-import { analyticsEventsTable, guidesTable, seoCompetitorsTable, seoCompetitorSnapshotsTable, seoContentPlansTable, seoOpportunitiesTable, vehiclesTable } from "@workspace/db/schema";
+import { analyticsEventsTable, answersTable, guidesTable, newsTable, seoCompetitorsTable, seoCompetitorSnapshotsTable, seoContentPlansTable, seoOpportunitiesTable, seoPageMetricsTable, vehiclesTable } from "@workspace/db/schema";
 import { vehiclePath } from "../lib/vehicleSeo";
 import { adminAuth } from "../middleware/auth";
 import { auditGuide, type SeoAuditInput, type SeoAuditIssue } from "../lib/guideSeoAudit";
@@ -55,6 +55,49 @@ const AUTO_FIXABLE_SEO_ISSUES = new Set([
   "faq",
   "cannibalization",
 ]);
+
+const normalizeSeoPath = (value: string) => {
+  const raw = value.trim();
+  if (!raw) return "/";
+  try {
+    const parsed = raw.startsWith("http") ? new URL(raw) : new URL(raw, "https://www.transyachtgroup.com");
+    const path = parsed.pathname || "/";
+    return path === "/" ? "/" : path.replace(/\/+$/, "");
+  } catch {
+    const path = raw.split(/[?#]/)[0] || "/";
+    return path === "/" ? "/" : `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
+  }
+};
+
+const publicSeoUrl = (path: string) => `https://www.transyachtgroup.com${path === "/" ? "/" : path}`;
+
+const seoPageType = (path: string) => {
+  if (path === "/") return "homepage";
+  if (path.startsWith("/services/")) return "service";
+  if (path.startsWith("/locations/")) return "location";
+  if (path.startsWith("/cars/")) return "car";
+  if (path.startsWith("/yachts/")) return "yacht";
+  if (path.startsWith("/guides/")) return "guide";
+  if (path.startsWith("/news/")) return "news";
+  if (path.startsWith("/answers/")) return "answer";
+  return "other";
+};
+
+const slugFromSeoPath = (path: string, prefix: string) => {
+  const match = path.match(new RegExp(`^/${prefix}/([^/?#]+)`));
+  return match?.[1] || "";
+};
+
+const seoOpportunityFor = (metrics: Record<string, unknown>, updatedAt?: Date | null) => {
+  const position = Number(metrics.position) || 0;
+  const impressions = Number(metrics.impressions) || 0;
+  const ctr = Number(metrics.ctr) || 0;
+  const ageDays = updatedAt ? Math.floor((Date.now() - updatedAt.getTime()) / 86_400_000) : 0;
+  if (position >= 8 && position <= 30) return "Improve page: ranking opportunity";
+  if (impressions >= 100 && ctr < 2) return "Improve title and description: low CTR";
+  if (ageDays > 180) return "Review and refresh stale content";
+  return null;
+};
 
 type InternalLinkCandidate = {
   url: string;
@@ -1048,34 +1091,55 @@ router.patch("/admin/guides/plans/:id/items/:itemIndex", adminAuth, async (req, 
 
 router.get("/admin/guides/overview", adminAuth, async (_req, res) => {
   try {
-    const [guides, events] = await Promise.all([
+    const [guides, news, answers, pageMetrics, events] = await Promise.all([
       db.select().from(guidesTable).orderBy(desc(guidesTable.updatedAt)),
+      db.select().from(newsTable).orderBy(desc(newsTable.updatedAt)),
+      db.select().from(answersTable).orderBy(desc(answersTable.updatedAt)),
+      db.select().from(seoPageMetricsTable).orderBy(desc(seoPageMetricsTable.importedAt)),
       db.select({ eventType: analyticsEventsTable.eventType, page: analyticsEventsTable.page, metadata: analyticsEventsTable.metadata }).from(analyticsEventsTable).orderBy(desc(analyticsEventsTable.createdAt)).limit(20_000),
     ]);
     const local: Record<string, { views: number; leads: number; clicks: number }> = {};
     for (const event of events) {
-      const match = event.page.match(/^\/guides\/([^/?]+)/);
-      if (match) {
-        const metric = local[match[1]] ||= { views: 0, leads: 0, clicks: 0 };
-        if (event.eventType === "page_view") metric.views++;
-        if (event.eventType === "click") metric.clicks++;
-      }
+      const path = normalizeSeoPath(event.page);
+      const metric = local[path] ||= { views: 0, leads: 0, clicks: 0 };
+      if (event.eventType === "page_view") metric.views++;
+      if (event.eventType === "click") metric.clicks++;
+      if (["form_submit", "phone_click", "whatsapp_click", "contact_click"].includes(event.eventType)) metric.leads++;
       const metadata = event.metadata && typeof event.metadata === "object" ? event.metadata as Record<string, unknown> : {};
       const attributed = typeof metadata.attributionGuide === "string" ? metadata.attributionGuide : "";
       if (attributed && ["form_submit", "phone_click", "whatsapp_click", "contact_click"].includes(event.eventType)) {
-        (local[attributed] ||= { views: 0, leads: 0, clicks: 0 }).leads++;
+        (local[normalizeSeoPath(`/guides/${attributed}/`)] ||= { views: 0, leads: 0, clicks: 0 }).leads++;
       }
     }
-    res.json(guides.map((guide) => {
+    const metricsByPath = new Map(pageMetrics.map((metric) => [metric.path, metric]));
+    const usedPaths = new Set<string>();
+    const rows = guides.map((guide) => {
       const effective = effectiveGuideState(guide);
-      const search = guide.searchMetrics && typeof guide.searchMetrics === "object" ? guide.searchMetrics as Record<string, unknown> : {};
-      const position = Number(search.position) || 0;
-      const impressions = Number(search.impressions) || 0;
-      const ctr = Number(search.ctr) || 0;
-      const ageDays = guide.updatedAt ? Math.floor((Date.now() - guide.updatedAt.getTime()) / 86_400_000) : 0;
-      const opportunity = position >= 8 && position <= 30 ? "Improve page: ranking opportunity" : impressions >= 100 && ctr < 2 ? "Improve title and description: low CTR" : ageDays > 180 ? "Review and refresh stale content" : null;
-      return { ...effective, localMetrics: local[guide.slug] || { views: 0, leads: 0, clicks: 0 }, opportunity };
-    }));
+      const path = normalizeSeoPath(`/guides/${guide.slug}/`);
+      usedPaths.add(path);
+      const metric = metricsByPath.get(path);
+      const search = metric ? { clicks: metric.clicks, impressions: metric.impressions, ctr: metric.ctr, position: metric.position, source: metric.source, importedAt: metric.importedAt?.toISOString() } : guide.searchMetrics && typeof guide.searchMetrics === "object" ? guide.searchMetrics as Record<string, unknown> : {};
+      return { ...effective, pageType: "guide", path, url: publicSeoUrl(path), searchMetrics: search, localMetrics: local[path] || { views: 0, leads: 0, clicks: 0 }, opportunity: seoOpportunityFor(search, guide.updatedAt) };
+    });
+    for (const item of news) {
+      const path = normalizeSeoPath(`/news/${item.slug}/`);
+      usedPaths.add(path);
+      const metric = metricsByPath.get(path);
+      const search = metric ? { clicks: metric.clicks, impressions: metric.impressions, ctr: metric.ctr, position: metric.position, source: metric.source, importedAt: metric.importedAt?.toISOString() } : item.searchMetrics && typeof item.searchMetrics === "object" ? item.searchMetrics as Record<string, unknown> : {};
+      rows.push({ ...item, pageType: "news", path, url: publicSeoUrl(path), localMetrics: local[path] || { views: 0, leads: 0, clicks: 0 }, searchMetrics: search, opportunity: seoOpportunityFor(search, item.updatedAt) } as never);
+    }
+    for (const item of answers) {
+      const path = normalizeSeoPath(`/answers/${item.slug}/`);
+      usedPaths.add(path);
+      const metric = metricsByPath.get(path);
+      const search = metric ? { clicks: metric.clicks, impressions: metric.impressions, ctr: metric.ctr, position: metric.position, source: metric.source, importedAt: metric.importedAt?.toISOString() } : {};
+      rows.push({ ...item, id: `answer-${item.id}`, title: item.question, pageType: "answer", path, url: publicSeoUrl(path), seoScore: null, contentCluster: "AI answers", localMetrics: local[path] || { views: 0, leads: 0, clicks: 0 }, searchMetrics: search, opportunity: seoOpportunityFor(search, item.updatedAt) } as never);
+    }
+    for (const metric of pageMetrics) {
+      if (usedPaths.has(metric.path)) continue;
+      rows.push({ id: `metric-${metric.id}`, title: metric.title || metric.path, pageType: metric.pageType, path: metric.path, url: metric.url, seoScore: null, contentCluster: metric.pageType, localMetrics: local[metric.path] || { views: 0, leads: 0, clicks: 0 }, searchMetrics: { clicks: metric.clicks, impressions: metric.impressions, ctr: metric.ctr, position: metric.position, source: metric.source, importedAt: metric.importedAt?.toISOString() }, opportunity: seoOpportunityFor(metric, metric.updatedAt) } as never);
+    }
+    res.json(rows);
   } catch { res.status(500).json({ error: "Failed to load SEO overview" }); }
 });
 
@@ -1085,15 +1149,35 @@ router.post("/admin/guides/search-metrics", adminAuth, async (req, res) => {
   for (const row of rows) {
     if (!row || typeof row !== "object") continue;
     const url = typeof row.url === "string" ? row.url : "";
-    const match = url.match(/\/guides\/([^/?#]+)/);
-    if (!match) continue;
+    if (!url.trim()) continue;
+    const path = normalizeSeoPath(url);
+    const pageType = seoPageType(path);
     const metrics = {
       clicks: Math.max(0, Number(row.clicks) || 0), impressions: Math.max(0, Number(row.impressions) || 0),
       ctr: Math.max(0, Number(row.ctr) || 0), position: Math.max(0, Number(row.position) || 0),
       source: typeof row.source === "string" ? row.source.slice(0, 30) : "search-console", importedAt: new Date().toISOString(),
     };
-    const result = await db.update(guidesTable).set({ searchMetrics: metrics, updatedAt: new Date() }).where(eq(guidesTable.slug, match[1])).returning({ id: guidesTable.id });
-    if (result.length) updated++;
+    await db.insert(seoPageMetricsTable).values({
+      url: publicSeoUrl(path),
+      path,
+      pageType,
+      title: typeof row.title === "string" ? row.title.slice(0, 300) : null,
+      clicks: metrics.clicks,
+      impressions: metrics.impressions,
+      ctr: metrics.ctr,
+      position: metrics.position,
+      source: metrics.source,
+      importedAt: new Date(),
+      updatedAt: new Date(),
+    }).onConflictDoUpdate({
+      target: seoPageMetricsTable.path,
+      set: { url: publicSeoUrl(path), pageType, title: typeof row.title === "string" ? row.title.slice(0, 300) : null, clicks: metrics.clicks, impressions: metrics.impressions, ctr: metrics.ctr, position: metrics.position, source: metrics.source, importedAt: new Date(), updatedAt: new Date() },
+    });
+    const guideSlug = slugFromSeoPath(path, "guides");
+    const newsSlug = slugFromSeoPath(path, "news");
+    if (guideSlug) await db.update(guidesTable).set({ searchMetrics: metrics, updatedAt: new Date() }).where(eq(guidesTable.slug, guideSlug));
+    if (newsSlug) await db.update(newsTable).set({ searchMetrics: metrics, updatedAt: new Date() }).where(eq(newsTable.slug, newsSlug));
+    updated++;
   }
   res.json({ updated });
 });

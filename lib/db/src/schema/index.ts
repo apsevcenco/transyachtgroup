@@ -9,6 +9,7 @@ import {
   integer,
   numeric,
   date,
+  doublePrecision,
   index,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
@@ -316,6 +317,30 @@ export const analyticsEventsTable = pgTable("analytics_events", {
   metadata: jsonb("metadata").default({}),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+export const seoPageMetricsTable = pgTable(
+  "seo_page_metrics",
+  {
+    id: serial("id").primaryKey(),
+    url: text("url").notNull(),
+    path: text("path").notNull().unique(),
+    pageType: varchar("page_type", { length: 40 }).notNull().default("other"),
+    title: text("title"),
+    clicks: integer("clicks").notNull().default(0),
+    impressions: integer("impressions").notNull().default(0),
+    ctr: doublePrecision("ctr").notNull().default(0),
+    position: doublePrecision("position").notNull().default(0),
+    source: varchar("source", { length: 40 }).notNull().default("search-console"),
+    importedAt: timestamp("imported_at").defaultNow(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("seo_page_metrics_path_idx").on(table.path),
+    index("seo_page_metrics_page_type_idx").on(table.pageType),
+    index("seo_page_metrics_imported_at_idx").on(table.importedAt),
+  ],
+);
 
 export const customersTable = pgTable(
   "customers",
@@ -718,3 +743,11 @@ export const insertAnswerSchema = createInsertSchema(answersTable).omit({
 });
 export type InsertAnswer = z.infer<typeof insertAnswerSchema>;
 export type Answer = typeof answersTable.$inferSelect;
+
+export const insertSeoPageMetricSchema = createInsertSchema(seoPageMetricsTable).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertSeoPageMetric = z.infer<typeof insertSeoPageMetricSchema>;
+export type SeoPageMetric = typeof seoPageMetricsTable.$inferSelect;

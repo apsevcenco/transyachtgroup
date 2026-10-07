@@ -366,7 +366,22 @@ export async function fixGuideSeoWithAi(data: GuideInput, excludeId?: number, ve
   return res.json();
 }
 
-export async function fetchGuideSeoOverview(): Promise<Array<Guide & { localMetrics: { views: number; leads: number; clicks: number }; opportunity: string | null }>> {
+export type SeoOverviewRow = {
+  id: number | string;
+  title: string;
+  slug?: string;
+  pageType?: string;
+  path?: string;
+  url?: string;
+  contentCluster?: string | null;
+  targetPage?: string | null;
+  seoScore?: number | null;
+  localMetrics: { views: number; leads: number; clicks: number };
+  searchMetrics: { clicks?: number; impressions?: number; ctr?: number; position?: number; source?: string; importedAt?: string } | null;
+  opportunity: string | null;
+};
+
+export async function fetchGuideSeoOverview(): Promise<SeoOverviewRow[]> {
   const res = await fetch(`${API_BASE}/admin/guides/overview`, { headers: authHeaders() });
   if (!res.ok) throw new Error("Failed to load SEO overview");
   return res.json();
