@@ -163,6 +163,44 @@ export function shouldSendDigest(now: Date, lastSentDate: string | null, digestH
   return clock.hour >= digestHour && clock.date !== lastSentDate;
 }
 
+const OPT_OUT_FOOTER_EN = "If you would rather not receive further messages from Trans Yacht Group, just reply with “unsubscribe” and we will remove you from our list.";
+const OPT_OUT_FOOTER_FR = "Si vous ne souhaitez plus recevoir de messages de Trans Yacht Group, répondez simplement « désinscription » et nous vous retirerons de notre liste.";
+
+export const optOutFooterText = `\n\n--\n${OPT_OUT_FOOTER_EN}\n${OPT_OUT_FOOTER_FR}`;
+export const optOutFooterHtml = `<p style="font-family:Arial,sans-serif;color:#8a8a8a;font-size:12px;line-height:1.5;max-width:680px;margin:28px 0 0;border-top:1px solid #e5e5e5;padding-top:12px">${OPT_OUT_FOOTER_EN}<br/>${OPT_OUT_FOOTER_FR}</p>`;
+
+// Puts the footer inside <body> when the message is a full document.
+export function appendHtmlFooter(html: string, footerHtml: string): string {
+  const closing = html.search(/<\/body>(?![\s\S]*<\/body>)/i);
+  return closing >= 0 ? `${html.slice(0, closing)}${footerHtml}${html.slice(closing)}` : html + footerHtml;
+}
+
+// Mail clients (Gmail, Outlook, Apple Mail) show their own "Unsubscribe"
+// button from this header; a mailto reply lands in the same inbox as replies.
+export function listUnsubscribeHeaders(replyTo: string | undefined): Record<string, string> | undefined {
+  const address = extractEmailAddress(replyTo || "");
+  return address ? { "List-Unsubscribe": `<mailto:${address}?subject=unsubscribe>` } : undefined;
+}
+
+const REPLY_PREFIX = /^(?:(?:re|fwd?|tr|aw|sv)\s*:\s*)+/i;
+const OPT_OUT_START = /^\W*(?:please\s+)?(?:unsubscribe|opt[\s-]?out|remove\s+me|d[ée]sabonn\w*|d[ée]sinscri\w*|se\s+d[ée]sabonner|отпи[сш]\w*)/i;
+const OPT_OUT_EXACT = /^\W*(?:stop|remove|unsub|не\s+пишите)\W*$/i;
+
+// Deliberately narrow: only an unmistakable opt-out (the subject our
+// List-Unsubscribe link produces, or a short first line like "Unsubscribe" or
+// "STOP") blocks a contact automatically. Anything longer or ambiguous is
+// left to the owner and the AI assistant, because wrongly blocking a real
+// partner is worse than asking a human.
+export function detectOptOut(subject: string | null | undefined, body: string | null | undefined): boolean {
+  const cleanSubject = (subject || "").replace(REPLY_PREFIX, "").trim();
+  if (cleanSubject.length <= 60 && (OPT_OUT_START.test(cleanSubject) || OPT_OUT_EXACT.test(cleanSubject))) return true;
+  const firstLine = (body || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find((line) => line && !line.startsWith(">"));
+  return Boolean(firstLine && firstLine.length <= 80 && (OPT_OUT_START.test(firstLine) || OPT_OUT_EXACT.test(firstLine)));
+}
+
 export function addDays(from: Date, days: number): Date {
   return new Date(from.getTime() + days * 24 * 60 * 60 * 1000);
 }

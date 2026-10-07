@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request } from "express";
 
 import { logger } from "../lib/logger";
 import { verifySvixSignature } from "../lib/svixSignature";
-import { extractEmailAddress, htmlToText } from "../lib/partnerMailUtils";
+import { detectOptOut, extractEmailAddress, htmlToText } from "../lib/partnerMailUtils";
 import { applyDeliveryEvent, fetchReceivedEmailBody, notifyAdmin, recordInboundReply } from "../lib/partnerCrm";
 
 const router: IRouter = Router();
@@ -58,22 +58,25 @@ async function handleReceived(data: Record<string, unknown>): Promise<ReceivedOu
   // The webhook carries metadata only; the body has to be fetched separately.
   if (!body) body = await fetchReceivedEmailBody(emailId);
 
-  const result = await recordInboundReply({ fromEmail: from, subject, bodyText: body, providerMessageId: emailId });
+  const optOut = detectOptOut(subject, body);
+  const result = await recordInboundReply({ fromEmail: from, subject, bodyText: body, providerMessageId: emailId, optOut });
   if (!result.inserted) return { result: "duplicate", reason: "this email id was already processed" };
 
   const label = result.matched ? result.organization || from : `unknown sender ${from}`;
+  const blocked = optOut && result.matched;
   await notifyAdmin(
-    result.matched ? `Partner reply: ${label}` : `Reply from ${label}`,
+    blocked ? `Unsubscribe request: ${label}` : result.matched ? `Partner reply: ${label}` : `Reply from ${label}`,
     [
       `From: ${from}${result.organization ? ` (${result.organization})` : ""}`,
       `Subject: ${subject || "(no subject)"}`,
+      ...(blocked ? ["", "Marked do_not_contact automatically — they will not be emailed again."] : []),
       "",
       (body || "(message body not available)").slice(0, 1_000),
       "",
       `Open the Partner CRM: ${ADMIN_URL}`,
     ].join("\n"),
   );
-  return { result: "stored", detail: { from, matched: result.matched } };
+  return { result: "stored", detail: { from, matched: result.matched, optOut } };
 }
 
 router.post("/webhooks/resend", async (req, res) => {

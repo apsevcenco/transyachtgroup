@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  appendHtmlFooter,
+  detectOptOut,
+  listUnsubscribeHeaders,
+  optOutFooterText,
   classifyDeliveryEvent,
   cleanAssistantResult,
   digestHourFromEnv,
@@ -14,6 +18,32 @@ import {
   shouldUpdateMessageStatus,
   statusAfterReply,
 } from "./partnerMailUtils.ts";
+
+test("only an unmistakable opt-out blocks a contact", () => {
+  // the subject our List-Unsubscribe mailto produces, with and without reply prefixes
+  assert.equal(detectOptOut("unsubscribe", ""), true);
+  assert.equal(detectOptOut("Re: Unsubscribe", null), true);
+  // short first lines, in the languages of our footer
+  assert.equal(detectOptOut("Re: Partnership", "Unsubscribe\n\nOn Tue, Trans Yacht Group wrote:\n> hello"), true);
+  assert.equal(detectOptOut("Re: Partnership", "STOP."), true);
+  assert.equal(detectOptOut("Re: Partnership", "Désinscription svp"), true);
+  assert.equal(detectOptOut("Re: Partnership", "> quoted\nPlease unsubscribe us"), true);
+  assert.equal(detectOptOut("Re: Partnership", "Отпишите нас, пожалуйста"), true);
+  // ambiguous or conversational replies are left to a human
+  assert.equal(detectOptOut("Re: Partnership", "Thanks, we'd like to learn more. Can you send rates?"), false);
+  assert.equal(detectOptOut("Re: Partnership", "Please stop by our office next week"), false);
+  assert.equal(detectOptOut("Re: Partnership", "We do not want to unsubscribe, rather the opposite, send details"), false);
+  assert.equal(detectOptOut("Re: Luxury Mobility Partnership for Hotels", "Interested!"), false);
+  assert.equal(detectOptOut(null, null), false);
+});
+
+test("the opt-out footer goes inside <body> and the unsubscribe header points at the reply address", () => {
+  assert.equal(appendHtmlFooter("<p>Hi</p>", "<i>F</i>"), "<p>Hi</p><i>F</i>");
+  assert.equal(appendHtmlFooter("<html><body><p>Hi</p></body></html>", "<i>F</i>"), "<html><body><p>Hi</p><i>F</i></body></html>");
+  assert.deepEqual(listUnsubscribeHeaders("Trans Yacht <reply@x.resend.app>"), { "List-Unsubscribe": "<mailto:reply@x.resend.app?subject=unsubscribe>" });
+  assert.equal(listUnsubscribeHeaders(undefined), undefined);
+  assert.ok(optOutFooterText.includes("unsubscribe") && optOutFooterText.includes("désinscription"));
+});
 
 test("digest timing uses Paris time, summer and winter, and sends once per day", () => {
   assert.deepEqual(parisClock(new Date("2026-10-07T06:30:00Z")), { date: "2026-10-07", hour: 8 });

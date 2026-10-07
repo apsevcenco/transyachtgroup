@@ -96,6 +96,9 @@ export async function recordInboundReply(input: {
   subject: string | null;
   bodyText: string | null;
   providerMessageId: string;
+  // An unmistakable unsubscribe request: block the contact instead of just
+  // recording a reply.
+  optOut?: boolean;
 }): Promise<{ inserted: boolean; organization: string | null; matched: boolean }> {
   const email = normalizeEmail(input.fromEmail);
   const matches = await db
@@ -132,7 +135,7 @@ export async function recordInboundReply(input: {
     await db
       .update(partnerContactsTable)
       .set({
-        status: statusAfterReply(contact.status),
+        status: input.optOut ? "do_not_contact" : statusAfterReply(contact.status),
         lastReplyAt: now,
         // The reply itself is the call to action; it supersedes a pending nudge.
         nextFollowUpAt: null,

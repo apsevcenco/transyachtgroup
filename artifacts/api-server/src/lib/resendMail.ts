@@ -1,5 +1,5 @@
 import { logger } from "./logger";
-import { retryDelayMs } from "./partnerMailUtils";
+import { appendHtmlFooter, listUnsubscribeHeaders, optOutFooterHtml, optOutFooterText, retryDelayMs } from "./partnerMailUtils";
 
 export const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -35,15 +35,18 @@ export async function sendPartnerEmail(email: PartnerEmail): Promise<string | nu
   const from = process.env.REVIEW_EMAIL_FROM || process.env.PROPOSAL_EMAIL_FROM;
   if (!key || !from) throw new Error("Email delivery is not configured (RESEND_API_KEY / REVIEW_EMAIL_FROM)");
 
+  const replyTo = process.env.PARTNER_REPLY_TO || undefined;
   const body = JSON.stringify({
     from,
     to: email.to,
     // Replies go to the address wired to the Resend inbound webhook, so they
     // land in the Partner CRM instead of an unwatched mailbox.
-    reply_to: process.env.PARTNER_REPLY_TO || undefined,
+    reply_to: replyTo,
     subject: email.subject,
-    text: email.text,
-    html: email.html,
+    // Every outreach email carries a one-step way to opt out.
+    text: email.text + optOutFooterText,
+    html: appendHtmlFooter(email.html, optOutFooterHtml),
+    headers: listUnsubscribeHeaders(replyTo),
     attachments: email.attachment ? [email.attachment] : undefined,
     tags: [{ name: "workflow", value: email.tag }],
   });
