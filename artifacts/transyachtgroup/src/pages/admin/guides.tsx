@@ -70,12 +70,19 @@ const findMetricValue = (row: Record<string, unknown>, names: string[]) => {
   return undefined;
 };
 
+const hasClickHeader = (value: string) => /click|clic|клик|kлик|лики/.test(value);
+const hasImpressionHeader = (value: string) => /impression|показ/.test(value);
+const isImportableSiteUrl = (value: unknown) => {
+  const text = String(value || "").trim();
+  return /^https?:\/\/(www\.)?transyachtgroup\.com(\/|$|\?)/i.test(text) || /^\/(?!\/)/.test(text);
+};
+
 const looksLikeMetricsHeader = (row: unknown[]) => {
   const cells = row.map((cell) => String(cell || "").toLowerCase().trim()).filter(Boolean);
   const joined = cells.join(" ");
-  const hasUrl = cells.some((cell) => ["page", "pages", "url", "страница", "страницы", "адрес", "adresse", "address"].some((name) => cell.includes(name)));
-  const hasClicks = /click|clic|клик/.test(joined);
-  const hasImpressions = /impression|показ/.test(joined);
+  const hasUrl = cells.some((cell) => ["page", "pages", "url", "страниц", "страница", "страницы", "адрес", "adresse", "address"].some((name) => cell.includes(name)));
+  const hasClicks = hasClickHeader(joined);
+  const hasImpressions = hasImpressionHeader(joined);
   return hasUrl && (hasClicks || hasImpressions);
 };
 
@@ -89,7 +96,7 @@ const mapSearchMetricRows = (rows: unknown[][]): Array<Record<string, unknown>> 
     return {
       url,
       title: String(findMetricValue(raw, ["title", "заголовок"]) || ""),
-      clicks: parseMetricNumber(findMetricValue(raw, ["click", "clic", "клик"])),
+      clicks: parseMetricNumber(findMetricValue(raw, ["click", "clic", "клик", "kлик", "лики"])),
       impressions: parseMetricNumber(findMetricValue(raw, ["impression", "показ"])),
       ctr: parseMetricNumber(findMetricValue(raw, ["ctr"])),
       position: parseMetricNumber(findMetricValue(raw, ["position", "позици"])),
@@ -97,7 +104,7 @@ const mapSearchMetricRows = (rows: unknown[][]): Array<Record<string, unknown>> 
     };
   }).filter((row) => {
     const url = String(row.url || "").trim();
-    return url && !looksLikeMetricsHeader([url]);
+    return isImportableSiteUrl(url) && !looksLikeMetricsHeader([url]);
   });
 };
 
