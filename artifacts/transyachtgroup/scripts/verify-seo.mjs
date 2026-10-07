@@ -46,14 +46,20 @@ assert.match(sitemap, /\/api\/news-sitemap\.xml/);
 assert.match(pagesSitemap, /<urlset[\s>]/);
 assert.match(pagesSitemap, /<loc>https:\/\/www\.transyachtgroup\.com\//);
 assert.doesNotMatch(pagesSitemap, /https:\/\/transyachtgroup\.com/);
-assert.doesNotMatch(pagesSitemap, /\?lang=/);
+assert.doesNotMatch(pagesSitemap, /<loc>[^<]*\?lang=/);
 assert.match(pagesSitemap, /\/cars\//);
 assert.match(pagesSitemap, /\/yachts\//);
 assert.match(pagesSitemap, /\/guides\//);
+assert.match(pagesSitemap, /\/news\//);
 assert.match(pagesSitemap, /\/locations\/cannes\//);
 assert.match(pagesSitemap, /\/services\/luxury-car-rental-cannes\//);
+assert.match(pagesSitemap, /\/services\/luxury-car-rental-courchevel\//);
+assert.match(pagesSitemap, /\/services\/geneva-airport-to-courchevel-transfer\//);
+assert.match(pagesSitemap, /\/services\/lyon-airport-to-courchevel-transfer\//);
 assert.match(pagesSitemap, /\/services\/yacht-charter-monaco\//);
 assert.match(pagesSitemap, /\/services\/rolls-royce-rental-french-riviera\//);
+assert.match(pagesSitemap, /\/services\/rolls-royce-rental-courchevel\//);
+assert.match(pagesSitemap, /hreflang="x-default"/);
 
 for (const [name, routeHtml, canonical] of [
   ["cars", carsHtml, "https://www.transyachtgroup.com/cars/"],

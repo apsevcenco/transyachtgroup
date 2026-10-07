@@ -65,6 +65,12 @@ const pages = [
     heading: "French Riviera Luxury Travel Guides",
   },
   {
+    path: "/news",
+    title: "News from Trans Yacht Group | Luxury Mobility Updates",
+    description: "Latest updates on luxury cars, VIP transfers and premium mobility across Monaco, the French Riviera and Courchevel.",
+    heading: "News from Trans Yacht Group",
+  },
+  {
     path: "/privacy",
     title: "Privacy Policy | Trans Yacht Group",
     description: "Read the Trans Yacht Group privacy policy and learn how personal information is handled.",
@@ -156,6 +162,40 @@ function renderPage(page) {
   );
 }
 
+function sitemapEntry(page) {
+  const loc = cleanUrl(page.path);
+  const priority = page.path === "/" ? "1.0"
+    : page.path === "/cars" || page.path === "/yachts" ? "0.9"
+      : page.path.startsWith("/services/") || page.path.startsWith("/locations/") || page.path === "/guides" || page.path === "/news" ? "0.8"
+        : "0.4";
+  const changefreq = page.path === "/cars" || page.path === "/yachts" ? "daily"
+    : page.path === "/guides" || page.path === "/news" || page.path.startsWith("/services/") ? "weekly"
+      : page.path.startsWith("/locations/") ? "monthly"
+        : "yearly";
+  const alternates = languages
+    .map((lang) => `    <xhtml:link rel="alternate" hreflang="${lang}" href="${loc}?lang=${lang}"/>`)
+    .join("\n");
+  return `  <url>
+    <loc>${loc}</loc>
+${alternates}
+    <xhtml:link rel="alternate" hreflang="x-default" href="${loc}?lang=en"/>
+    <changefreq>${changefreq}</changefreq>
+    <priority>${priority}</priority>
+  </url>`;
+}
+
+function renderPagesSitemap(items) {
+  const uniquePages = Array.from(
+    new Map(items.map((page) => [cleanUrl(page.path), page])).values(),
+  );
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+${uniquePages.map(sitemapEntry).join("\n")}
+</urlset>
+`;
+}
+
 function isAbsoluteHttpUrl(value) {
   return /^https?:\/\//i.test(String(value || ""));
 }
@@ -204,5 +244,7 @@ await Promise.all(
     await writeFile(join(directory, "index.html"), renderPage(page), "utf8");
   }),
 );
+
+await writeFile(join(outputDir, "pages-sitemap.xml"), renderPagesSitemap([...pages, ...dynamicContentPages]), "utf8");
 
 console.log(`Generated ${pages.length + dynamicContentPages.length} route-specific SEO pages`);

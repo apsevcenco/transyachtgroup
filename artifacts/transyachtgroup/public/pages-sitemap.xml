@@ -5,6 +5,7 @@
   <url><loc>https://www.transyachtgroup.com/yachts/</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
   <url><loc>https://www.transyachtgroup.com/about/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://www.transyachtgroup.com/guides/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/news/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.transyachtgroup.com/privacy/</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>
   <url><loc>https://www.transyachtgroup.com/legal/</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>
   <url><loc>https://www.transyachtgroup.com/locations/cannes/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
@@ -17,11 +18,23 @@
   <url><loc>https://www.transyachtgroup.com/services/luxury-car-rental-monaco/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.transyachtgroup.com/services/luxury-car-rental-nice/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.transyachtgroup.com/services/luxury-car-rental-saint-tropez/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/services/luxury-car-rental-antibes/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/services/luxury-car-rental-courchevel/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.transyachtgroup.com/services/courchevel-private-transfers/</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://www.transyachtgroup.com/services/geneva-airport-to-courchevel-transfer/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/services/lyon-airport-to-courchevel-transfer/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/services/private-jet-to-car-transfer-courchevel/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.transyachtgroup.com/services/yacht-charter-cannes/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.transyachtgroup.com/services/yacht-charter-monaco/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/services/yacht-charter-nice/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/services/yacht-charter-saint-tropez/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.transyachtgroup.com/services/lamborghini-rental-french-riviera/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.transyachtgroup.com/services/mercedes-rental-french-riviera/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.transyachtgroup.com/services/ferrari-rental-french-riviera/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.transyachtgroup.com/services/rolls-royce-rental-french-riviera/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/services/mercedes-rental-courchevel/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/services/rolls-royce-rental-courchevel/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/services/bentley-rental-courchevel/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/services/lamborghini-rental-courchevel/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.transyachtgroup.com/services/ferrari-rental-courchevel/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
 </urlset>
