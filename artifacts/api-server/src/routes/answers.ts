@@ -36,6 +36,64 @@ function normalizeFaq(value: unknown): AnswerFaq[] {
     : [];
 }
 
+function plainText(value: string): string {
+  return value
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, "\"")
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+type AnswerAuditIssue = { code: string; severity: "error" | "warning" | "info"; message: string; points: number };
+
+function auditAnswerInput(input: ReturnType<typeof parseAnswerInput>) {
+  const issues: AnswerAuditIssue[] = [];
+  const directWords = plainText(input.directAnswer).split(/\s+/).filter(Boolean).length;
+  const explanationText = plainText(input.explanation);
+  const explanationWords = explanationText.split(/\s+/).filter(Boolean).length;
+  const keyword = (input.primaryKeyword || "").trim().toLowerCase();
+  const haystack = `${input.question} ${input.directAnswer} ${explanationText}`.toLowerCase();
+  const metaDescriptionLength = (input.metaDescription || "").trim().length;
+  const metaTitleLength = (input.metaTitle || "").trim().length;
+  const h2Count = (input.explanation.match(/<h2[\s>]/gi) || []).length;
+  const linkCount = (input.explanation.match(/<a\s/gi) || []).length;
+
+  if (!keyword) issues.push({ code: "missing_keyword", severity: "error", message: "Primary keyword is missing.", points: -10 });
+  else {
+    if (!input.question.toLowerCase().includes(keyword)) issues.push({ code: "keyword_not_in_question", severity: "warning", message: "Use the primary keyword naturally in the question/title.", points: -8 });
+    if (!haystack.includes(keyword)) issues.push({ code: "keyword_not_used", severity: "error", message: "Primary keyword is not used in the answer body.", points: -12 });
+  }
+  if (directWords < 60 || directWords > 160) issues.push({ code: "direct_answer_length", severity: "warning", message: "Direct answer should be roughly 60–160 words.", points: -8 });
+  if (explanationWords < 350) issues.push({ code: "explanation_short", severity: "error", message: `Explanation is too short (${explanationWords} words). Target 450–900 useful words.`, points: -14 });
+  if (h2Count < 2) issues.push({ code: "missing_sections", severity: "warning", message: "Add at least two H2 sections to structure the answer.", points: -8 });
+  if ((input.faq || []).length < 3) issues.push({ code: "faq_short", severity: "warning", message: "Add at least three FAQ answers.", points: -8 });
+  if (!input.relatedServicePath) issues.push({ code: "missing_related_service", severity: "warning", message: "Related service path is missing.", points: -6 });
+  if (linkCount < 1) issues.push({ code: "missing_internal_link", severity: "warning", message: "Add at least one internal link to a relevant service or fleet page.", points: -6 });
+  if (!input.metaTitle || metaTitleLength < 35 || metaTitleLength > 70) issues.push({ code: "meta_title_length", severity: "warning", message: "SEO title should be about 35–70 characters.", points: -7 });
+  if (!input.metaDescription || metaDescriptionLength < 110 || metaDescriptionLength > 155) issues.push({ code: "meta_description_length", severity: "warning", message: "SEO description should contain 110–155 characters.", points: -8 });
+
+  const score = Math.max(0, Math.min(100, 100 + issues.reduce((sum, issue) => sum + issue.points, 0)));
+  return {
+    score,
+    issues,
+    stats: {
+      directWords,
+      explanationWords,
+      h2Count,
+      faqCount: input.faq.length,
+      linkCount,
+      metaTitleLength,
+      metaDescriptionLength,
+    },
+    cannibalization: [],
+  };
+}
+
 function parseAnswerInput(body: unknown) {
   const value = body && typeof body === "object" ? body as Record<string, unknown> : {};
   const slug = slugify(textFrom(value, "slug", 180) || textFrom(value, "question", 180));
@@ -133,6 +191,18 @@ Create one answer page.`
   return cleanGeneratedAnswer(result);
 }
 
+async function fixAnswerDraft(input: ReturnType<typeof parseAnswerInput>, issues: AnswerAuditIssue[]) {
+  const result = await requestOpenAiJson(
+    `You improve existing GEO/AI-search answer pages for Trans Yacht Group. Return only valid JSON.
+Revise only enough to resolve the deterministic audit issues. Preserve the business facts, luxury tone and internal links. Do not invent prices.
+Return {"slug":"...","question":"...","directAnswer":"60-160 words","explanation":"safe HTML with h2/p/ul and at least one internal link","faq":[{"question":"...","answer":"..."}],"metaTitle":"35-70 characters","metaDescription":"110-155 characters","primaryKeyword":"...","audience":"...","relatedServicePath":"/services/..."}.`,
+    `AUDIT ISSUES: ${JSON.stringify(issues)}
+CURRENT ANSWER: ${JSON.stringify(input)}
+Improve the answer for AI search/GEO and SEO.`
+  );
+  return cleanGeneratedAnswer(result);
+}
+
 router.get("/answers", async (req, res) => {
   try {
     const items = await db.select().from(answersTable).where(eq(answersTable.published, true)).orderBy(desc(answersTable.publishedAt), desc(answersTable.id));
@@ -178,6 +248,39 @@ router.post("/admin/answers/generate", adminAuth, answerAiLimiter, async (req, r
         : code.startsWith("OPENAI_429") ? "OpenAI quota or billing limit reached"
           : code.startsWith("OPENAI_403") ? "This OpenAI account does not have access to the configured model"
             : "AI answer generation failed. Check the backend logs for the recorded OpenAI error";
+    res.status(code === "OPENAI_NOT_CONFIGURED" ? 503 : 502).json({ error });
+  }
+});
+
+router.post("/admin/answers/audit", adminAuth, async (req, res) => {
+  try {
+    const data = parseAnswerInput(req.body);
+    res.json(auditAnswerInput(data));
+  } catch (err) {
+    req.log?.error?.({ err }, "Answer SEO audit failed");
+    if (err instanceof Error && err.message === "INVALID_ANSWER") return void res.status(400).json({ error: "Complete the required answer fields before auditing" });
+    res.status(500).json({ error: "Answer SEO audit failed" });
+  }
+});
+
+router.post("/admin/answers/fix-seo", adminAuth, answerAiLimiter, async (req, res) => {
+  try {
+    const data = parseAnswerInput(req.body);
+    const before = auditAnswerInput(data);
+    if (!before.issues.length) return void res.json({ draft: { ...data, published: false }, audit: before });
+    const fixed = await fixAnswerDraft(data, before.issues);
+    const draft = parseAnswerInput({ ...fixed, language: data.language, published: false });
+    const audit = auditAnswerInput(draft);
+    res.json({ draft, audit, unresolvedAutoFixes: audit.issues.map((issue) => issue.code) });
+  } catch (err) {
+    req.log?.error?.({ err }, "AI answer SEO correction failed");
+    if (err instanceof Error && err.message === "INVALID_ANSWER") return void res.status(400).json({ error: "Complete the required answer fields before fixing SEO" });
+    const code = err instanceof Error ? err.message : "";
+    const error = code === "OPENAI_NOT_CONFIGURED" ? "OpenAI is not configured on the server"
+      : code.startsWith("OPENAI_401") ? "OpenAI rejected the API key"
+        : code.startsWith("OPENAI_429") ? "OpenAI quota or billing limit reached"
+          : code.startsWith("OPENAI_403") ? "This OpenAI account does not have access to the configured model"
+            : "AI answer SEO correction failed. Check the backend logs for the recorded OpenAI error";
     res.status(code === "OPENAI_NOT_CONFIGURED" ? 503 : 502).json({ error });
   }
 });

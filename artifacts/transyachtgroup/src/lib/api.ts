@@ -297,6 +297,26 @@ export async function generateAnswerWithAi(input: { topic: string; keyword?: str
   return res.json();
 }
 
+export async function auditAnswerSeo(data: AnswerInput): Promise<SeoAuditResult> {
+  const res = await fetch(`${API_BASE}/admin/answers/audit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "Answer SEO audit failed");
+  return res.json();
+}
+
+export async function fixAnswerSeoWithAi(data: AnswerInput): Promise<{ draft: AnswerInput; audit: SeoAuditResult; unresolvedAutoFixes?: string[] }> {
+  const res = await fetch(`${API_BASE}/admin/answers/fix-seo`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "AI answer SEO correction failed");
+  return res.json();
+}
+
 export async function createAnswer(data: AnswerInput): Promise<Answer> {
   const res = await fetch(`${API_BASE}/admin/answers`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(data) });
   if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "Failed to create answer");
