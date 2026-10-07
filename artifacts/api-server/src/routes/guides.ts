@@ -51,6 +51,7 @@ const AUTO_FIXABLE_SEO_ISSUES = new Set([
   "extra_h1",
   "headings",
   "internal_links",
+  "direct_answer",
   "faq",
   "cannibalization",
 ]);
@@ -377,6 +378,7 @@ function seoFixInstructions(issues: SeoAuditIssue[], primaryKeyword: string): st
   if (codes.has("extra_h1")) lines.push("extra_h1: remove every h1 from content; use h2 and h3 only inside the body.");
   if (codes.has("headings")) lines.push("headings: add at least three useful h2 sections that match the article intent.");
   if (codes.has("internal_links")) lines.push("internal_links: add at least three distinct approved internal links using visible, meaningful anchor text.");
+  if (codes.has("direct_answer")) lines.push("direct_answer: add a 45-75 word direct-answer paragraph within the first two paragraphs. It should answer the main search question, mention the service/location and be useful as a standalone AI-search answer.");
   if (codes.has("faq")) lines.push("faq: add a concise FAQ section with clear questions and answers.");
   if (codes.has("cannibalization")) lines.push("cannibalization: change the article angle, title, opening, section structure and FAQ so it serves a more specific search intent than the competing article while preserving the primary keyword and target page.");
   return lines.join("\n");

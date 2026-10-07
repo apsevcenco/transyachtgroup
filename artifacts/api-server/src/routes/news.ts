@@ -208,6 +208,7 @@ function fixableNewsIssues(issues: ReturnType<typeof auditNews>["issues"]) {
     "extra_h1",
     "headings",
     "internal_links",
+    "direct_answer",
     "faq",
     "cannibalization",
   ]);
@@ -220,6 +221,7 @@ Never invent fake awards, fake partners, fake client names, prices, availability
 Preserve useful facts from the current article and brief. Make the article commercially useful for premium clients interested in luxury car rental, chauffeur service, VIP transfers, Monaco, the French Riviera and Courchevel when relevant.
 If the article is short, expand it by covering genuinely new ground — a topic, angle or practical detail not yet mentioned anywhere else in the piece. Never pad length by repeating or rephrasing a section that already exists elsewhere in the article; a reader skimming top to bottom must not hit the same information twice.
 When adding or restructuring content, include a 45-75 word direct-answer paragraph near the top that can stand alone in AI search results. It must answer the likely client question behind the primary keyword without unverifiable claims.
+If direct_answer appears in the audit issues, add or rewrite a concise direct-answer paragraph within the first two paragraphs. It must mention the relevant service/location and answer the searcher's likely question directly.
 If cannibalization appears in the audit issues, change the article angle, headline, opening, H2 structure and FAQ so this article targets a more specific search intent than the competing pages while preserving the keyword and target page.
 When keyword_title or keyword_body is in the audit issues, the primary keyword must appear as an exact, verbatim, contiguous phrase (case-insensitive) at least once in that field — the audit does a literal substring match, not a fuzzy one, so a paraphrase, reordering or splitting the words across a sentence will still fail it. Prefer placing it somewhere it reads naturally, such as an H2/H3 heading or as a noun phrase ("our Courchevel private transfer fleet..."); only force it into a sentence if there is no natural placement, and never at the cost of correct, fluent English grammar. If no primary keyword is supplied, infer one from the title and brief.
 The site appends " | Trans Yacht Group" to the page title automatically, so metaTitle must NOT already include the brand name. Keep metaTitle to roughly 10-40 characters so it renders to 30-60 characters once the suffix is added. Meta description must be 110-155 characters.

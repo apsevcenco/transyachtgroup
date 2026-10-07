@@ -45,6 +45,21 @@ function hasFaqSection(html: string, body: string): boolean {
   return questionHeadings >= 2;
 }
 
+function hasDirectAnswer(html: string, keyword: string): boolean {
+  const paragraphs = [...html.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)]
+    .slice(0, 3)
+    .map((match) => plainText(match[1]));
+  const keywordTerms = new Set(words(keyword).filter((word) => word.length > 3));
+  return paragraphs.some((paragraph) => {
+    const count = words(paragraph).length;
+    if (count < 35 || count > 95) return false;
+    if (!/[.!?]$/.test(paragraph.trim())) return false;
+    if (!keywordTerms.size) return true;
+    const paragraphTerms = new Set(words(paragraph));
+    return [...keywordTerms].some((term) => paragraphTerms.has(term));
+  });
+}
+
 export function auditGuide(input: SeoAuditInput, existing: Array<{ id: number; title: string; slug: string; primaryKeyword?: string | null; content: string }> = []): SeoAuditResult {
   const issues: SeoAuditIssue[] = [];
   const add = (code: string, severity: SeoAuditIssue["severity"], message: string, points: number) => issues.push({ code, severity, message, points });
@@ -57,6 +72,7 @@ export function auditGuide(input: SeoAuditInput, existing: Array<{ id: number; t
   const h2Count = (input.content.match(/<h2\b/gi) || []).length;
   const internalLinks = (input.content.match(/<a\s[^>]*href=["'](?:\/|https:\/\/www\.transyachtgroup\.com\/)/gi) || []).length;
   const faqMentions = hasFaqSection(input.content, body) ? 1 : 0;
+  const directAnswer = hasDirectAnswer(input.content, keyword) ? 1 : 0;
   const translations = input.translations || {};
   const completeTranslations = ["fr", "ru", "ro", "ar"].filter((lang) => {
     const item = translations[lang] || {};
@@ -84,6 +100,7 @@ export function auditGuide(input: SeoAuditInput, existing: Array<{ id: number; t
   if (h1Count) add("extra_h1", "error", "Remove H1 from the body; the page title is already H1.", 10);
   if (h2Count < 3) add("headings", "warning", "Use at least three useful H2 sections.", 5);
   if (internalLinks < 3) add("internal_links", "warning", "Add at least three relevant internal links.", 7);
+  if (!directAnswer) add("direct_answer", "warning", "Add a concise direct-answer paragraph near the top for AI search results.", 4);
   if (!faqMentions) add("faq", "warning", "Add a concise FAQ section.", 4);
   if (!input.coverImage) add("cover", "warning", "Add a relevant cover image.", 4);
   if (!input.targetPage) add("target_page", "warning", "Select the commercial page supported by this article.", 4);
@@ -106,7 +123,7 @@ export function auditGuide(input: SeoAuditInput, existing: Array<{ id: number; t
   return {
     score: Math.max(0, 100 - issues.reduce((sum, issue) => sum + issue.points, 0)),
     issues,
-    stats: { wordCount: bodyWords.length, h1Count, h2Count, internalLinks, keywordDensity: density, completeTranslations },
+    stats: { wordCount: bodyWords.length, h1Count, h2Count, internalLinks, keywordDensity: density, completeTranslations, directAnswer },
     cannibalization,
   };
 }
