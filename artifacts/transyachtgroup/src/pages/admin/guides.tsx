@@ -70,12 +70,22 @@ const findMetricValue = (row: Record<string, unknown>, names: string[]) => {
   return undefined;
 };
 
+const looksLikeMetricsHeader = (row: unknown[]) => {
+  const cells = row.map((cell) => String(cell || "").toLowerCase().trim()).filter(Boolean);
+  const joined = cells.join(" ");
+  const hasUrl = cells.some((cell) => ["page", "pages", "url", "страница", "страницы", "адрес", "adresse", "address"].some((name) => cell.includes(name)));
+  const hasClicks = /click|clic|клик/.test(joined);
+  const hasImpressions = /impression|показ/.test(joined);
+  return hasUrl && (hasClicks || hasImpressions);
+};
+
 const mapSearchMetricRows = (rows: unknown[][]): Array<Record<string, unknown>> => {
   if (rows.length < 2) return [];
-  const headers = rows[0].map((header) => String(header || "").toLowerCase().trim());
-  return rows.slice(1).map((cells) => {
+  const headerIndex = rows.findIndex(looksLikeMetricsHeader);
+  const headers = rows[Math.max(0, headerIndex)].map((header) => String(header || "").toLowerCase().trim());
+  return rows.slice(Math.max(0, headerIndex) + 1).map((cells) => {
     const raw = Object.fromEntries(headers.map((header, index) => [header, cells[index] || ""]));
-    const url = String(findMetricValue(raw, ["page", "url", "страниц", "страница", "adresse", "address"]) || cells[0] || "");
+    const url = String(findMetricValue(raw, ["page", "url", "страниц", "страница", "адрес", "adresse", "address"]) || cells.find((cell) => /^https?:\/\//i.test(String(cell || ""))) || cells[0] || "");
     return {
       url,
       title: String(findMetricValue(raw, ["title", "заголовок"]) || ""),
@@ -85,7 +95,10 @@ const mapSearchMetricRows = (rows: unknown[][]): Array<Record<string, unknown>> 
       position: parseMetricNumber(findMetricValue(raw, ["position", "позици"])),
       source: "search-console",
     };
-  }).filter((row) => String(row.url || "").trim());
+  }).filter((row) => {
+    const url = String(row.url || "").trim();
+    return url && !looksLikeMetricsHeader([url]);
+  });
 };
 
 const parseSearchMetricsInput = (value: string): Array<Record<string, unknown>> => {
@@ -264,9 +277,14 @@ export default function AdminGuides() {
     try {
       let rows: Array<Record<string, unknown>> = [];
       if (file.name.toLowerCase().endsWith(".xlsx")) {
-        const { default: readXlsxFile } = await import("read-excel-file/browser");
-        const rawRows = await readXlsxFile(file);
-        rows = mapSearchMetricRows(rawRows as unknown as unknown[][]);
+        const excel = await import("read-excel-file/browser") as typeof import("read-excel-file/browser") & { readSheetNames?: (input: File) => Promise<string[]> };
+        const readXlsxFile = excel.default as unknown as (input: File, options?: { sheet?: string }) => Promise<unknown[][]>;
+        const sheetNames = await excel.readSheetNames?.(file).catch(() => []) || [];
+        const sheetsToRead = sheetNames.length ? sheetNames : [undefined];
+        for (const sheet of sheetsToRead) {
+          const rawRows = await readXlsxFile(file, sheet ? { sheet } : undefined);
+          rows.push(...mapSearchMetricRows(rawRows as unknown as unknown[][]));
+        }
       } else {
         rows = parseSearchMetricsInput(await file.text());
       }
