@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 import {
   classifyDeliveryEvent,
   cleanAssistantResult,
+  digestHourFromEnv,
+  parisClock,
   plainTextToEmailHtml,
+  shouldSendDigest,
   extractEmailAddress,
   followUpAfterSend,
   htmlToText,
@@ -11,6 +14,26 @@ import {
   shouldUpdateMessageStatus,
   statusAfterReply,
 } from "./partnerMailUtils.ts";
+
+test("digest timing uses Paris time, summer and winter, and sends once per day", () => {
+  assert.deepEqual(parisClock(new Date("2026-10-07T06:30:00Z")), { date: "2026-10-07", hour: 8 });
+  assert.deepEqual(parisClock(new Date("2026-12-01T06:30:00Z")), { date: "2026-12-01", hour: 7 });
+  assert.deepEqual(parisClock(new Date("2026-10-07T22:30:00Z")), { date: "2026-10-08", hour: 0 });
+
+  assert.equal(shouldSendDigest(new Date("2026-10-07T05:59:00Z"), null, 8), false, "07:59 in Paris is too early");
+  assert.equal(shouldSendDigest(new Date("2026-10-07T06:00:00Z"), null, 8), true);
+  assert.equal(shouldSendDigest(new Date("2026-10-07T15:00:00Z"), "2026-10-07", 8), false, "already sent today");
+  assert.equal(shouldSendDigest(new Date("2026-10-08T06:10:00Z"), "2026-10-07", 8), true, "new day");
+});
+
+test("digest hour falls back to 8 for anything unusable", () => {
+  assert.equal(digestHourFromEnv(undefined), 8);
+  assert.equal(digestHourFromEnv(""), 8);
+  assert.equal(digestHourFromEnv("abc"), 8);
+  assert.equal(digestHourFromEnv("24"), 8);
+  assert.equal(digestHourFromEnv("0"), 0);
+  assert.equal(digestHourFromEnv("17"), 17);
+});
 
 test("assistant output is validated, not trusted", () => {
   const fallback = { subject: "Re: Partnership", status: "replied" };

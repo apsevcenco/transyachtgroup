@@ -14,6 +14,7 @@ import {
   fetchUnmatchedPartnerMessages,
   markPartnerMessageRead,
   markPartnerMessagesRead,
+  sendPartnerDigestNow,
   sendPartnerMessage,
   updatePartnerContact,
   type PartnerAssistDraft,
@@ -351,6 +352,23 @@ export default function AdminPartners() {
           {viewButton("all", "All contacts")}
           {viewButton("due", "Follow-ups due", summary?.dueFollowUps)}
           {viewButton("unread", "Unread replies", summary?.unreadReplies)}
+          <button
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                const result = await sendPartnerDigestNow();
+                setMessage(result.sent ? "Summary emailed to you." : result.reason || "Summary was not sent.");
+              } catch (err) {
+                setMessage(err instanceof Error ? err.message : "Failed to send the summary");
+              } finally {
+                setBusy(false);
+              }
+            }}
+            className="ml-auto rounded-full border border-white/10 px-4 py-2 text-xs text-white/40 transition hover:text-gold disabled:opacity-40"
+          >
+            Email me this summary
+          </button>
         </div>
 
         {unmatched.length > 0 && (

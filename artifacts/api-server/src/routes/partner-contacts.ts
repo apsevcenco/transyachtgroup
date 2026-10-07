@@ -6,6 +6,7 @@ import { insertPartnerContactSchema, partnerContactsTable, partnerMessagesTable 
 import { adminAuth } from "../middleware/auth";
 import { CLOSED_STATUSES, isPartnerStatus } from "../lib/partnerMailUtils";
 import { importKey, MAX_IMPORT_ROWS, validateImportRows } from "../lib/partnerImport";
+import { sendPartnerDigest } from "../lib/partnerDigest";
 
 const router: IRouter = Router();
 router.use("/admin/partner-contacts", adminAuth);
@@ -123,6 +124,16 @@ router.get("/admin/partner-contacts/summary", async (req, res) => {
   } catch (err) {
     req.log?.error?.({ err }, "Failed to load partner summary");
     res.status(500).json({ error: "Failed to load partner summary" });
+  }
+});
+
+// Sends the daily summary right now (the scheduler does it once a morning).
+router.post("/admin/partner-contacts/digest", async (req, res) => {
+  try {
+    res.json(await sendPartnerDigest());
+  } catch (err) {
+    req.log?.error?.({ err }, "Failed to send partner digest");
+    res.status(500).json({ error: "Failed to send the summary" });
   }
 });
 

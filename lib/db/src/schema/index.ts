@@ -375,6 +375,12 @@ export const partnerContactsTable = pgTable(
   ],
 );
 
+export const appStateTable = pgTable("app_state", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const partnerMessagesTable = pgTable(
   "partner_messages",
   {

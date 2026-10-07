@@ -932,6 +932,12 @@ export interface PartnerSummary {
   unmatchedReplies: number;
 }
 
+export async function sendPartnerDigestNow(): Promise<{ sent: boolean; reason?: string }> {
+  const res = await fetch(`${API_BASE}/admin/partner-contacts/digest`, { method: "POST", headers: authHeaders() });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "Failed to send the summary");
+  return res.json();
+}
+
 export interface PartnerImportResult {
   received: number;
   valid: number;

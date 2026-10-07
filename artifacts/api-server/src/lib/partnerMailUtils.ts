@@ -137,6 +137,32 @@ export function cleanAssistantResult(
   };
 }
 
+// Calendar date and hour in the company's timezone, regardless of where the
+// server runs (Render is UTC).
+export function parisClock(now: Date): { date: string; hour: number } {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Paris",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(now);
+  const part = (type: string) => parts.find((entry) => entry.type === type)?.value ?? "";
+  return { date: `${part("year")}-${part("month")}-${part("day")}`, hour: Number(part("hour")) };
+}
+
+export function digestHourFromEnv(raw: string | undefined): number {
+  const hour = Number(raw);
+  return raw !== undefined && raw.trim() !== "" && Number.isInteger(hour) && hour >= 0 && hour <= 23 ? hour : 8;
+}
+
+// True once per Paris calendar day, from the configured hour onwards.
+export function shouldSendDigest(now: Date, lastSentDate: string | null, digestHour: number): boolean {
+  const clock = parisClock(now);
+  return clock.hour >= digestHour && clock.date !== lastSentDate;
+}
+
 export function addDays(from: Date, days: number): Date {
   return new Date(from.getTime() + days * 24 * 60 * 60 * 1000);
 }

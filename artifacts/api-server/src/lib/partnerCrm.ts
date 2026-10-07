@@ -204,14 +204,14 @@ async function notificationRecipient(): Promise<string | null> {
 }
 
 // Best effort: a failed notification must never fail the webhook that triggered it.
-export async function notifyAdmin(subject: string, text: string) {
+export async function notifyAdmin(subject: string, text: string): Promise<boolean> {
   try {
     const key = process.env.RESEND_API_KEY;
     const from = process.env.REVIEW_EMAIL_FROM || process.env.PROPOSAL_EMAIL_FROM;
     const to = await notificationRecipient();
     if (!key || !from || !to) {
       logger.warn("Partner notification skipped: RESEND_API_KEY, sender or recipient is not configured");
-      return;
+      return false;
     }
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -219,8 +219,11 @@ export async function notifyAdmin(subject: string, text: string) {
       body: JSON.stringify({ from, to: [to], subject, text }),
       signal: AbortSignal.timeout(15_000),
     });
-    if (!response.ok) logger.error({ status: response.status }, "Partner notification rejected by Resend");
+    if (response.ok) return true;
+    logger.error({ status: response.status }, "Partner notification rejected by Resend");
+    return false;
   } catch (err) {
     logger.error({ err }, "Partner notification failed");
+    return false;
   }
 }
