@@ -71,6 +71,12 @@ const pages = [
     heading: "News from Trans Yacht Group",
   },
   {
+    path: "/answers",
+    title: "Luxury Travel Answers | Trans Yacht Group",
+    description: "Direct answers about luxury car rental, VIP transfers, yacht charter, Monaco, the French Riviera and Courchevel.",
+    heading: "Luxury Travel Answers",
+  },
+  {
     path: "/privacy",
     title: "Privacy Policy | Trans Yacht Group",
     description: "Read the Trans Yacht Group privacy policy and learn how personal information is handled.",
@@ -165,10 +171,10 @@ function sitemapEntry(page) {
   const loc = cleanUrl(page.path);
   const priority = page.path === "/" ? "1.0"
     : page.path === "/cars" || page.path === "/yachts" ? "0.9"
-      : page.path.startsWith("/services/") || page.path.startsWith("/locations/") || page.path === "/guides" || page.path === "/news" ? "0.8"
+      : page.path.startsWith("/services/") || page.path.startsWith("/locations/") || page.path === "/guides" || page.path === "/news" || page.path === "/answers" ? "0.8"
         : "0.4";
   const changefreq = page.path === "/cars" || page.path === "/yachts" ? "daily"
-    : page.path === "/guides" || page.path === "/news" || page.path.startsWith("/services/") ? "weekly"
+    : page.path === "/guides" || page.path === "/news" || page.path === "/answers" || page.path.startsWith("/services/") ? "weekly"
       : page.path.startsWith("/locations/") ? "monthly"
         : "yearly";
   const alternates = languages

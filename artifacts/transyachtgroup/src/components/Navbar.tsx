@@ -40,6 +40,7 @@ export function Navbar() {
     { name: t("about_us"), href: "/about" },
     { name: "Guides", href: "/guides/" },
     { name: "News", href: "/news/" },
+    { name: "Answers", href: "/answers/" },
     { name: t("contact"), href: "/#request", hash: "request" },
   ];
 

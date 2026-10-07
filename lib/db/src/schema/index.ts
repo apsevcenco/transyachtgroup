@@ -135,6 +135,32 @@ export const newsTable = pgTable(
   ],
 );
 
+export const answersTable = pgTable(
+  "answers",
+  {
+    id: serial("id").primaryKey(),
+    slug: varchar("slug", { length: 160 }).notNull().unique(),
+    question: text("question").notNull(),
+    directAnswer: text("direct_answer").notNull(),
+    explanation: text("explanation").notNull(),
+    faq: jsonb("faq").notNull().default([]),
+    metaTitle: text("meta_title"),
+    metaDescription: text("meta_description"),
+    primaryKeyword: text("primary_keyword"),
+    audience: text("audience"),
+    relatedServicePath: text("related_service_path"),
+    language: varchar("language", { length: 10 }).notNull().default("en"),
+    published: boolean("published").notNull().default(false),
+    publishedAt: timestamp("published_at"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("answers_published_at_idx").on(table.published, table.publishedAt),
+    index("answers_keyword_idx").on(table.primaryKeyword),
+  ],
+);
+
 export const businessLettersTable = pgTable(
   "business_letters",
   {
@@ -614,3 +640,11 @@ export const insertNewsSchema = createInsertSchema(newsTable).omit({
 });
 export type InsertNews = z.infer<typeof insertNewsSchema>;
 export type News = typeof newsTable.$inferSelect;
+
+export const insertAnswerSchema = createInsertSchema(answersTable).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertAnswer = z.infer<typeof insertAnswerSchema>;
+export type Answer = typeof answersTable.$inferSelect;

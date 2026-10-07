@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { guidesTable, newsTable, vehiclesTable } from "@workspace/db/schema";
+import { answersTable, guidesTable, newsTable, vehiclesTable } from "@workspace/db/schema";
 import { and, asc, desc, eq, isNotNull, lte, ne, or } from "drizzle-orm";
 import { vehiclePath } from "../lib/vehicleSeo";
 
@@ -157,6 +157,36 @@ ${entries.join("\n")}
   } catch (err) {
     req.log?.error?.({ err }, "News sitemap generation failed");
     res.status(500).type("text/plain").send("Unable to generate sitemap");
+  }
+});
+
+router.get("/answers-sitemap.xml", async (req, res) => {
+  try {
+    const answers = await db.select({
+      slug: answersTable.slug,
+      question: answersTable.question,
+      updatedAt: answersTable.updatedAt,
+    }).from(answersTable)
+      .where(eq(answersTable.published, true))
+      .orderBy(desc(answersTable.publishedAt));
+
+    const urls = answers.map((answer) => {
+      const lastmod = answer.updatedAt ? new Date(answer.updatedAt).toISOString() : new Date().toISOString();
+      return `  <url>
+    <loc>${SITE_URL}/answers/${escapeXml(answer.slug)}/</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>`;
+    }).join("\n");
+
+    res.type("application/xml").send(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls}
+</urlset>`);
+  } catch (err) {
+    req.log?.error?.({ err }, "Failed to build answers sitemap");
+    res.status(500).type("application/xml").send("<?xml version=\"1.0\" encoding=\"UTF-8\"?><error>Failed to build sitemap</error>");
   }
 });
 

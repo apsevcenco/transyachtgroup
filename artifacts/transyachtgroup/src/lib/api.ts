@@ -63,6 +63,31 @@ export type NewsInput = Pick<News, "slug" | "title" | "excerpt" | "content" | "c
 
 export type GeneratedNewsDraft = Omit<NewsInput, "coverImage" | "gallery" | "published" | "scheduledAt" | "brief" | "primaryKeyword">;
 
+export type AnswerFaq = { question: string; answer: string };
+
+export type Answer = {
+  id: number;
+  slug: string;
+  question: string;
+  directAnswer: string;
+  explanation: string;
+  faq: AnswerFaq[];
+  metaTitle: string | null;
+  metaDescription: string | null;
+  primaryKeyword: string | null;
+  audience: string | null;
+  relatedServicePath: string | null;
+  language: string;
+  published: boolean;
+  publishedAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type AnswerInput = Pick<Answer, "slug" | "question" | "directAnswer" | "explanation" | "faq" | "metaTitle" | "metaDescription" | "primaryKeyword" | "audience" | "relatedServicePath" | "language" | "published">;
+
+export type GeneratedAnswerDraft = Omit<AnswerInput, "published" | "language">;
+
 function getToken(): string | null {
   return localStorage.getItem("admin_token");
 }
@@ -242,6 +267,51 @@ export async function updateNews(id: number, data: NewsInput): Promise<News> {
 export async function deleteNews(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/admin/news/${id}`, { method: "DELETE", headers: authHeaders() });
   if (!res.ok) throw new Error("Failed to delete news");
+}
+
+export async function fetchAnswers(): Promise<Answer[]> {
+  const res = await fetch(`${API_BASE}/answers`);
+  if (!res.ok) throw new Error("Failed to fetch answers");
+  return res.json();
+}
+
+export async function fetchAnswer(slug: string): Promise<Answer> {
+  const res = await fetch(`${API_BASE}/answers/${encodeURIComponent(slug)}`);
+  if (!res.ok) throw new Error(res.status === 404 ? "Answer not found" : "Failed to fetch answer");
+  return res.json();
+}
+
+export async function fetchAdminAnswers(): Promise<Answer[]> {
+  const res = await fetch(`${API_BASE}/admin/answers`, { headers: authHeaders() });
+  if (!res.ok) throw new Error("Failed to fetch answers");
+  return res.json();
+}
+
+export async function generateAnswerWithAi(input: { topic: string; keyword?: string; audience?: string; relatedServicePath?: string }): Promise<GeneratedAnswerDraft> {
+  const res = await fetch(`${API_BASE}/admin/answers/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "AI answer generation failed");
+  return res.json();
+}
+
+export async function createAnswer(data: AnswerInput): Promise<Answer> {
+  const res = await fetch(`${API_BASE}/admin/answers`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(data) });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "Failed to create answer");
+  return res.json();
+}
+
+export async function updateAnswer(id: number, data: AnswerInput): Promise<Answer> {
+  const res = await fetch(`${API_BASE}/admin/answers/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(data) });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "Failed to update answer");
+  return res.json();
+}
+
+export async function deleteAnswer(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/admin/answers/${id}`, { method: "DELETE", headers: authHeaders() });
+  if (!res.ok) throw new Error("Failed to delete answer");
 }
 
 export async function fetchAdminGuides(): Promise<Guide[]> {
