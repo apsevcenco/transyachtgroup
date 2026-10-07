@@ -968,6 +968,7 @@ router.post("/admin/proposals/business-letters/:id/send", adminAuth, async (req,
 
     const failedRecipients: string[] = [];
     const sentRecipients: string[] = [];
+    let firstFailure: string | null = null;
     for (const recipient of recipients) {
       const contacts = contactsByEmail.get(normalizeEmail(recipient)) ?? [];
       let providerMessageId: string | null = null;
@@ -985,6 +986,7 @@ router.post("/admin/proposals/business-letters/:id/send", adminAuth, async (req,
         logger.error({ err, recipient }, "business letter recipient send error");
         failedRecipients.push(recipient);
         sendFailure = err instanceof Error ? err.message : "Send failed";
+        firstFailure ??= sendFailure;
       }
 
       // The email is already out (or has definitively failed) at this point;
@@ -1005,7 +1007,9 @@ router.post("/admin/proposals/business-letters/:id/send", adminAuth, async (req,
     }
 
     if (failedRecipients.length === recipients.length) {
-      throw new Error("Email provider rejected all recipient messages");
+      // Surface the provider's own reason (domain not verified, bad API key,
+      // invalid reply-to, ...) instead of a generic message.
+      throw new Error(`Email provider rejected all recipient messages${firstFailure ? ` — ${firstFailure}` : ""}`);
     }
 
     const [updated] = await db
