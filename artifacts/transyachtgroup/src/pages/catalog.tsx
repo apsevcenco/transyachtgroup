@@ -348,9 +348,6 @@ export default function Catalog({ category }: CatalogProps) {
     ar: isYacht ? "المزيد عن تأجير اليخوت" : "المزيد عن تأجير السيارات الفاخرة",
   }[lang];
 
-  const title = isYacht
-    ? siteContent.yacht_section_title || "Ocean Prestige"
-    : siteContent.car_section_title || "Road Sovereign";
   const seoTitle = isYacht
     ? {
         en: "Luxury Yacht Charter on the French Riviera",
@@ -456,13 +453,6 @@ export default function Catalog({ category }: CatalogProps) {
               as="h1"
               html={seoTitle}
               className="section-display-title mx-auto max-w-5xl text-balance font-serif text-white"
-            />
-
-            <CmsContent
-              as="p"
-              html={title}
-              className="mt-5 uppercase tracking-[0.4em] text-white/30 font-light"
-              style={{ fontSize: subtitleSize }}
             />
 
             <div className="flex items-center justify-center gap-3 mb-8">
