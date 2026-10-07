@@ -72,9 +72,13 @@ const CORE_INTERNAL_LINKS: InternalLinkCandidate[] = [
     ["luxury-car-rental-monaco", "Luxury car rental in Monaco"],
     ["luxury-car-rental-nice", "Luxury car rental in Nice"],
     ["luxury-car-rental-saint-tropez", "Luxury car rental in Saint-Tropez"],
+    ["luxury-car-rental-antibes", "Luxury car rental in Antibes"],
     ["courchevel-private-transfers", "Private transfers to Courchevel"],
+    ["private-jet-to-car-transfer-courchevel", "Private jet to car transfer in Courchevel"],
     ["yacht-charter-cannes", "Luxury yacht charter in Cannes"],
     ["yacht-charter-monaco", "Luxury yacht charter in Monaco"],
+    ["yacht-charter-nice", "Luxury yacht charter in Nice"],
+    ["yacht-charter-saint-tropez", "Luxury yacht charter in Saint-Tropez"],
     ["lamborghini-rental-french-riviera", "Lamborghini rental on the French Riviera"],
     ["mercedes-rental-french-riviera", "Mercedes-Benz rental on the French Riviera"],
     ["ferrari-rental-french-riviera", "Ferrari rental on the French Riviera"],
@@ -820,7 +824,7 @@ router.get("/admin/guides/context", adminAuth, async (req, res) => {
     res.json({
       vehicles,
       guides,
-      corePages: ["/cars/", "/yachts/", "/about/", "/locations/cannes/", "/locations/monaco/", "/locations/nice/", "/locations/antibes/", "/locations/saint-tropez/"],
+      corePages: ["/cars/", "/yachts/", "/about/", "/locations/cannes/", "/locations/monaco/", "/locations/nice/", "/locations/antibes/", "/locations/saint-tropez/", "/locations/courchevel/"],
     });
   } catch (err) { req.log?.error?.({ err }, "Guide context failed"); res.status(500).json({ error: "Failed to load SEO context" }); }
 });

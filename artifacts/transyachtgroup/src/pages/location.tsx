@@ -48,8 +48,18 @@ const LOCATION_SERVICES: Partial<Record<LocationKey, { slug: string; label: stri
     { slug: "luxury-car-rental-monaco", label: "Luxury car rental in Monaco" },
     { slug: "yacht-charter-monaco", label: "Luxury yacht charter in Monaco" },
   ],
-  nice: [{ slug: "luxury-car-rental-nice", label: "Luxury car rental in Nice" }],
-  "saint-tropez": [{ slug: "luxury-car-rental-saint-tropez", label: "Luxury car rental in Saint-Tropez" }],
+  nice: [
+    { slug: "luxury-car-rental-nice", label: "Luxury car rental in Nice" },
+    { slug: "yacht-charter-nice", label: "Luxury yacht charter in Nice" },
+  ],
+  antibes: [
+    { slug: "luxury-car-rental-antibes", label: "Luxury car rental in Antibes" },
+    { slug: "yacht-charter-cannes", label: "Luxury yacht charter near Antibes" },
+  ],
+  "saint-tropez": [
+    { slug: "luxury-car-rental-saint-tropez", label: "Luxury car rental in Saint-Tropez" },
+    { slug: "yacht-charter-saint-tropez", label: "Luxury yacht charter in Saint-Tropez" },
+  ],
   courchevel: [
     { slug: "private-jet-to-car-transfer-courchevel", label: "Private jet to car transfer in Courchevel" },
     { slug: "courchevel-private-transfers", label: "Private transfers to Courchevel" },
