@@ -14,12 +14,22 @@ function header(req: Request, name: string): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-async function handleReceived(data: Record<string, unknown>) {
+// The outcome goes back in the webhook response body. Resend shows it on each
+// delivery, which is the only place to see why an event was not turned into a
+// reply when server logs are out of reach. The caller is already authenticated
+// by the signature, so addresses in it are not exposed to anyone else.
+type ReceivedOutcome = { result: "stored" | "duplicate" | "ignored"; reason?: string; detail?: Record<string, unknown> };
+
+async function handleReceived(data: Record<string, unknown>): Promise<ReceivedOutcome> {
   const emailId = typeof data.email_id === "string" ? data.email_id : null;
   const from = extractEmailAddress(data.from);
   if (!emailId || !from) {
     logger.warn({ hasId: Boolean(emailId) }, "Inbound email event without id or sender, ignored");
-    return;
+    return {
+      result: "ignored",
+      reason: "missing email_id or an address in 'from'",
+      detail: { fields: Object.keys(data), from: data.from ?? null, hasEmailId: Boolean(emailId) },
+    };
   }
 
   // When a dedicated reply address is configured, only mail sent to it is a
@@ -27,11 +37,16 @@ async function handleReceived(data: Record<string, unknown>) {
   const replyTo = extractEmailAddress(process.env.PARTNER_REPLY_TO || "");
   if (replyTo) {
     const recipients = (Array.isArray(data.to) ? data.to : []).map((value) => extractEmailAddress(value));
-    if (!recipients.includes(replyTo)) return;
+    if (!recipients.includes(replyTo)) {
+      logger.warn({ replyTo, recipients }, "Inbound email not addressed to PARTNER_REPLY_TO, ignored");
+      return { result: "ignored", reason: "'to' does not include PARTNER_REPLY_TO", detail: { expected: replyTo, received: data.to ?? null } };
+    }
   }
 
   const ourSender = extractEmailAddress(process.env.REVIEW_EMAIL_FROM || process.env.PROPOSAL_EMAIL_FROM || "");
-  if (ourSender && from === ourSender) return;
+  if (ourSender && from === ourSender) {
+    return { result: "ignored", reason: "sent from our own sender address", detail: { from } };
+  }
 
   const subject = typeof data.subject === "string" ? data.subject : null;
   let body =
@@ -44,7 +59,7 @@ async function handleReceived(data: Record<string, unknown>) {
   if (!body) body = await fetchReceivedEmailBody(emailId);
 
   const result = await recordInboundReply({ fromEmail: from, subject, bodyText: body, providerMessageId: emailId });
-  if (!result.inserted) return;
+  if (!result.inserted) return { result: "duplicate", reason: "this email id was already processed" };
 
   const label = result.matched ? result.organization || from : `unknown sender ${from}`;
   await notifyAdmin(
@@ -58,6 +73,7 @@ async function handleReceived(data: Record<string, unknown>) {
       `Open the Partner CRM: ${ADMIN_URL}`,
     ].join("\n"),
   );
+  return { result: "stored", detail: { from, matched: result.matched } };
 }
 
 router.post("/webhooks/resend", async (req, res) => {
@@ -81,9 +97,12 @@ router.post("/webhooks/resend", async (req, res) => {
   const data = event?.data && typeof event.data === "object" ? (event.data as Record<string, unknown>) : {};
 
   try {
-    if (type === "email.received") await handleReceived(data);
-    else await applyDeliveryEvent(type, data);
-    res.json({ ok: true });
+    if (type === "email.received") {
+      res.json({ ok: true, type, ...(await handleReceived(data)) });
+    } else {
+      await applyDeliveryEvent(type, data);
+      res.json({ ok: true, type });
+    }
   } catch (err) {
     // A 5xx makes Resend retry; processing is idempotent (unique provider id).
     logger.error({ err, type }, "Resend webhook processing failed");
