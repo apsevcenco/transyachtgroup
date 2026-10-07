@@ -510,6 +510,34 @@ export function ProposalsDashboard() {
     setError("");
   };
 
+  // Back to a blank letter: detaches from any loaded saved letter (so saving
+  // creates a new one instead of overwriting it) and empties every field.
+  const handleNewBusinessLetter = () => {
+    const hasUnsavedWork =
+      !businessLetterId &&
+      Boolean(businessCopy || businessTopic.trim() || businessNotes.trim() || businessRecipients.trim());
+    if (hasUnsavedWork && !window.confirm("Clear the form? This letter has not been saved.")) return;
+    setBusinessLetterId(null);
+    setBusinessLang("en");
+    setBusinessRecipientType("Concierge service");
+    setBusinessRecipientName("");
+    setBusinessTopic("");
+    setBusinessService("Luxury car rental and VIP transfers");
+    setBusinessNotes("");
+    setBusinessContactName("");
+    setBusinessSignerRole("");
+    setBusinessImageUrl(null);
+    setBusinessCopy(null);
+    setBusinessRecipients("");
+    setBusinessEmailSubject("");
+    setBusinessCoverMessage("");
+    setBusinessSendMode("cover_with_pdf");
+    setSelectedPartnerContactId("");
+    setSelectedPartnerContactIds([]);
+    setBusinessNotice("");
+    setError("");
+  };
+
   const handleDeleteBusinessLetter = async (id: number) => {
     setGenerating(true);
     setError("");
@@ -532,13 +560,14 @@ export function ProposalsDashboard() {
     setError("");
     setBusinessNotice("");
     try {
-      if (!id) {
-        const payload = currentBusinessLetterPayload();
-        if (!payload) return;
-        const saved = await saveBusinessLetter(payload);
-        id = saved.id;
-        setBusinessLetterId(saved.id);
-      }
+      // Always save what is on screen first. The server sends the stored copy,
+      // so for a loaded letter the old text used to go out and any edits made
+      // after loading were silently ignored.
+      const payload = currentBusinessLetterPayload();
+      if (!payload) return;
+      const saved = await saveBusinessLetter(payload);
+      id = saved.id;
+      setBusinessLetterId(saved.id);
       const result = await sendBusinessLetter(id, businessRecipients, {
         subject: businessEmailSubject || businessTopic || businessCopy?.headline,
         coverMessage: businessCoverMessage,
@@ -658,9 +687,22 @@ export function ProposalsDashboard() {
         <div className="grid lg:grid-cols-[1fr_320px] gap-6">
           <div className="space-y-6">
             <div className="border border-white/[0.08] rounded-lg p-5 bg-white/[0.02]">
-              <p className="text-[10px] uppercase tracking-wide text-gold/70 mb-4">
-                AI one-page presentation letter
-              </p>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-[10px] uppercase tracking-wide text-gold/70">
+                  AI one-page presentation letter
+                  <span className="ml-3 text-white/40">
+                    {businessLetterId ? "· editing a saved letter" : "· new letter"}
+                  </span>
+                </p>
+                <button
+                  type="button"
+                  onClick={handleNewBusinessLetter}
+                  disabled={generating}
+                  className="min-h-[36px] rounded-md border border-white/[0.12] px-4 text-[10px] uppercase tracking-wide text-white/60 transition-colors hover:border-gold/30 hover:text-gold disabled:opacity-40"
+                >
+                  New letter · clear all
+                </button>
+              </div>
               <div className="grid md:grid-cols-2 gap-4">
                 <label className="text-[10px] uppercase tracking-wide text-white/40">
                   Recipient type
@@ -1010,9 +1052,19 @@ export function ProposalsDashboard() {
               Send letter
             </button>
             <div className="mt-6 pt-5 border-t border-white/[0.08]">
-              <p className="text-[10px] uppercase tracking-wide text-white/40 mb-3">
-                Saved letters
-              </p>
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <p className="text-[10px] uppercase tracking-wide text-white/40">
+                  Saved letters
+                </p>
+                <button
+                  type="button"
+                  onClick={handleNewBusinessLetter}
+                  disabled={generating}
+                  className="text-[10px] uppercase tracking-wide text-gold/80 hover:text-gold disabled:opacity-40"
+                >
+                  + New letter
+                </button>
+              </div>
               {businessLetters.length ? (
                 <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                   {businessLetters.map((letter) => (
