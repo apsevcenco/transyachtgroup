@@ -52,6 +52,7 @@ const AUTO_FIXABLE_SEO_ISSUES = new Set([
   "headings",
   "internal_links",
   "faq",
+  "cannibalization",
 ]);
 
 type InternalLinkCandidate = {
@@ -377,6 +378,7 @@ function seoFixInstructions(issues: SeoAuditIssue[], primaryKeyword: string): st
   if (codes.has("headings")) lines.push("headings: add at least three useful h2 sections that match the article intent.");
   if (codes.has("internal_links")) lines.push("internal_links: add at least three distinct approved internal links using visible, meaningful anchor text.");
   if (codes.has("faq")) lines.push("faq: add a concise FAQ section with clear questions and answers.");
+  if (codes.has("cannibalization")) lines.push("cannibalization: change the article angle, title, opening, section structure and FAQ so it serves a more specific search intent than the competing article while preserving the primary keyword and target page.");
   return lines.join("\n");
 }
 
@@ -909,6 +911,7 @@ TARGET PAGE=${JSON.stringify(data.targetPage || "")}
 CONTENT CLUSTER=${JSON.stringify(data.contentCluster || "")}
 VERIFIED NOTES=${JSON.stringify(verifiedNotes)}
 APPROVED INTERNAL LINKS=${JSON.stringify(linkCandidates)}
+POSSIBLE COMPETING PAGES=${JSON.stringify(best.audit.cannibalization)}
 CURRENT ARTICLE=${JSON.stringify(checkedSource)}`));
       checkedSource = polishSeoCopy(source, data.primaryKeyword || "", linkCandidates);
       const interimAudit = await auditInput(
