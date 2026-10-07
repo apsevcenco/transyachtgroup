@@ -547,10 +547,16 @@ export function ProposalsDashboard() {
       });
       const sentCount = result.sentCount ?? 1;
       const failedCount = result.failedRecipients?.length || 0;
+      const skippedCount = result.skippedRecipients?.length || 0;
       setBusinessNotice(
-        failedCount
-          ? `Sent ${sentCount} individual letters. Failed: ${failedCount}.`
-          : `Sent ${sentCount} individual letter${sentCount === 1 ? "" : "s"}.`,
+        [
+          failedCount
+            ? `Sent ${sentCount} individual letters. Failed: ${failedCount}.`
+            : `Sent ${sentCount} individual letter${sentCount === 1 ? "" : "s"}.`,
+          skippedCount ? `Skipped ${skippedCount} marked do_not_contact: ${result.skippedRecipients?.join(", ")}.` : "",
+        ]
+          .filter(Boolean)
+          .join(" "),
       );
       loadBusinessLetters();
     } catch (err: any) {

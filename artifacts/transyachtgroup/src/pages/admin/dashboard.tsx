@@ -21,6 +21,7 @@ import {
   translateText,
   fetchAnalyticsStats,
   fetchAgents,
+  fetchPartnerSummary,
   type Agent,
   uploadAdminPublicImage,
   deleteAdminPublicImage,
@@ -393,6 +394,8 @@ export default function AdminDashboard() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [requests, setRequests] = useState<ContactRequest[]>([]);
+  // Partner CRM items that need attention (due follow-ups + unread replies).
+  const [partnerAlerts, setPartnerAlerts] = useState(0);
   // Set by CarBookingCalendar's "Generate Contract" button — switches to the
   // Contracts tab and hands the booking's data to ContractGenerator as a
   // starting point, rather than a blank form.
@@ -496,6 +499,9 @@ export default function AdminDashboard() {
       }
       setLoading(false);
       void loadData();
+      fetchPartnerSummary()
+        .then((summary) => setPartnerAlerts(summary.dueFollowUps + summary.unreadReplies + summary.unmatchedReplies))
+        .catch(() => {});
     });
   }, [loadData, setLocation]);
 
@@ -700,7 +706,7 @@ export default function AdminDashboard() {
     </>
   );
 
-  const MOBILE_MENU_ITEMS: { label: string; icon: string; go: () => void }[] = [
+  const MOBILE_MENU_ITEMS: { label: string; icon: string; go: () => void; badge?: number }[] = [
     {
       label: "Vehicles (Cars & Yachts)",
       icon: "🚗",
@@ -717,7 +723,7 @@ export default function AdminDashboard() {
       go: () => setLocation("/admin/bookings/yachts"),
     },
     { label: "CRM", icon: "💼", go: () => setLocation("/admin/crm") },
-    { label: "Partner CRM", icon: "🏨", go: () => setLocation("/admin/partners") },
+    { label: "Partner CRM", icon: "🏨", go: () => setLocation("/admin/partners"), badge: partnerAlerts },
     { label: "Agents", icon: "🤝", go: () => setLocation("/admin/agents") },
     {
       label: "Proposals",
@@ -861,6 +867,9 @@ export default function AdminDashboard() {
                   <span className="flex-1 text-white text-sm font-light uppercase tracking-[0.1em]">
                     {item.label}
                   </span>
+                  {item.badge ? (
+                    <span className="rounded-full bg-gold px-2 py-0.5 text-[10px] font-medium text-black">{item.badge}</span>
+                  ) : null}
                   <ChevronRight size={20} className="text-white/30 shrink-0" />
                 </button>
               ))}
@@ -942,6 +951,9 @@ export default function AdminDashboard() {
               >
                 <span className="w-6 text-center text-base">🏨</span>
                 <span className="text-[11px] uppercase tracking-[0.12em]">Partner CRM</span>
+                {partnerAlerts > 0 && (
+                  <span className="ml-auto rounded-full bg-gold px-2 py-0.5 text-[10px] font-medium text-black">{partnerAlerts}</span>
+                )}
               </button>
               <button
                 onClick={() => setLocation("/admin/guides")}

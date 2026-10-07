@@ -902,19 +902,71 @@ export interface PartnerContact {
   status: string;
   lastContactedAt?: string | null;
   nextFollowUpAt?: string | null;
+  lastReplyAt?: string | null;
+  unreadCount?: number;
   tags: string[];
   createdAt?: string | null;
   updatedAt?: string | null;
 }
 
-export type PartnerContactInput = Omit<PartnerContact, "id" | "createdAt" | "updatedAt">;
+export type PartnerContactInput = Omit<PartnerContact, "id" | "createdAt" | "updatedAt" | "lastReplyAt" | "unreadCount">;
 
-export async function fetchPartnerContacts(params?: { q?: string; city?: string; category?: string; status?: string; limit?: number }): Promise<PartnerContact[]> {
+export interface PartnerMessage {
+  id: number;
+  partnerContactId: number | null;
+  businessLetterId: number | null;
+  direction: "outbound" | "inbound";
+  email: string;
+  subject: string | null;
+  bodyText: string | null;
+  status: string;
+  error: string | null;
+  hasAttachment: boolean;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface PartnerSummary {
+  dueFollowUps: number;
+  unreadReplies: number;
+  unmatchedReplies: number;
+}
+
+export async function fetchPartnerSummary(): Promise<PartnerSummary> {
+  const res = await fetch(`${API_BASE}/admin/partner-contacts/summary`, { headers: authHeaders() });
+  if (!res.ok) throw new Error("Failed to fetch partner summary");
+  return res.json();
+}
+
+export async function fetchPartnerMessages(contactId: number): Promise<PartnerMessage[]> {
+  const res = await fetch(`${API_BASE}/admin/partner-contacts/${contactId}/messages`, { headers: authHeaders() });
+  if (!res.ok) throw new Error("Failed to fetch message history");
+  return res.json();
+}
+
+export async function markPartnerMessagesRead(contactId: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/admin/partner-contacts/${contactId}/messages/read`, { method: "POST", headers: authHeaders() });
+  if (!res.ok) throw new Error("Failed to mark messages read");
+}
+
+export async function fetchUnmatchedPartnerMessages(): Promise<PartnerMessage[]> {
+  const res = await fetch(`${API_BASE}/admin/partner-messages/unmatched`, { headers: authHeaders() });
+  if (!res.ok) throw new Error("Failed to fetch unmatched replies");
+  return res.json();
+}
+
+export async function markPartnerMessageRead(messageId: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/admin/partner-messages/${messageId}/read`, { method: "POST", headers: authHeaders() });
+  if (!res.ok) throw new Error("Failed to mark message read");
+}
+
+export async function fetchPartnerContacts(params?: { q?: string; city?: string; category?: string; status?: string; view?: "due" | "unread"; limit?: number }): Promise<PartnerContact[]> {
   const qs = new URLSearchParams();
   if (params?.q) qs.set("q", params.q);
   if (params?.city) qs.set("city", params.city);
   if (params?.category) qs.set("category", params.category);
   if (params?.status) qs.set("status", params.status);
+  if (params?.view) qs.set("view", params.view);
   if (params?.limit) qs.set("limit", String(params.limit));
   const res = await fetch(`${API_BASE}/admin/partner-contacts?${qs}`, { headers: authHeaders() });
   if (!res.ok) throw new Error("Failed to fetch partner contacts");
@@ -1394,7 +1446,7 @@ export async function sendBusinessLetter(
   id: number,
   recipients: string,
   options?: { subject?: string; coverMessage?: string; attachPdf?: boolean; sendMode?: "body_only" | "cover_with_pdf" },
-): Promise<BusinessLetterRecord & { sentCount?: number; failedRecipients?: string[] }> {
+): Promise<BusinessLetterRecord & { sentCount?: number; failedRecipients?: string[]; skippedRecipients?: string[] }> {
   const res = await fetch(`${API_BASE}/admin/proposals/business-letters/${id}/send`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },

@@ -23,6 +23,8 @@ import { renderPdf } from "../documents/pdf/generatePdf";
 import { validateImageUrls } from "../documents/core/util";
 import { adminAuth } from "../middleware/auth";
 import { logger } from "../lib/logger";
+import { findContactsByEmails, recordOutboundSend } from "../lib/partnerCrm";
+import { BLOCKED_STATUSES, normalizeEmail } from "../lib/partnerMailUtils";
 
 const router: IRouter = Router();
 
@@ -197,7 +199,7 @@ async function sendBusinessLetterEmail(input: {
   copy: BusinessLetterCopy;
   coverMessage?: string;
   attachment?: { filename: string; content: string };
-}) {
+}): Promise<string | null> {
   const key = process.env.RESEND_API_KEY;
   const from = process.env.REVIEW_EMAIL_FROM || process.env.PROPOSAL_EMAIL_FROM;
   if (!key || !from) throw new Error("Email delivery is not configured (RESEND_API_KEY / REVIEW_EMAIL_FROM)");
@@ -221,6 +223,9 @@ async function sendBusinessLetterEmail(input: {
     body: JSON.stringify({
       from,
       to: input.to,
+      // Replies go to the address wired to the Resend inbound webhook, so
+      // they land in the Partner CRM instead of an unwatched mailbox.
+      reply_to: process.env.PARTNER_REPLY_TO || undefined,
       subject: input.subject,
       text: bodyText,
       html: input.coverMessage?.trim()
@@ -231,7 +236,12 @@ async function sendBusinessLetterEmail(input: {
     }),
     signal: AbortSignal.timeout(15_000),
   });
-  if (!response.ok) throw new Error(`Email provider rejected request (${response.status})`);
+  if (!response.ok) {
+    const detail = (await response.text().catch(() => "")).slice(0, 200);
+    throw new Error(`Email provider rejected request (${response.status})${detail ? `: ${detail}` : ""}`);
+  }
+  const data = (await response.json().catch(() => null)) as { id?: unknown } | null;
+  return typeof data?.id === "string" ? data.id : null;
 }
 
 function renderBusinessLetterHtml(input: {
@@ -894,9 +904,25 @@ router.post("/admin/proposals/business-letters/:id/send", adminAuth, async (req,
     const value = req.body && typeof req.body === "object" ? req.body as Record<string, unknown> : {};
     const text = (key: string, max: number) => typeof value[key] === "string" ? value[key].trim().slice(0, max) : "";
     const rawRecipients = typeof value.recipients === "string" ? value.recipients : "";
-    const recipients = Array.from(new Set(rawRecipients.split(/[\s,;]+/).map((v) => v.trim()).filter(validEmail))).slice(0, 50);
-    if (recipients.length === 0) {
+    const requestedRecipients = Array.from(new Set(rawRecipients.split(/[\s,;]+/).map((v) => v.trim()).filter(validEmail))).slice(0, 50);
+    if (requestedRecipients.length === 0) {
       res.status(400).json({ error: "Add at least one valid email address" });
+      return;
+    }
+
+    // Partners who asked not to be contacted (or whose address bounced / who
+    // reported spam) are never emailed, whatever the admin typed or selected.
+    const contactsByEmail = await findContactsByEmails(requestedRecipients);
+    const skippedRecipients: string[] = [];
+    const recipients = requestedRecipients.filter((email) => {
+      const blocked = (contactsByEmail.get(normalizeEmail(email)) ?? []).some((contact) =>
+        (BLOCKED_STATUSES as readonly string[]).includes(contact.status),
+      );
+      if (blocked) skippedRecipients.push(email);
+      return !blocked;
+    });
+    if (recipients.length === 0) {
+      res.status(400).json({ error: "All selected recipients are marked do_not_contact", skippedRecipients });
       return;
     }
     const [letter] = await db.select().from(businessLettersTable).where(eq(businessLettersTable.id, id)).limit(1);
@@ -941,18 +967,40 @@ router.post("/admin/proposals/business-letters/:id/send", adminAuth, async (req,
     }
 
     const failedRecipients: string[] = [];
+    const sentRecipients: string[] = [];
     for (const recipient of recipients) {
+      const contacts = contactsByEmail.get(normalizeEmail(recipient)) ?? [];
+      let providerMessageId: string | null = null;
+      let sendFailure: string | null = null;
       try {
-        await sendBusinessLetterEmail({
+        providerMessageId = await sendBusinessLetterEmail({
           to: [recipient],
           subject,
           copy,
           coverMessage: coverMessage || undefined,
           attachment,
         });
+        sentRecipients.push(recipient);
       } catch (err) {
         logger.error({ err, recipient }, "business letter recipient send error");
         failedRecipients.push(recipient);
+        sendFailure = err instanceof Error ? err.message : "Send failed";
+      }
+
+      // The email is already out (or has definitively failed) at this point;
+      // a problem writing the history must not turn that into an API error.
+      try {
+        await recordOutboundSend({
+          contacts,
+          email: recipient,
+          letterId: id,
+          subject,
+          providerMessageId,
+          hasAttachment: Boolean(attachment),
+          error: sendFailure,
+        });
+      } catch (err) {
+        logger.error({ err, recipient }, "partner message history write failed");
       }
     }
 
@@ -963,7 +1011,7 @@ router.post("/admin/proposals/business-letters/:id/send", adminAuth, async (req,
     const [updated] = await db
       .update(businessLettersTable)
       .set({
-        lastSentTo: recipients.join(", "),
+        lastSentTo: sentRecipients.join(", "),
         lastSentAt: new Date(),
         sendError: failedRecipients.length
           ? `Failed for ${failedRecipients.length}/${recipients.length}: ${failedRecipients.join(", ")}`
@@ -972,7 +1020,7 @@ router.post("/admin/proposals/business-letters/:id/send", adminAuth, async (req,
       })
       .where(eq(businessLettersTable.id, id))
       .returning();
-    res.json({ ...updated, sentCount: recipients.length - failedRecipients.length, failedRecipients });
+    res.json({ ...updated, sentCount: sentRecipients.length, failedRecipients, skippedRecipients });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     logger.error({ err: msg }, "business letter send error");

@@ -1,12 +1,14 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq, ilike, or, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, getTableColumns, ilike, isNotNull, isNull, lte, notInArray, or, sql, type SQL } from "drizzle-orm";
 
 import { db } from "@workspace/db";
-import { insertPartnerContactSchema, partnerContactsTable } from "@workspace/db/schema";
+import { insertPartnerContactSchema, partnerContactsTable, partnerMessagesTable } from "@workspace/db/schema";
 import { adminAuth } from "../middleware/auth";
+import { CLOSED_STATUSES, isPartnerStatus } from "../lib/partnerMailUtils";
 
 const router: IRouter = Router();
 router.use("/admin/partner-contacts", adminAuth);
+router.use("/admin/partner-messages", adminAuth);
 
 function clean(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -19,17 +21,64 @@ function parseId(value: string) {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
+// The admin UI sends dates as ISO strings; the insert schema expects Date.
+function normalizeBody(body: unknown): Record<string, unknown> {
+  const value: Record<string, unknown> = body && typeof body === "object" ? { ...(body as Record<string, unknown>) } : {};
+  for (const key of ["lastContactedAt", "nextFollowUpAt"]) {
+    if (!(key in value)) continue;
+    const raw = value[key];
+    if (raw === null || raw === "") {
+      value[key] = null;
+    } else if (typeof raw === "string") {
+      const date = new Date(raw);
+      if (Number.isNaN(date.getTime())) throw new Error("INVALID_DATE");
+      value[key] = date;
+    }
+  }
+  return value;
+}
+
+const dueClause = () =>
+  and(
+    isNotNull(partnerContactsTable.nextFollowUpAt),
+    lte(partnerContactsTable.nextFollowUpAt, new Date()),
+    notInArray(partnerContactsTable.status, [...CLOSED_STATUSES]),
+  );
+
+// Written out by hand on purpose: in a single-table SELECT list drizzle renders
+// `${column}` unqualified ("id"), which inside these subqueries would silently
+// bind to partner_messages.id instead of the outer partner_contacts row.
+const contactId = sql.raw('"partner_contacts"."id"');
+
+const unreadReplySql = sql`exists (
+  select 1 from partner_messages m
+  where m.partner_contact_id = ${contactId}
+    and m.direction = 'inbound' and m.read_at is null
+)`;
+
+const unreadCountSql = sql<number>`(
+  select count(*)::int from partner_messages m
+  where m.partner_contact_id = ${contactId}
+    and m.direction = 'inbound' and m.read_at is null
+)`;
+
 router.get("/admin/partner-contacts", async (req, res) => {
   try {
     const q = clean(req.query.q);
     const city = clean(req.query.city);
     const category = clean(req.query.category);
     const status = clean(req.query.status);
+    const view = clean(req.query.view);
     const limit = Math.min(Math.max(Number(req.query.limit) || 500, 1), 2_000);
     const clauses: SQL[] = [];
     if (city) clauses.push(eq(partnerContactsTable.city, city));
     if (category) clauses.push(eq(partnerContactsTable.category, category));
     if (status) clauses.push(eq(partnerContactsTable.status, status));
+    if (view === "due") {
+      const due = dueClause();
+      if (due) clauses.push(due);
+    }
+    if (view === "unread") clauses.push(unreadReplySql);
     if (q) {
       const searchClause = or(
         ilike(partnerContactsTable.organization, `%${q}%`),
@@ -39,10 +88,17 @@ router.get("/admin/partner-contacts", async (req, res) => {
       );
       if (searchClause) clauses.push(searchClause);
     }
-    const where = clauses.length ? and(...clauses) : undefined;
-    const contacts = where
-      ? await db.select().from(partnerContactsTable).where(where).orderBy(desc(partnerContactsTable.updatedAt)).limit(limit)
-      : await db.select().from(partnerContactsTable).orderBy(desc(partnerContactsTable.updatedAt)).limit(limit);
+
+    const order =
+      view === "due"
+        ? asc(partnerContactsTable.nextFollowUpAt)
+        : view === "unread"
+          ? sql`${partnerContactsTable.lastReplyAt} desc nulls last`
+          : desc(partnerContactsTable.updatedAt);
+    const query = db
+      .select({ ...getTableColumns(partnerContactsTable), unreadCount: unreadCountSql })
+      .from(partnerContactsTable);
+    const contacts = await (clauses.length ? query.where(and(...clauses)) : query).orderBy(order).limit(limit);
     res.json(contacts);
   } catch (err) {
     req.log?.error?.({ err }, "Failed to fetch partner contacts");
@@ -50,13 +106,35 @@ router.get("/admin/partner-contacts", async (req, res) => {
   }
 });
 
+// Counters for the admin badges: follow-ups that are due and replies nobody has read yet.
+router.get("/admin/partner-contacts/summary", async (req, res) => {
+  try {
+    const [due] = await db.select({ n: count() }).from(partnerContactsTable).where(dueClause());
+    const [unread] = await db
+      .select({ n: count() })
+      .from(partnerMessagesTable)
+      .where(and(eq(partnerMessagesTable.direction, "inbound"), isNull(partnerMessagesTable.readAt), isNotNull(partnerMessagesTable.partnerContactId)));
+    const [unmatched] = await db
+      .select({ n: count() })
+      .from(partnerMessagesTable)
+      .where(and(eq(partnerMessagesTable.direction, "inbound"), isNull(partnerMessagesTable.readAt), isNull(partnerMessagesTable.partnerContactId)));
+    res.json({ dueFollowUps: due?.n ?? 0, unreadReplies: unread?.n ?? 0, unmatchedReplies: unmatched?.n ?? 0 });
+  } catch (err) {
+    req.log?.error?.({ err }, "Failed to load partner summary");
+    res.status(500).json({ error: "Failed to load partner summary" });
+  }
+});
+
 router.post("/admin/partner-contacts", async (req, res) => {
   try {
-    const parsed = insertPartnerContactSchema.safeParse(req.body);
+    const body = normalizeBody(req.body);
+    if ("status" in body && !isPartnerStatus(body.status)) return void res.status(400).json({ error: "Invalid status" });
+    const parsed = insertPartnerContactSchema.safeParse(body);
     if (!parsed.success) return void res.status(400).json({ error: "Invalid partner contact", details: parsed.error.issues });
     const [contact] = await db.insert(partnerContactsTable).values(parsed.data).returning();
     res.status(201).json(contact);
   } catch (err) {
+    if (err instanceof Error && err.message === "INVALID_DATE") return void res.status(400).json({ error: "Invalid date" });
     req.log?.error?.({ err }, "Failed to create partner contact");
     res.status(500).json({ error: "Failed to create partner contact" });
   }
@@ -66,12 +144,15 @@ router.put("/admin/partner-contacts/:id", async (req, res) => {
   try {
     const id = parseId(req.params.id);
     if (!id) return void res.status(400).json({ error: "Invalid id" });
-    const parsed = insertPartnerContactSchema.partial().safeParse(req.body);
+    const body = normalizeBody(req.body);
+    if ("status" in body && !isPartnerStatus(body.status)) return void res.status(400).json({ error: "Invalid status" });
+    const parsed = insertPartnerContactSchema.partial().safeParse(body);
     if (!parsed.success) return void res.status(400).json({ error: "Invalid partner contact", details: parsed.error.issues });
     const [contact] = await db.update(partnerContactsTable).set({ ...parsed.data, updatedAt: new Date() }).where(eq(partnerContactsTable.id, id)).returning();
     if (!contact) return void res.status(404).json({ error: "Partner contact not found" });
     res.json(contact);
   } catch (err) {
+    if (err instanceof Error && err.message === "INVALID_DATE") return void res.status(400).json({ error: "Invalid date" });
     req.log?.error?.({ err }, "Failed to update partner contact");
     res.status(500).json({ error: "Failed to update partner contact" });
   }
@@ -86,6 +167,67 @@ router.delete("/admin/partner-contacts/:id", async (req, res) => {
   } catch (err) {
     req.log?.error?.({ err }, "Failed to delete partner contact");
     res.status(500).json({ error: "Failed to delete partner contact" });
+  }
+});
+
+router.get("/admin/partner-contacts/:id/messages", async (req, res) => {
+  try {
+    const id = parseId(req.params.id);
+    if (!id) return void res.status(400).json({ error: "Invalid id" });
+    const messages = await db
+      .select()
+      .from(partnerMessagesTable)
+      .where(eq(partnerMessagesTable.partnerContactId, id))
+      .orderBy(asc(partnerMessagesTable.createdAt))
+      .limit(200);
+    res.json(messages);
+  } catch (err) {
+    req.log?.error?.({ err }, "Failed to fetch partner messages");
+    res.status(500).json({ error: "Failed to fetch partner messages" });
+  }
+});
+
+router.post("/admin/partner-contacts/:id/messages/read", async (req, res) => {
+  try {
+    const id = parseId(req.params.id);
+    if (!id) return void res.status(400).json({ error: "Invalid id" });
+    await db
+      .update(partnerMessagesTable)
+      .set({ readAt: new Date() })
+      .where(and(eq(partnerMessagesTable.partnerContactId, id), eq(partnerMessagesTable.direction, "inbound"), isNull(partnerMessagesTable.readAt)));
+    res.status(204).end();
+  } catch (err) {
+    req.log?.error?.({ err }, "Failed to mark partner messages read");
+    res.status(500).json({ error: "Failed to mark messages read" });
+  }
+});
+
+// Replies from addresses that are not in the CRM (a partner answering from a
+// different mailbox, a forward, ...). They still need a human to look at them.
+router.get("/admin/partner-messages/unmatched", async (req, res) => {
+  try {
+    const messages = await db
+      .select()
+      .from(partnerMessagesTable)
+      .where(and(eq(partnerMessagesTable.direction, "inbound"), isNull(partnerMessagesTable.partnerContactId)))
+      .orderBy(desc(partnerMessagesTable.createdAt))
+      .limit(50);
+    res.json(messages);
+  } catch (err) {
+    req.log?.error?.({ err }, "Failed to fetch unmatched replies");
+    res.status(500).json({ error: "Failed to fetch unmatched replies" });
+  }
+});
+
+router.post("/admin/partner-messages/:id/read", async (req, res) => {
+  try {
+    const id = parseId(req.params.id);
+    if (!id) return void res.status(400).json({ error: "Invalid id" });
+    await db.update(partnerMessagesTable).set({ readAt: new Date() }).where(eq(partnerMessagesTable.id, id));
+    res.status(204).end();
+  } catch (err) {
+    req.log?.error?.({ err }, "Failed to mark message read");
+    res.status(500).json({ error: "Failed to mark message read" });
   }
 });
 

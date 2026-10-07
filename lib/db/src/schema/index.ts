@@ -362,6 +362,7 @@ export const partnerContactsTable = pgTable(
     status: varchar("status", { length: 30 }).notNull().default("new"),
     lastContactedAt: timestamp("last_contacted_at"),
     nextFollowUpAt: timestamp("next_follow_up_at"),
+    lastReplyAt: timestamp("last_reply_at"),
     tags: jsonb("tags").notNull().default([]),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
@@ -371,6 +372,30 @@ export const partnerContactsTable = pgTable(
     index("partner_contacts_category_idx").on(table.category),
     index("partner_contacts_email_idx").on(table.email),
     index("partner_contacts_status_idx").on(table.status, table.updatedAt),
+  ],
+);
+
+export const partnerMessagesTable = pgTable(
+  "partner_messages",
+  {
+    id: serial("id").primaryKey(),
+    partnerContactId: integer("partner_contact_id"),
+    businessLetterId: integer("business_letter_id"),
+    direction: varchar("direction", { length: 10 }).notNull(),
+    email: text("email").notNull(),
+    subject: text("subject"),
+    bodyText: text("body_text"),
+    providerMessageId: text("provider_message_id"),
+    status: varchar("status", { length: 20 }).notNull().default("sent"),
+    error: text("error"),
+    hasAttachment: boolean("has_attachment").notNull().default(false),
+    readAt: timestamp("read_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("partner_messages_contact_idx").on(table.partnerContactId, table.createdAt),
+    index("partner_messages_email_idx").on(table.email),
   ],
 );
 
@@ -616,9 +641,11 @@ export const insertPartnerContactSchema = createInsertSchema(partnerContactsTabl
   id: true,
   createdAt: true,
   updatedAt: true,
+  lastReplyAt: true,
 });
 export type InsertPartnerContact = z.infer<typeof insertPartnerContactSchema>;
 export type PartnerContact = typeof partnerContactsTable.$inferSelect;
+export type PartnerMessage = typeof partnerMessagesTable.$inferSelect;
 
 export const insertVehicleSchema = createInsertSchema(vehiclesTable, {
   // .optional() only — the column is NOT NULL at the DB level (default

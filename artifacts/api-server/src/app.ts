@@ -83,7 +83,15 @@ app.use(
 );
 
 // Parsers
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      // Webhook signatures are computed over the exact bytes received, so keep
+      // the raw body for those routes only.
+      if (req.url?.startsWith("/api/webhooks/")) (req as { rawBody?: Buffer }).rawBody = buf;
+    },
+  }),
+);
 app.use(express.urlencoded({ extended: true }));
 
 // Health check
