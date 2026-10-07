@@ -937,6 +937,13 @@ export default function AdminDashboard() {
                 </button>
               ))}
               <button
+                onClick={() => setLocation("/admin/partners")}
+                className="w-full min-h-[44px] flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-left text-white/45 hover:text-white/75 hover:bg-white/[0.04] border border-transparent transition-colors"
+              >
+                <span className="w-6 text-center text-base">🏨</span>
+                <span className="text-[11px] uppercase tracking-[0.12em]">Partner CRM</span>
+              </button>
+              <button
                 onClick={() => setLocation("/admin/guides")}
                 className="w-full min-h-[44px] flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-left text-white/45 hover:text-white/75 hover:bg-white/[0.04] border border-transparent transition-colors"
               >
