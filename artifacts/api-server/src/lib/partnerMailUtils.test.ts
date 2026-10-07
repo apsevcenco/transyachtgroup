@@ -2,6 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   classifyDeliveryEvent,
+  cleanAssistantResult,
+  plainTextToEmailHtml,
   extractEmailAddress,
   followUpAfterSend,
   htmlToText,
@@ -9,6 +11,33 @@ import {
   shouldUpdateMessageStatus,
   statusAfterReply,
 } from "./partnerMailUtils.ts";
+
+test("assistant output is validated, not trusted", () => {
+  const fallback = { subject: "Re: Partnership", status: "replied" };
+  const ok = cleanAssistantResult(
+    { intent: "interested", summary: "Хотят условия", suggestedStatus: "interested", subject: "Subject: Re: Hello", body: "  Dear team, ...  ", language: "fr" },
+    fallback,
+  );
+  assert.equal(ok.intent, "interested");
+  assert.equal(ok.suggestedStatus, "interested");
+  assert.equal(ok.subject, "Re: Hello");
+  assert.equal(ok.body, "Dear team, ...");
+
+  const odd = cleanAssistantResult({ intent: "banana", suggestedStatus: "vip", body: "Hi" }, fallback);
+  assert.equal(odd.intent, "other");
+  assert.equal(odd.suggestedStatus, "replied");
+  assert.equal(odd.subject, "Re: Partnership");
+  assert.equal(odd.language, "en");
+
+  assert.throws(() => cleanAssistantResult({ intent: "other", body: "   " }, fallback), /INVALID_AI_RESPONSE/);
+  assert.throws(() => cleanAssistantResult("not json", fallback), /INVALID_AI_RESPONSE/);
+});
+
+test("plain text becomes escaped html with line breaks", () => {
+  const html = plainTextToEmailHtml("Hello <b>team</b>\nBest & regards");
+  assert.ok(html.includes("Hello &lt;b&gt;team&lt;/b&gt;<br/>Best &amp; regards"));
+  assert.ok(!html.includes("<b>"));
+});
 
 test("retry delay honours Retry-After, backs off without it, and is bounded", () => {
   assert.equal(retryDelayMs("2", 0), 2_000);

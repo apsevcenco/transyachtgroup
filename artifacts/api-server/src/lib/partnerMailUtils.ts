@@ -99,6 +99,44 @@ export function retryDelayMs(retryAfter: string | null | undefined, attempt: num
   return Math.min(Math.max(base, 500), 10_000);
 }
 
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Plain-text body -> the same minimal HTML wrapper the cover-message emails use.
+export function plainTextToEmailHtml(text: string): string {
+  return `<div style="font-family:Arial,sans-serif;color:#171717;line-height:1.6;max-width:680px">${escapeHtml(text).replace(/\r?\n/g, "<br/>")}</div>`;
+}
+
+export const PARTNER_INTENTS = ["interested", "question", "not_interested", "unsubscribe", "out_of_office", "other", "no_reply"] as const;
+export type PartnerIntent = (typeof PARTNER_INTENTS)[number];
+
+// Validates what the model returned instead of trusting it: unknown intents or
+// statuses fall back to safe values, and an unusable draft is an error.
+export function cleanAssistantResult(
+  raw: unknown,
+  fallback: { subject: string; status: string },
+): { intent: PartnerIntent; summary: string; suggestedStatus: string; subject: string; body: string; language: string } {
+  const item = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const text = (key: string, max: number) => (typeof item[key] === "string" ? (item[key] as string).trim().slice(0, max) : "");
+  const body = text("body", 6_000);
+  if (!body) throw new Error("INVALID_AI_RESPONSE");
+  const intent = (PARTNER_INTENTS as readonly string[]).includes(text("intent", 30)) ? (text("intent", 30) as PartnerIntent) : "other";
+  return {
+    intent,
+    summary: text("summary", 500),
+    suggestedStatus: isPartnerStatus(item.suggestedStatus) ? item.suggestedStatus : fallback.status,
+    subject: text("subject", 200).replace(/^subject\s*:\s*/i, "") || fallback.subject,
+    body,
+    language: text("language", 8) || "en",
+  };
+}
+
 export function addDays(from: Date, days: number): Date {
   return new Date(from.getTime() + days * 24 * 60 * 60 * 1000);
 }

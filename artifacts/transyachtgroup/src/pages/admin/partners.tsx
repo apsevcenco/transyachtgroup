@@ -3,6 +3,7 @@ import { MessageSquare, Pencil, Trash2 } from "lucide-react";
 import { useLocation } from "wouter";
 
 import {
+  assistPartnerContact,
   checkAuth,
   createPartnerContact,
   deletePartnerContact,
@@ -12,9 +13,12 @@ import {
   fetchUnmatchedPartnerMessages,
   markPartnerMessageRead,
   markPartnerMessagesRead,
+  sendPartnerMessage,
   updatePartnerContact,
+  type PartnerAssistDraft,
   type PartnerContact,
   type PartnerContactInput,
+  type PartnerIntent,
   type PartnerMessage,
   type PartnerSummary,
 } from "@/lib/api";
@@ -74,6 +78,107 @@ const formatDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateStr
 const inDays = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 const isOverdue = (item: PartnerContact) =>
   Boolean(item.nextFollowUpAt) && new Date(item.nextFollowUpAt as string).getTime() <= Date.now() && !closedStatuses.includes(item.status);
+
+const intentLabels: Record<PartnerIntent, string> = {
+  interested: "Interested",
+  question: "Has a question",
+  not_interested: "Not interested",
+  unsubscribe: "Wants to unsubscribe",
+  out_of_office: "Out of office",
+  other: "Other",
+  no_reply: "No reply yet",
+};
+
+// Drafts a reply or follow-up from the thread, shows what the partner said,
+// and lets the owner edit and send it. Nothing is sent without pressing Send.
+function AssistPanel({
+  contact,
+  hasReply,
+  onSent,
+  onStatus,
+}: {
+  contact: PartnerContact;
+  hasReply: boolean;
+  onSent: () => Promise<void>;
+  onStatus: (status: string) => Promise<void>;
+}) {
+  const [instructions, setInstructions] = useState("");
+  const [loading, setLoading] = useState<"reply" | "follow_up" | null>(null);
+  const [error, setError] = useState("");
+  const [draft, setDraft] = useState<PartnerAssistDraft | null>(null);
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [sending, setSending] = useState(false);
+  const blocked = contact.status === "do_not_contact";
+
+  const generate = async (mode: "reply" | "follow_up") => {
+    setLoading(mode);
+    setError("");
+    try {
+      const result = await assistPartnerContact(contact.id, { mode, instructions });
+      setDraft(result);
+      setSubject(result.subject);
+      setBody(result.body);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "AI assistant failed");
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const send = async () => {
+    if (!window.confirm(`Send this message to ${contact.email}?`)) return;
+    setSending(true);
+    setError("");
+    try {
+      await sendPartnerMessage(contact.id, { subject, body });
+      setDraft(null);
+      setInstructions("");
+      await onSent();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send message");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4 text-xs">
+      <p className="text-[10px] uppercase tracking-[0.2em] text-gold/70">AI assistant</p>
+      <input
+        value={instructions}
+        onChange={(e) => setInstructions(e.target.value)}
+        placeholder="Optional guidance, e.g. propose a call next week"
+        className="mt-3 w-full rounded border border-white/10 bg-black/40 p-3 text-white"
+      />
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button disabled={loading !== null || !hasReply} onClick={() => void generate("reply")} title={hasReply ? "" : "No reply from this contact yet"} className="rounded border border-gold/30 px-4 py-2 text-gold disabled:opacity-40">{loading === "reply" ? "Writing…" : "Draft reply"}</button>
+        <button disabled={loading !== null} onClick={() => void generate("follow_up")} className="rounded border border-white/15 px-4 py-2 text-white/70 hover:text-gold disabled:opacity-40">{loading === "follow_up" ? "Writing…" : "Draft follow-up"}</button>
+      </div>
+      {error && <p className="mt-3 text-red-300">{error}</p>}
+      {draft && (
+        <div className="mt-4 space-y-3">
+          <div className="rounded border border-white/10 bg-black/30 p-3">
+            <p className="text-white/80"><span className="mr-2 rounded-full bg-gold/15 px-2 py-0.5 text-[10px] uppercase tracking-wider text-gold">{intentLabels[draft.intent]}</span>{draft.summary}</p>
+            {draft.suggestedStatus !== contact.status && (
+              <p className="mt-2 text-white/50">
+                Suggested status: <span className="text-white/80">{label(draft.suggestedStatus)}</span>
+                <button onClick={() => void onStatus(draft.suggestedStatus)} className="ml-3 rounded border border-white/15 px-3 py-1 text-white/70 hover:text-gold">Apply</button>
+              </p>
+            )}
+          </div>
+          <input value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full rounded border border-white/10 bg-black/40 p-3 text-white" />
+          <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={10} className="w-full rounded border border-white/10 bg-black/40 p-3 text-white" />
+          {blocked && <p className="text-red-300">This contact is marked do_not_contact — sending is disabled.</p>}
+          <div className="flex gap-2">
+            <button disabled={sending || blocked || !subject.trim() || !body.trim()} onClick={() => void send()} className="rounded bg-gold px-5 py-2.5 font-medium text-black disabled:opacity-40">{sending ? "Sending…" : `Send to ${contact.email}`}</button>
+            <button disabled={sending} onClick={() => setDraft(null)} className="rounded border border-white/10 px-5 py-2.5 text-white/60">Discard</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AdminPartners() {
   const [, setLocation] = useLocation();
@@ -352,6 +457,26 @@ export default function AdminPartners() {
                         {entry.bodyText && <p className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap text-white/70">{entry.bodyText}</p>}
                       </div>
                     ))
+                  )}
+                  {threads[item.id] !== undefined && (
+                    <AssistPanel
+                      key={item.id}
+                      contact={item}
+                      hasReply={threads[item.id].some((entry) => entry.direction === "inbound")}
+                      onSent={async () => {
+                        const history = await fetchPartnerMessages(item.id);
+                        setThreads((current) => ({ ...current, [item.id]: history }));
+                        await load();
+                        void loadMeta();
+                        setMessage("Message sent.");
+                      }}
+                      onStatus={async (status) => {
+                        await updatePartnerContact(item.id, { status });
+                        await load();
+                        void loadMeta();
+                        setMessage(`Status set to ${label(status)}.`);
+                      }}
+                    />
                   )}
                 </div>
               )}

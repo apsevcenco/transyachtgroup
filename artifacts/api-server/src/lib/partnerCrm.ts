@@ -60,7 +60,7 @@ export async function findContactsByEmails(emails: string[]): Promise<Map<string
 export async function recordOutboundSend(input: {
   contacts: ContactLookup[];
   email: string;
-  letterId: number;
+  letterId: number | null;
   subject: string;
   providerMessageId: string | null;
   hasAttachment: boolean;

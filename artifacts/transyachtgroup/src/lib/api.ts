@@ -932,6 +932,40 @@ export interface PartnerSummary {
   unmatchedReplies: number;
 }
 
+export type PartnerIntent = "interested" | "question" | "not_interested" | "unsubscribe" | "out_of_office" | "other" | "no_reply";
+
+export interface PartnerAssistDraft {
+  mode: "reply" | "follow_up";
+  intent: PartnerIntent;
+  summary: string;
+  suggestedStatus: string;
+  subject: string;
+  body: string;
+  language: string;
+}
+
+export async function assistPartnerContact(
+  contactId: number,
+  input: { mode: "reply" | "follow_up"; instructions?: string },
+): Promise<PartnerAssistDraft> {
+  const res = await fetch(`${API_BASE}/admin/partner-contacts/${contactId}/ai-assist`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "AI assistant failed");
+  return res.json();
+}
+
+export async function sendPartnerMessage(contactId: number, input: { subject: string; body: string }): Promise<void> {
+  const res = await fetch(`${API_BASE}/admin/partner-contacts/${contactId}/send-message`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "Failed to send message");
+}
+
 export async function fetchPartnerSummary(): Promise<PartnerSummary> {
   const res = await fetch(`${API_BASE}/admin/partner-contacts/summary`, { headers: authHeaders() });
   if (!res.ok) throw new Error("Failed to fetch partner summary");
