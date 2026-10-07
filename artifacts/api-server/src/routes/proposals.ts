@@ -24,6 +24,7 @@ import { validateImageUrls } from "../documents/core/util";
 import { adminAuth } from "../middleware/auth";
 import { logger } from "../lib/logger";
 import { findContactsByEmails, recordOutboundSend } from "../lib/partnerCrm";
+import { createSendPacer, sendPartnerEmail } from "../lib/resendMail";
 import { BLOCKED_STATUSES, normalizeEmail } from "../lib/partnerMailUtils";
 
 const router: IRouter = Router();
@@ -200,9 +201,6 @@ async function sendBusinessLetterEmail(input: {
   coverMessage?: string;
   attachment?: { filename: string; content: string };
 }): Promise<string | null> {
-  const key = process.env.RESEND_API_KEY;
-  const from = process.env.REVIEW_EMAIL_FROM || process.env.PROPOSAL_EMAIL_FROM;
-  if (!key || !from) throw new Error("Email delivery is not configured (RESEND_API_KEY / REVIEW_EMAIL_FROM)");
   const bodyText = input.coverMessage?.trim()
     ? input.coverMessage.trim()
     : [
@@ -217,31 +215,16 @@ async function sendBusinessLetterEmail(input: {
       "Warm regards,",
       input.copy.signature,
     ].join("\n\n");
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from,
-      to: input.to,
-      // Replies go to the address wired to the Resend inbound webhook, so
-      // they land in the Partner CRM instead of an unwatched mailbox.
-      reply_to: process.env.PARTNER_REPLY_TO || undefined,
-      subject: input.subject,
-      text: bodyText,
-      html: input.coverMessage?.trim()
-        ? emailHtmlForCoverMessage(input.coverMessage.trim())
-        : emailHtmlForBusinessLetter(input.copy),
-      attachments: input.attachment ? [input.attachment] : undefined,
-      tags: [{ name: "workflow", value: "business-letter" }],
-    }),
-    signal: AbortSignal.timeout(15_000),
+  return sendPartnerEmail({
+    to: input.to,
+    subject: input.subject,
+    text: bodyText,
+    html: input.coverMessage?.trim()
+      ? emailHtmlForCoverMessage(input.coverMessage.trim())
+      : emailHtmlForBusinessLetter(input.copy),
+    attachment: input.attachment,
+    tag: "business-letter",
   });
-  if (!response.ok) {
-    const detail = (await response.text().catch(() => "")).slice(0, 200);
-    throw new Error(`Email provider rejected request (${response.status})${detail ? `: ${detail}` : ""}`);
-  }
-  const data = (await response.json().catch(() => null)) as { id?: unknown } | null;
-  return typeof data?.id === "string" ? data.id : null;
 }
 
 function renderBusinessLetterHtml(input: {
@@ -969,10 +952,13 @@ router.post("/admin/proposals/business-letters/:id/send", adminAuth, async (req,
     const failedRecipients: string[] = [];
     const sentRecipients: string[] = [];
     let firstFailure: string | null = null;
+    // Spread a bulk send out below Resend's rate limit instead of bursting.
+    const paceSend = createSendPacer();
     for (const recipient of recipients) {
       const contacts = contactsByEmail.get(normalizeEmail(recipient)) ?? [];
       let providerMessageId: string | null = null;
       let sendFailure: string | null = null;
+      await paceSend();
       try {
         providerMessageId = await sendBusinessLetterEmail({
           to: [recipient],

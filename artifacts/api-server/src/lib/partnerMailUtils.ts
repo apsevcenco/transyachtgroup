@@ -90,6 +90,15 @@ export function shouldUpdateMessageStatus(current: string, next: string): boolea
   return (STATUS_RANK[next] ?? 0) > (STATUS_RANK[current] ?? 0);
 }
 
+// Resend allows ~2 requests per second per team. When it answers 429 it says
+// how long to wait in the Retry-After header (seconds); without it we back off
+// exponentially. Always bounded so one bad response cannot stall a whole send.
+export function retryDelayMs(retryAfter: string | null | undefined, attempt: number): number {
+  const seconds = retryAfter ? Number(retryAfter) : NaN;
+  const base = Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 1_000 * 2 ** attempt;
+  return Math.min(Math.max(base, 500), 10_000);
+}
+
 export function addDays(from: Date, days: number): Date {
   return new Date(from.getTime() + days * 24 * 60 * 60 * 1000);
 }
