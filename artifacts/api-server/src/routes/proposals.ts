@@ -29,6 +29,8 @@ import { BLOCKED_STATUSES, normalizeEmail } from "../lib/partnerMailUtils";
 
 const router: IRouter = Router();
 
+const MAX_RECIPIENTS_PER_SEND = 50;
+
 const languageNames = {
   en: "English",
   fr: "French",
@@ -889,9 +891,17 @@ router.post("/admin/proposals/business-letters/:id/send", adminAuth, async (req,
     const value = req.body && typeof req.body === "object" ? req.body as Record<string, unknown> : {};
     const text = (key: string, max: number) => typeof value[key] === "string" ? value[key].trim().slice(0, max) : "";
     const rawRecipients = typeof value.recipients === "string" ? value.recipients : "";
-    const requestedRecipients = Array.from(new Set(rawRecipients.split(/[\s,;]+/).map((v) => v.trim()).filter(validEmail))).slice(0, 50);
+    const requestedRecipients = Array.from(new Set(rawRecipients.split(/[\s,;]+/).map((v) => v.trim()).filter(validEmail)));
     if (requestedRecipients.length === 0) {
       res.status(400).json({ error: "Add at least one valid email address" });
+      return;
+    }
+    // One request sends sequentially (paced for Resend) and must finish before
+    // the host's HTTP timeout. Refuse instead of silently dropping the rest.
+    if (requestedRecipients.length > MAX_RECIPIENTS_PER_SEND) {
+      res.status(400).json({
+        error: `Up to ${MAX_RECIPIENTS_PER_SEND} addresses can be sent at once, but ${requestedRecipients.length} were selected. Send in batches.`,
+      });
       return;
     }
 

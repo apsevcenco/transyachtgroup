@@ -92,6 +92,20 @@ function calcMonths(start: string, end: string): number {
   return months > 0 ? months : 1;
 }
 
+const PARTNER_CATEGORY_LABELS: Record<string, string> = {
+  hotel: "Hotels",
+  concierge: "Concierge services",
+  travel_agency: "Travel agencies",
+  luxury_rental: "Luxury rentals",
+};
+
+const RECIPIENT_TYPE_BY_CATEGORY: Record<string, string> = {
+  hotel: "Hotel partner",
+  concierge: "Concierge service",
+  travel_agency: "Travel agency",
+  luxury_rental: "Luxury mobility partner",
+};
+
 export function ProposalsDashboard() {
   const [generatorMode, setGeneratorMode] = useState<GeneratorMode>("single");
 
@@ -151,6 +165,11 @@ export function ProposalsDashboard() {
   const [partnerContacts, setPartnerContacts] = useState<PartnerContact[]>([]);
   const [selectedPartnerContactId, setSelectedPartnerContactId] = useState("");
   const [selectedPartnerContactIds, setSelectedPartnerContactIds] = useState<string[]>([]);
+  // Filters for the Partner CRM pickers below; they only narrow what is shown.
+  const [crmCategory, setCrmCategory] = useState("");
+  const [crmCity, setCrmCity] = useState("");
+  const [crmSearch, setCrmSearch] = useState("");
+  const [crmOnlyNew, setCrmOnlyNew] = useState(false);
   const [uploadingBusinessImage, setUploadingBusinessImage] = useState(false);
 
   useEffect(() => {
@@ -182,7 +201,7 @@ export function ProposalsDashboard() {
   }, [loadBusinessLetters]);
 
   useEffect(() => {
-    fetchPartnerContacts({ limit: 1000 })
+    fetchPartnerContacts({ limit: 2000 })
       .then(setPartnerContacts)
       .catch(() => setPartnerContacts([]));
   }, []);
@@ -207,6 +226,47 @@ export function ProposalsDashboard() {
     [partnerContacts],
   );
 
+  // Contacts marked do_not_contact can never be emailed (the server refuses
+  // them too), so they are not offered at all.
+  const mailablePartnerContacts = useMemo(
+    () => sortedPartnerContacts.filter((contact) => contact.status !== "do_not_contact"),
+    [sortedPartnerContacts],
+  );
+  const hiddenDoNotContact = sortedPartnerContacts.length - mailablePartnerContacts.length;
+  const partnerCities = useMemo(
+    () => Array.from(new Set(mailablePartnerContacts.map((contact) => contact.city).filter(Boolean))).sort(),
+    [mailablePartnerContacts],
+  );
+  const filteredPartnerContacts = useMemo(() => {
+    const query = crmSearch.trim().toLowerCase();
+    return mailablePartnerContacts.filter(
+      (contact) =>
+        (!crmCategory || contact.category === crmCategory) &&
+        (!crmCity || contact.city === crmCity) &&
+        (!crmOnlyNew || (contact.status === "new" && !contact.lastContactedAt)) &&
+        (!query ||
+          `${contact.organization} ${contact.email} ${contact.city} ${contact.contactPerson || ""}`
+            .toLowerCase()
+            .includes(query)),
+    );
+  }, [mailablePartnerContacts, crmCategory, crmCity, crmOnlyNew, crmSearch]);
+  // The single-contact dropdown follows the filters but never drops the
+  // contact that is currently chosen.
+  const dropdownPartnerContacts = useMemo(() => {
+    const chosen = mailablePartnerContacts.find((contact) => String(contact.id) === selectedPartnerContactId);
+    return chosen && !filteredPartnerContacts.includes(chosen)
+      ? [chosen, ...filteredPartnerContacts]
+      : filteredPartnerContacts;
+  }, [mailablePartnerContacts, filteredPartnerContacts, selectedPartnerContactId]);
+  const selectedCategoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const id of selectedPartnerContactIds) {
+      const category = partnerContacts.find((contact) => String(contact.id) === id)?.category;
+      if (category) counts[category] = (counts[category] || 0) + 1;
+    }
+    return counts;
+  }, [selectedPartnerContactIds, partnerContacts]);
+
   const applyPartnerContact = (contactId: string) => {
     setSelectedPartnerContactId(contactId);
     const contact = partnerContacts.find((item) => String(item.id) === contactId);
@@ -218,13 +278,7 @@ export function ProposalsDashboard() {
         .filter(Boolean)
         .join("\n"),
     );
-    const labelByCategory: Record<string, string> = {
-      hotel: "Hotel partner",
-      concierge: "Concierge service",
-      travel_agency: "Travel agency",
-      luxury_rental: "Luxury mobility partner",
-    };
-    setBusinessRecipientType(labelByCategory[contact.category] || "Business partner");
+    setBusinessRecipientType(RECIPIENT_TYPE_BY_CATEGORY[contact.category] || "Business partner");
     if (!businessTopic.trim()) {
       setBusinessTopic(`Partnership proposal for ${contact.organization}`);
     }
@@ -243,6 +297,22 @@ export function ProposalsDashboard() {
     setSelectedPartnerContactIds(ids);
     setSelectedPartnerContactId(ids.length === 1 ? ids[0] : "");
     setBusinessRecipients(partnerEmailsFromIds(ids).join("\n"));
+    // A selection from one category gets the matching recipient type, the same
+    // way picking a single contact does.
+    const categories = new Set(
+      ids.map((id) => partnerContacts.find((contact) => String(contact.id) === id)?.category).filter(Boolean),
+    );
+    if (categories.size === 1) {
+      setBusinessRecipientType(RECIPIENT_TYPE_BY_CATEGORY[Array.from(categories)[0] as string] || "Business partner");
+    }
+  };
+
+  const shownContactIds = () => filteredPartnerContacts.map((contact) => String(contact.id));
+  const selectAllShown = () =>
+    setRecipientsFromPartnerIds(Array.from(new Set([...selectedPartnerContactIds, ...shownContactIds()])));
+  const deselectShown = () => {
+    const shown = new Set(shownContactIds());
+    setRecipientsFromPartnerIds(selectedPartnerContactIds.filter((id) => !shown.has(id)));
   };
 
   const togglePartnerRecipient = (contactId: string) => {
@@ -588,6 +658,13 @@ export function ProposalsDashboard() {
           .join(" "),
       );
       loadBusinessLetters();
+      // Statuses and last-contacted dates just changed; reload so the filters
+      // ("Only not yet contacted") reflect who has already been emailed.
+      fetchPartnerContacts({ limit: 2000 })
+        .then(setPartnerContacts)
+        .catch(() => {});
+      // A finished CRM batch starts the next one from a clean selection.
+      if (!failedCount && selectedPartnerContactIds.length) setRecipientsFromPartnerIds([]);
     } catch (err: any) {
       setError(err.message || "Failed to send business letter");
     } finally {
@@ -937,7 +1014,7 @@ export function ProposalsDashboard() {
                 className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-sm text-white min-h-[44px]"
               >
                 <option value="">Manual recipient</option>
-                {sortedPartnerContacts.map((contact) => (
+                {dropdownPartnerContacts.map((contact) => (
                   <option key={contact.id} value={contact.id}>
                     {contact.city} · {contact.organization} · {contact.email}
                   </option>
@@ -955,10 +1032,19 @@ export function ProposalsDashboard() {
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => setRecipientsFromPartnerIds(sortedPartnerContacts.map((contact) => String(contact.id)))}
-                    className="text-[10px] uppercase tracking-[0.12em] text-gold hover:text-white transition-colors"
+                    onClick={selectAllShown}
+                    disabled={!filteredPartnerContacts.length}
+                    className="text-[10px] uppercase tracking-[0.12em] text-gold hover:text-white transition-colors disabled:opacity-40"
                   >
-                    Add all
+                    Select all shown ({filteredPartnerContacts.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={deselectShown}
+                    disabled={!filteredPartnerContacts.length}
+                    className="text-[10px] uppercase tracking-[0.12em] text-white/45 hover:text-white transition-colors disabled:opacity-40"
+                  >
+                    Deselect shown
                   </button>
                   <button
                     type="button"
@@ -969,9 +1055,64 @@ export function ProposalsDashboard() {
                   </button>
                 </div>
               </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <select
+                  value={crmCategory}
+                  onChange={(e) => setCrmCategory(e.target.value)}
+                  className="bg-white/[0.04] border border-white/[0.08] rounded-md px-2 py-2 text-xs text-white min-h-[40px]"
+                >
+                  <option value="">All categories</option>
+                  {Object.entries(PARTNER_CATEGORY_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+                <select
+                  value={crmCity}
+                  onChange={(e) => setCrmCity(e.target.value)}
+                  className="bg-white/[0.04] border border-white/[0.08] rounded-md px-2 py-2 text-xs text-white min-h-[40px]"
+                >
+                  <option value="">All cities</option>
+                  {partnerCities.map((city) => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
+                </select>
+                <input
+                  value={crmSearch}
+                  onChange={(e) => setCrmSearch(e.target.value)}
+                  placeholder="Search name, email, city"
+                  className="col-span-2 bg-white/[0.04] border border-white/[0.08] rounded-md px-3 py-2 text-xs text-white placeholder:text-white/25 min-h-[40px]"
+                />
+                <label className="col-span-2 flex items-center gap-2 text-[11px] text-white/55">
+                  <input
+                    type="checkbox"
+                    checked={crmOnlyNew}
+                    onChange={(e) => setCrmOnlyNew(e.target.checked)}
+                    className="accent-[hsl(43,67%,55%)]"
+                  />
+                  Only not yet contacted
+                </label>
+              </div>
+              <p className="mt-2 text-[11px] text-white/35">
+                Showing {filteredPartnerContacts.length} of {mailablePartnerContacts.length}
+                {hiddenDoNotContact ? ` · ${hiddenDoNotContact} hidden (do not contact)` : ""}
+              </p>
+              {selectedPartnerContactIds.length > 50 && (
+                <p className="mt-2 rounded border border-red-400/30 bg-red-400/5 px-2 py-1.5 text-[11px] text-red-200/90">
+                  {selectedPartnerContactIds.length} selected — a single mailing is limited to 50 addresses. Send in batches: after each batch those contacts drop out of the list when “Only not yet contacted” is on.
+                </p>
+              )}
+              {Object.keys(selectedCategoryCounts).length > 1 && (
+                <p className="mt-2 rounded border border-amber-400/30 bg-amber-400/5 px-2 py-1.5 text-[11px] text-amber-200/90">
+                  The selection spans several categories (
+                  {Object.entries(selectedCategoryCounts)
+                    .map(([category, total]) => `${PARTNER_CATEGORY_LABELS[category] || category}: ${total}`)
+                    .join(", ")}
+                  ) — the same letter will go to everyone.
+                </p>
+              )}
               <div className="mt-3 max-h-44 overflow-y-auto space-y-2 pr-1">
-                {sortedPartnerContacts.length ? (
-                  sortedPartnerContacts.map((contact) => {
+                {filteredPartnerContacts.length ? (
+                  filteredPartnerContacts.map((contact) => {
                     const id = String(contact.id);
                     const checked = selectedPartnerContactIds.includes(id);
                     return (
@@ -988,7 +1129,11 @@ export function ProposalsDashboard() {
                         <span>
                           <span className="block text-white/85">{contact.organization}</span>
                           <span className="block text-white/45">
-                            {contact.city} · {contact.category} · {contact.email}
+                            {contact.city} · {PARTNER_CATEGORY_LABELS[contact.category] || contact.category} · {contact.email}
+                          </span>
+                          <span className="block text-white/30">
+                            {contact.status.replace(/_/g, " ")}
+                            {contact.lastContactedAt ? ` · last contacted ${new Date(contact.lastContactedAt).toLocaleDateString()}` : ""}
                           </span>
                         </span>
                       </label>
@@ -996,7 +1141,9 @@ export function ProposalsDashboard() {
                   })
                 ) : (
                   <p className="text-xs text-white/35">
-                    Partner CRM contacts will appear here after the migration is applied.
+                    {partnerContacts.length
+                      ? "No contacts match these filters."
+                      : "Partner CRM contacts will appear here after the migration is applied."}
                   </p>
                 )}
               </div>
