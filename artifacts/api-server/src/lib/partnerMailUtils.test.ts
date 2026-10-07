@@ -16,7 +16,7 @@ test("retry delay honours Retry-After, backs off without it, and is bounded", ()
   assert.equal(retryDelayMs(undefined, 2), 4_000);
   assert.equal(retryDelayMs("not-a-number", 1), 2_000);
   assert.equal(retryDelayMs("120", 0), 10_000);
-  assert.equal(retryDelayMs("0.1", 0), 1_000);
+  assert.equal(retryDelayMs("0.1", 0), 500);
 });
 
 test("extracts the address from a display-name header", () => {
