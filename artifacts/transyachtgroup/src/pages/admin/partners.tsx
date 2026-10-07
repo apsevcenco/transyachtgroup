@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MessageSquare, Pencil, Trash2 } from "lucide-react";
 import { useLocation } from "wouter";
 
+import PartnerImport from "@/components/admin/PartnerImport";
 import {
   assistPartnerContact,
   checkAuth,
@@ -370,6 +371,13 @@ export default function AdminPartners() {
             </div>
           </section>
         )}
+
+        <PartnerImport
+          onImported={async () => {
+            await load();
+            void loadMeta();
+          }}
+        />
 
         <section className="mt-6 rounded-xl border border-white/10 bg-white/[0.02] p-5">
           <h2 className="font-serif text-2xl">{editing ? "Edit partner contact" : "Add partner contact"}</h2>

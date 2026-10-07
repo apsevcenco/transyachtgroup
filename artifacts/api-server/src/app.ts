@@ -83,6 +83,10 @@ app.use(
 );
 
 // Parsers
+// The default 100kb JSON limit is too small for a batch of spreadsheet rows
+// with long notes; raise it for this one route only (the global parser below
+// skips a body that has already been parsed).
+app.use("/api/admin/partner-contacts/import", express.json({ limit: "1mb" }));
 app.use(
   express.json({
     verify: (req, _res, buf) => {

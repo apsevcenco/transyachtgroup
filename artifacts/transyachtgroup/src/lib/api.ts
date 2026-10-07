@@ -932,6 +932,30 @@ export interface PartnerSummary {
   unmatchedReplies: number;
 }
 
+export interface PartnerImportResult {
+  received: number;
+  valid: number;
+  invalid: { index: number; reason: string }[];
+  invalidCount: number;
+  duplicatesInFile: number;
+  alreadyInCrm: number;
+  willImport?: number;
+  inserted?: number;
+}
+
+export async function importPartnerContacts(
+  rows: Array<Record<string, string | null>>,
+  dryRun: boolean,
+): Promise<PartnerImportResult> {
+  const res = await fetch(`${API_BASE}/admin/partner-contacts/import`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ rows, dryRun }),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "Import failed");
+  return res.json();
+}
+
 export type PartnerIntent = "interested" | "question" | "not_interested" | "unsubscribe" | "out_of_office" | "other" | "no_reply";
 
 export interface PartnerAssistDraft {

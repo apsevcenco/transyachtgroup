@@ -5,6 +5,7 @@ import { db } from "@workspace/db";
 import { insertPartnerContactSchema, partnerContactsTable, partnerMessagesTable } from "@workspace/db/schema";
 import { adminAuth } from "../middleware/auth";
 import { CLOSED_STATUSES, isPartnerStatus } from "../lib/partnerMailUtils";
+import { importKey, MAX_IMPORT_ROWS, validateImportRows } from "../lib/partnerImport";
 
 const router: IRouter = Router();
 router.use("/admin/partner-contacts", adminAuth);
@@ -122,6 +123,61 @@ router.get("/admin/partner-contacts/summary", async (req, res) => {
   } catch (err) {
     req.log?.error?.({ err }, "Failed to load partner summary");
     res.status(500).json({ error: "Failed to load partner summary" });
+  }
+});
+
+// Bulk import from a spreadsheet the browser has already parsed. With
+// dryRun it only reports what would happen; otherwise it inserts the new
+// contacts and silently leaves existing ones (and their statuses) untouched.
+router.post("/admin/partner-contacts/import", async (req, res) => {
+  try {
+    const value = req.body && typeof req.body === "object" ? (req.body as Record<string, unknown>) : {};
+    if (!Array.isArray(value.rows)) return void res.status(400).json({ error: "rows must be an array" });
+    if (value.rows.length > MAX_IMPORT_ROWS) {
+      return void res.status(400).json({ error: `Send at most ${MAX_IMPORT_ROWS} rows per request` });
+    }
+    const dryRun = value.dryRun === true;
+    const { rows, invalid, duplicatesInFile } = validateImportRows(value.rows);
+
+    const existing = new Set<string>();
+    const emails = Array.from(new Set(rows.map((row) => row.email)));
+    if (emails.length) {
+      const list = sql.join(emails.map((email) => sql`${email}`), sql`, `);
+      const found = await db
+        .select({
+          email: partnerContactsTable.email,
+          organization: partnerContactsTable.organization,
+          city: partnerContactsTable.city,
+          category: partnerContactsTable.category,
+        })
+        .from(partnerContactsTable)
+        .where(sql`lower(${partnerContactsTable.email}) in (${list})`);
+      for (const row of found) existing.add(importKey(row));
+    }
+    const fresh = rows.filter((row) => !existing.has(importKey(row)));
+    const summary = {
+      received: value.rows.length,
+      valid: rows.length,
+      invalid: invalid.slice(0, 25),
+      invalidCount: invalid.length,
+      duplicatesInFile,
+      alreadyInCrm: rows.length - fresh.length,
+    };
+    if (dryRun) return void res.json({ ...summary, willImport: fresh.length });
+
+    let inserted = 0;
+    if (fresh.length) {
+      const result = await db
+        .insert(partnerContactsTable)
+        .values(fresh.map((row) => ({ ...row, status: "new" })))
+        .onConflictDoNothing()
+        .returning({ id: partnerContactsTable.id });
+      inserted = result.length;
+    }
+    res.json({ ...summary, inserted });
+  } catch (err) {
+    req.log?.error?.({ err }, "Failed to import partner contacts");
+    res.status(500).json({ error: "Failed to import partner contacts" });
   }
 });
 
