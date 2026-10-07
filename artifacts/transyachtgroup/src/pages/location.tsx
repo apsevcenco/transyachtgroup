@@ -61,6 +61,12 @@ const LOCATION_SERVICES: Partial<Record<LocationKey, { slug: string; label: stri
     { slug: "yacht-charter-saint-tropez", label: "Luxury yacht charter in Saint-Tropez" },
   ],
   courchevel: [
+    { slug: "luxury-car-rental-courchevel", label: "Luxury car rental in Courchevel" },
+    { slug: "mercedes-rental-courchevel", label: "Mercedes-Benz rental in Courchevel" },
+    { slug: "rolls-royce-rental-courchevel", label: "Rolls-Royce rental in Courchevel" },
+    { slug: "bentley-rental-courchevel", label: "Bentley rental in Courchevel" },
+    { slug: "lamborghini-rental-courchevel", label: "Lamborghini rental in Courchevel" },
+    { slug: "ferrari-rental-courchevel", label: "Ferrari rental in Courchevel" },
     { slug: "private-jet-to-car-transfer-courchevel", label: "Private jet to car transfer in Courchevel" },
     { slug: "courchevel-private-transfers", label: "Private transfers to Courchevel" },
     { slug: "geneva-airport-to-courchevel-transfer", label: "Geneva Airport to Courchevel transfer" },

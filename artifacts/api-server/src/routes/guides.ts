@@ -73,6 +73,7 @@ const CORE_INTERNAL_LINKS: InternalLinkCandidate[] = [
     ["luxury-car-rental-nice", "Luxury car rental in Nice"],
     ["luxury-car-rental-saint-tropez", "Luxury car rental in Saint-Tropez"],
     ["luxury-car-rental-antibes", "Luxury car rental in Antibes"],
+    ["luxury-car-rental-courchevel", "Luxury car rental in Courchevel"],
     ["courchevel-private-transfers", "Private transfers to Courchevel"],
     ["geneva-airport-to-courchevel-transfer", "Geneva Airport to Courchevel transfer"],
     ["lyon-airport-to-courchevel-transfer", "Lyon Airport to Courchevel transfer"],
@@ -85,6 +86,11 @@ const CORE_INTERNAL_LINKS: InternalLinkCandidate[] = [
     ["mercedes-rental-french-riviera", "Mercedes-Benz rental on the French Riviera"],
     ["ferrari-rental-french-riviera", "Ferrari rental on the French Riviera"],
     ["rolls-royce-rental-french-riviera", "Rolls-Royce rental on the French Riviera"],
+    ["mercedes-rental-courchevel", "Mercedes-Benz rental in Courchevel"],
+    ["rolls-royce-rental-courchevel", "Rolls-Royce rental in Courchevel"],
+    ["bentley-rental-courchevel", "Bentley rental in Courchevel"],
+    ["lamborghini-rental-courchevel", "Lamborghini rental in Courchevel"],
+    ["ferrari-rental-courchevel", "Ferrari rental in Courchevel"],
   ].map(([slug, label]) => ({ url: `/services/${slug}/?lang=en`, label, kind: "service" as const })),
 ];
 
