@@ -54,7 +54,11 @@ onlyBuiltDependencies:
 
 overrides:
   body-parser: ^2.3.0
-  ip-address: ^10.3.1
+  ip-address: ^10.7.3
+  proxy-addr: ^2.0.8
+  basic-ftp: ^6.2.2
+  prosemirror-view: ^1.42.6
+  dompurify: ^3.4.16
   lodash: ^4.17.24
   qs: ^6.16.0
   nanoid: ^5.1.16
