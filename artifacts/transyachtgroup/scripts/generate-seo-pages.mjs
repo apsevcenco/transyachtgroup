@@ -41,6 +41,7 @@ const { LANDINGS, COURCHEVEL_CLUSTER_SLUGS, UI } = await importTsModule("src/dat
 const { LOCATIONS, LOCATION_SERVICES, TEXT } = await importTsModule("src/data/locations.ts");
 const { vehiclePath } = await importTsModule("src/lib/vehicleSeo.ts");
 const { answersForService, answersForLocation, moreAnswers } = await importTsModule("src/data/answerLinks.ts");
+const { seoVehicleName, vehicleShortName, vehicleServiceLinks, relatedVehicles, yachtSummary } = await importTsModule("src/data/vehicleContent.ts");
 
 // ---------------------------------------------------------------- helpers
 function escapeHtml(value) {
@@ -357,10 +358,13 @@ const SPEC_LABELS = {
 
 function vehiclePageEntry(vehicle) {
   const isCar = vehicle.category !== "yacht";
-  const name = stripHtml(vehicle.name);
+  const name = seoVehicleName(vehicle);
   const specs = vehicle.specs && typeof vehicle.specs === "object" ? vehicle.specs : {};
   const fullDescription = typeof specs.fullDescription === "string" ? specs.fullDescription : "";
-  const description = stripHtml(fullDescription || vehicle.description).slice(0, 300) || `${name} available from ${brand} on the French Riviera.`;
+  const summary = fullDescription ? [] : yachtSummary(vehicle);
+  const services = vehicleServiceLinks(vehicle);
+  const related = relatedVehicles(vehicles, vehicle);
+  const description = stripHtml(fullDescription || summary.join(" ") || vehicle.description).slice(0, 300) || `${name} available from ${brand} on the French Riviera.`;
   const metaDescription = description.length > 155 ? `${description.slice(0, 152).trim()}…` : description;
   const path = vehiclePath(vehicle);
   const images = [vehicle.image, ...(Array.isArray(vehicle.images) ? vehicle.images : [])].map(publicAssetUrl).filter(Boolean);
@@ -372,7 +376,7 @@ function vehiclePageEntry(vehicle) {
   const collection = isCar ? "cars" : "yachts";
   return {
     path,
-    title: withBrand(`${name} ${isCar ? "Luxury Car Rental" : "Yacht Charter"}`),
+    title: withBrand(`${vehicleShortName(vehicle)} ${isCar ? "Luxury Car Rental" : "Yacht Charter"}`),
     description: metaDescription,
     heading: name,
     image,
@@ -382,8 +386,9 @@ function vehiclePageEntry(vehicle) {
 <h1>${escapeHtml(name)}</h1>
 ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" loading="lazy">` : ""}
 <p>${escapeHtml(stripHtml(vehicle.description))}</p>
-${fullDescription ? sanitizeHtml(fullDescription) : ""}
+${fullDescription ? sanitizeHtml(fullDescription) : summary.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}
 ${specRows.length ? `<h2>Specifications</h2><ul>${specRows.join("")}</ul>` : ""}
+${services.length || related.length ? `<h2>Explore</h2>${li([...services.map((item) => `<li>${link(item.href, item.label)}</li>`), ...related.map((item) => `<li>${link(`${vehiclePath(item)}/`, seoVehicleName(item))}</li>`)])}` : ""}
 <p>${link("/#request", "Request a private offer")}</p>
 </article>`,
     jsonLd: [
