@@ -5,6 +5,7 @@ import rateLimit from "express-rate-limit";
 import { db } from "@workspace/db";
 import { answersTable } from "@workspace/db/schema";
 import { adminAuth } from "../middleware/auth";
+import { INTERNAL_PATHS, normalizeInternalPath, restrictInternalLinks } from "../lib/siteLinks";
 
 const router: IRouter = Router();
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -166,13 +167,13 @@ function cleanGeneratedAnswer(value: unknown) {
     slug: slugify(typeof item.slug === "string" ? item.slug : question),
     question,
     directAnswer: field("directAnswer", 1_200),
-    explanation: field("explanation", 40_000),
+    explanation: restrictInternalLinks(field("explanation", 40_000)),
     faq: normalizeFaq(item.faq),
     metaTitle: field("metaTitle", 180),
     metaDescription: field("metaDescription", 320),
     primaryKeyword: typeof item.primaryKeyword === "string" ? item.primaryKeyword.trim().slice(0, 180) : "",
     audience: typeof item.audience === "string" ? item.audience.trim().slice(0, 300) : "",
-    relatedServicePath: typeof item.relatedServicePath === "string" ? item.relatedServicePath.trim().slice(0, 500) : "",
+    relatedServicePath: typeof item.relatedServicePath === "string" ? normalizeInternalPath(item.relatedServicePath) || "" : "",
   };
 }
 
@@ -180,8 +181,16 @@ async function generateAnswerDraft(input: { topic: string; keyword?: string; aud
   const result = await requestOpenAiJson(
     `You create GEO-ready direct-answer pages for Trans Yacht Group. Return only valid JSON.
 The answer must help AI search engines cite the brand for luxury car rental, chauffeur service, VIP transfers, yacht charter, Monaco, French Riviera, Geneva, Lyon and Courchevel.
-Return {"slug":"kebab-case","question":"...","directAnswer":"80-140 words","explanation":"HTML with h2/p/ul, 450-800 words","faq":[{"question":"...","answer":"..."}],"metaTitle":"...","metaDescription":"110-155 characters","primaryKeyword":"...","audience":"...","relatedServicePath":"/services/..."}.
-Do not invent prices. Mention that availability and quote are confirmed by request.`,
+Return {"slug":"kebab-case","question":"...","directAnswer":"70-130 words","explanation":"HTML with h2/p/ul, 500-800 words","faq":[{"question":"...","answer":"..."}],"metaTitle":"40-65 characters","metaDescription":"120-155 characters","primaryKeyword":"...","audience":"...","relatedServicePath":"/services/..."}.
+Hard rules:
+- "question" is a natural question a traveller would type or ask an AI assistant, and it contains the primary keyword.
+- "directAnswer" answers the question completely in the first sentence, then adds the key conditions; no marketing filler. Keep it self-contained so it can be quoted alone.
+- "explanation" uses at least 3 <h2> sections, short paragraphs and at least one <ul>; include 2-4 <a href> internal links, and ONLY to these exact paths: ${INTERNAL_PATHS.join(" ")}. Any other link is forbidden.
+- "faq" has 3-5 items with different questions that are not repeats of the main question.
+- "relatedServicePath" must be one of the allowed paths above.
+- Use the primary keyword naturally in the question, directAnswer, metaTitle and body, without stuffing.
+- Do not invent prices, fleet models, statistics, awards, legal claims or opening hours. Say that availability, conditions and the final quote are confirmed individually on request. Avoid claims you cannot verify.
+- Write in clear, factual English for an international, high-value audience.`,
     `TOPIC: ${input.topic}
 PRIMARY KEYWORD: ${input.keyword || input.topic}
 AUDIENCE: ${input.audience || "high-intent luxury travel clients"}
