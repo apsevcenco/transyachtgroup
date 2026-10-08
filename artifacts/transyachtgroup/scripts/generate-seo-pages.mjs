@@ -823,6 +823,17 @@ await Promise.all([
   ...[...pages, ...contentPages].map((page) => writePage(outputPath(page.path, page.lang || "en"), renderPage(page))),
   ...languageHomePages.map((page) => writePage(outputPath("/", page.lang), renderPage(page))),
 ]);
+// Old /vehicle/<id>/ links still circulate and Google indexes them as duplicates of the real page.
+// Serve the real page's HTML there: its canonical points at the real URL, so the duplicate consolidates.
+await Promise.all(
+  vehiclePages
+    .filter((page) => (page.lang || "en") === "en")
+    .map((page) => {
+      const id = page.path.match(/-(\d+)$/)?.[1];
+      return id ? writePage(`/vehicle/${id}/`, renderPage(page)) : null;
+    })
+    .filter(Boolean),
+);
 await writeFile(join(outputDir, "index.html"), renderHome(), "utf8");
 await writeFile(join(outputDir, "404.html"), renderNotFound(), "utf8");
 

@@ -91,7 +91,7 @@ async function htmlDirs(dir, prefix = "") {
   const out = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     if (entry.isDirectory()) {
-      if (!prefix && ["assets", "fonts", "images"].includes(entry.name)) continue;
+      if (!prefix && ["assets", "fonts", "images", "vehicle"].includes(entry.name)) continue; // vehicle/ = legacy aliases, checked below
       out.push(...(await htmlDirs(join(dir, entry.name), `${prefix}${entry.name}/`)));
     } else if (entry.name === "index.html") out.push(prefix);
   }
@@ -134,6 +134,20 @@ assert.equal(normalised("/ru/services/yacht-charter-nice"), "/ru/services/yacht-
 assert.equal(normalised("/fr/cars/"), null, "trailing-slash URL must be left alone");
 assert.equal(normalised("/admin"), null, "/admin is never rewritten");
 assert.equal(normalised("/api/vehicles"), null, "/api is never rewritten");
+
+// 1b. legacy /vehicle/<id>/ aliases must canonicalise to an existing real vehicle page
+const aliasRoot = join(publicRoot, "vehicle");
+let aliasCount = 0;
+for (const entry of await readdir(aliasRoot, { withFileTypes: true }).catch(() => [])) {
+  if (!entry.isDirectory()) continue;
+  const alias = await readFile(join(aliasRoot, entry.name, "index.html"), "utf8");
+  const target = canonicalOf(alias);
+  assert.ok(target && target.startsWith(`${origin}/`) && !target.includes("/vehicle/"), `vehicle/${entry.name}/ must canonicalise to the real vehicle URL`);
+  assert.ok(pages.has(target.slice(origin.length + 1)), `vehicle/${entry.name}/ canonical points at a page that was not generated: ${target}`);
+  aliasCount++;
+}
+const realVehicleDirs = dirs.filter((dir) => /^(cars|yachts)\/[^/]+\/$/.test(dir));
+assert.equal(aliasCount, realVehicleDirs.length, "every English vehicle page needs a legacy /vehicle/<id>/ alias");
 
 // 2. every generated page: canonical = itself, <html lang> matches, alternates exist and are reciprocal
 const alternatesByUrl = new Map();
