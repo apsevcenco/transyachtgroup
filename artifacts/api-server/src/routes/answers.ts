@@ -91,11 +91,11 @@ function auditAnswerInput(input: ReturnType<typeof parseAnswerInput>) {
   if (!input.metaTitle || metaTitleLength < 35 || metaTitleLength > 70) issues.push({ code: "meta_title_length", severity: "warning", message: "SEO title should be about 35–70 characters.", points: -7 });
   if (!input.metaDescription || metaDescriptionLength < 110 || metaDescriptionLength > 155) issues.push({ code: "meta_description_length", severity: "warning", message: "SEO description should contain 110–155 characters.", points: -8 });
 
-  const unsupported = haystack.match(/(wi-?fi|catering|refreshments|child seats?|baby seats?|limousines?|helicopters?|24/7|24 hours|guaranteed availability|award-winning|years of experience)/g);
+  const unsupported = haystack.match(/\b(?:wi-?fi|catering|refreshments|child seats?|baby seats?|limousines?|helicopters?|24\/7|24 hours|guaranteed availability|award-winning|years of experience)\b/g);
   if (unsupported?.length) issues.push({ code: "unsupported_claims", severity: "error", message: `Remove claims we cannot verify: ${[...new Set(unsupported)].join(", ")}.`, points: -20 });
-  const fluff = haystack.match(/(unparalleled|epitomi[sz]es|unforgettable|seamless|world-class|second to none|bespoke luxury)/g);
+  const fluff = haystack.match(/\b(?:unparalleled|epitomi[sz]es|unforgettable|seamless|world-class|second to none|bespoke luxury)\b/g);
   if (fluff && fluff.length >= 2) issues.push({ code: "marketing_fluff", severity: "warning", message: `Replace marketing filler with concrete facts: ${[...new Set(fluff)].join(", ")}.`, points: -8 });
-  if (!/d/.test(input.directAnswer) && !/^(yes|no|it depends|usually)/i.test(input.directAnswer.trim())) issues.push({ code: "direct_answer_not_concrete", severity: "warning", message: "Direct answer should state the concrete fact first (a figure, or a clear yes/no with the key condition).", points: -8 });
+  if (!/\d/.test(input.directAnswer) && !/^(yes|no|it depends|usually)\b/i.test(input.directAnswer.trim())) issues.push({ code: "direct_answer_not_concrete", severity: "warning", message: "Direct answer should state the concrete fact first (a figure, or a clear yes/no with the key condition).", points: -8 });
 
   const score = Math.max(0, Math.min(100, 100 + issues.reduce((sum, issue) => sum + issue.points, 0)));
   return {
