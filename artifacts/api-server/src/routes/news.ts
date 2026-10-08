@@ -5,6 +5,7 @@ import rateLimit from "express-rate-limit";
 import { db } from "@workspace/db";
 import { newsTable } from "@workspace/db/schema";
 import { adminAuth } from "../middleware/auth";
+import { requestOpenAiJson as sharedRequestOpenAiJson } from "../lib/openaiJson";
 import { auditGuide, type SeoAuditInput } from "../lib/guideSeoAudit";
 
 const router: IRouter = Router();
@@ -98,10 +99,6 @@ function inferNewsCluster(value: string): string {
   return "French Riviera luxury mobility";
 }
 
-function extractJson(text: string): unknown {
-  return JSON.parse(text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, ""));
-}
-
 function cleanCopy(value: unknown): NewsCopy {
   const item = value && typeof value === "object" ? value as Record<string, unknown> : {};
   const field = (name: string, max: number) => {
@@ -118,41 +115,7 @@ function cleanCopy(value: unknown): NewsCopy {
   };
 }
 
-async function requestOpenAiJson(instructions: string, input: string): Promise<unknown> {
-  const baseUrl = (process.env.OPENAI_BASE_URL || process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
-  const apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_NOT_CONFIGURED");
-  const configuredModel = process.env.OPENAI_CONTENT_MODEL?.trim().toLowerCase();
-  const preferredModel = configuredModel && !configuredModel.startsWith("gpt-5") && !configuredModel.includes("5.6") ? configuredModel : "gpt-4o";
-  const models = Array.from(new Set([preferredModel, "gpt-4o", "gpt-4o-mini"]));
-  let response: Response | null = null;
-  let detail = "";
-  for (const model of models) {
-    response = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      signal: AbortSignal.timeout(75_000),
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: instructions },
-          { role: "user", content: input },
-        ],
-        max_tokens: 16_000,
-        response_format: { type: "json_object" },
-      }),
-    });
-    if (response.ok) break;
-    detail = (await response.text()).slice(0, 500);
-    const mayBeModelAccessProblem = response.status === 400 || response.status === 403 || response.status === 404;
-    if (!mayBeModelAccessProblem || model === models.at(-1)) throw new Error(`OPENAI_${response.status}:${detail}`);
-  }
-  if (!response?.ok) throw new Error(`OPENAI_REQUEST_FAILED:${detail}`);
-  const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
-  const outputText = data.choices?.[0]?.message?.content;
-  if (!outputText) throw new Error("INVALID_AI_RESPONSE");
-  return extractJson(outputText);
-}
+const requestOpenAiJson = (instructions: string, input: string) => sharedRequestOpenAiJson(instructions, input, { maxTokens: 16_000 });
 
 function parseNewsInput(body: unknown) {
   const value = body && typeof body === "object" ? body as Record<string, unknown> : {};

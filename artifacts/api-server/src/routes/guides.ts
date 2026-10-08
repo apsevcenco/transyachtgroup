@@ -8,6 +8,7 @@ import { analyticsEventsTable, answersTable, guidesTable, newsTable, seoCompetit
 import { vehiclePath } from "../lib/vehicleSeo";
 import { canonicalInternalHref } from "../lib/siteLinks";
 import { adminAuth } from "../middleware/auth";
+import { requestOpenAiJson as sharedRequestOpenAiJson } from "../lib/openaiJson";
 import { auditGuide, type SeoAuditInput, type SeoAuditIssue } from "../lib/guideSeoAudit";
 import { uploadPublicImage } from "../lib/privateStorage";
 import { safeRemoteFetch } from "../lib/safeRemoteFetch";
@@ -281,11 +282,6 @@ function cleanGeneratedCopy(value: unknown): GeneratedCopy {
   };
 }
 
-function extractJson(text: string): unknown {
-  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-  return JSON.parse(cleaned);
-}
-
 function approvedInternalLinks(value: string): string {
   return value.split(/[\s,]+/).map((item) => item.trim()).filter((item) => {
     if (!item) return false;
@@ -441,41 +437,7 @@ function visibleWordCount(html: string): number {
     .match(/[\p{L}\p{N}]+/gu)?.length || 0;
 }
 
-async function requestOpenAiJson(instructions: string, input: string): Promise<unknown> {
-  const baseUrl = (process.env.OPENAI_BASE_URL || process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
-  const apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_NOT_CONFIGURED");
-  const configuredModel = process.env.OPENAI_CONTENT_MODEL?.trim().toLowerCase();
-  const preferredModel = configuredModel && !configuredModel.startsWith("gpt-5") && !configuredModel.includes("5.6") ? configuredModel : "gpt-4o";
-  const models = Array.from(new Set([preferredModel, "gpt-4o", "gpt-4o-mini"]));
-  let response: Response | null = null;
-  let detail = "";
-  for (const model of models) {
-    response = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      signal: AbortSignal.timeout(75_000),
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: instructions },
-          { role: "user", content: input },
-        ],
-        max_tokens: 16_000,
-        response_format: { type: "json_object" },
-      }),
-    });
-    if (response.ok) break;
-    detail = (await response.text()).slice(0, 500);
-    const mayBeModelAccessProblem = response.status === 400 || response.status === 403 || response.status === 404;
-    if (!mayBeModelAccessProblem || model === models.at(-1)) throw new Error(`OPENAI_${response.status}:${detail}`);
-  }
-  if (!response?.ok) throw new Error(`OPENAI_REQUEST_FAILED:${detail}`);
-  const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
-  const outputText = data.choices?.[0]?.message?.content;
-  if (!outputText) throw new Error("INVALID_AI_RESPONSE");
-  return extractJson(outputText);
-}
+const requestOpenAiJson = (instructions: string, input: string) => sharedRequestOpenAiJson(instructions, input, { maxTokens: 16_000 });
 
 async function generateAndStoreGuideCover(input: { title: string; excerpt: string; service: string; city: string }) {
   const baseUrl = (process.env.OPENAI_BASE_URL || process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");

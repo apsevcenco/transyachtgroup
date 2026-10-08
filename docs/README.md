@@ -15,10 +15,11 @@ Website, admin panel and API for **transyachtgroup.com**: luxury car rental, VIP
 | 7 | [ADMIN_GUIDE.md](ADMIN_GUIDE.md) | Staff | Day-to-day use of the admin panel |
 | 8 | [SEO_GEO_OPERATIONS.md](SEO_GEO_OPERATIONS.md) | Marketing / content | How search and AI-search visibility is produced and maintained |
 | 9 | [LANGUAGE-URLS.md](LANGUAGE-URLS.md) | Developers / marketing | How the `/fr` `/ru` `/ro` `/ar` language URLs, hreflang and language sitemaps work; Render rules; known gaps |
+| 10 | [ENGINEERING.md](ENGINEERING.md) | Developers | Tooling (lint, format, tests, CI), conventions, shared helpers, refactoring backlog |
 
 Older focused notes that remain valid: [SECURITY_DEPLOYMENT.md](SECURITY_DEPLOYMENT.md), [PRODUCTION_LAUNCH_CHECKLIST.md](PRODUCTION_LAUNCH_CHECKLIST.md), [GDPR-DATA-RETENTION.md](GDPR-DATA-RETENTION.md), [GOOGLE-ADS-CONVERSIONS.md](GOOGLE-ADS-CONVERSIONS.md), [REVIEW-AUTOMATION.md](REVIEW-AUTOMATION.md).
 
-> `replit.md` in the repository root is a legacy note from an earlier hosting setup. The current production setup is described in these documents (GitHub → Render, Supabase for data).
+> The production setup is described in these documents (GitHub → Render, Supabase for data). Code conventions, tooling and the refactoring backlog are in [ENGINEERING.md](ENGINEERING.md).
 
 ## The system in one paragraph
 
