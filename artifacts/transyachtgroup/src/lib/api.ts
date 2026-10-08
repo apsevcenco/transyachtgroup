@@ -455,9 +455,19 @@ export async function updateSeoOpportunity(id: number, status: SeoOpportunity["s
 }
 
 export async function importGuideSearchMetrics(rows: Array<Record<string, unknown>>): Promise<{ updated: number }> {
-  const res = await fetch(`${API_BASE}/admin/guides/search-metrics`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify({ rows }) });
-  if (!res.ok) throw new Error("Search metrics import failed");
-  return res.json();
+  // Batches keep each request small (no 413) and let one slow batch finish before the next starts.
+  const unique = [...new Map(rows.map((row) => [String(row.url || ""), row])).values()].filter((row) => row.url);
+  let updated = 0;
+  for (let start = 0; start < unique.length; start += 200) {
+    const res = await fetch(`${API_BASE}/admin/guides/search-metrics`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify({ rows: unique.slice(start, start + 200) }) });
+    if (!res.ok) {
+      const detail = (await res.json().catch(() => null))?.error;
+      const reason = res.status === 401 ? "Your admin session expired; log in again." : res.status === 413 ? "The file is too large for one request." : detail || `Server error ${res.status}`;
+      throw new Error(`Search metrics import failed after ${updated} rows: ${reason}`);
+    }
+    updated += (await res.json()).updated || 0;
+  }
+  return { updated };
 }
 
 export async function refreshGuideWithAi(id: number, context: Record<string, unknown>): Promise<GeneratedGuideDraft> {

@@ -98,7 +98,11 @@ const mapSearchMetricRows = (rows: unknown[][]): Array<Record<string, unknown>> 
       title: String(findMetricValue(raw, ["title", "заголовок"]) || ""),
       clicks: parseMetricNumber(findMetricValue(raw, ["click", "clic", "клик", "kлик", "лики"])),
       impressions: parseMetricNumber(findMetricValue(raw, ["impression", "показ"])),
-      ctr: parseMetricNumber(findMetricValue(raw, ["ctr"])),
+      ctr: (() => {
+        const rawCtr = findMetricValue(raw, ["ctr"]);
+        // Excel exports hold CTR as a fraction of 1 (0.0213 = 2.13%); text/CSV already says 2.13%.
+        return typeof rawCtr === "number" && rawCtr > 0 && rawCtr <= 1 ? Math.round(rawCtr * 10000) / 100 : parseMetricNumber(rawCtr);
+      })(),
       position: parseMetricNumber(findMetricValue(raw, ["position", "позици"])),
       source: "search-console",
     };

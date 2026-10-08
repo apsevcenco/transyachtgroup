@@ -1135,6 +1135,7 @@ router.get("/admin/guides/overview", adminAuth, async (_req, res) => {
 router.post("/admin/guides/search-metrics", adminAuth, async (req, res) => {
   const rows = Array.isArray(req.body?.rows) ? req.body.rows.slice(0, 5_000) : [];
   let updated = 0;
+  try {
   for (const row of rows) {
     if (!row || typeof row !== "object") continue;
     const url = typeof row.url === "string" ? row.url : "";
@@ -1169,6 +1170,17 @@ router.post("/admin/guides/search-metrics", adminAuth, async (req, res) => {
     updated++;
   }
   res.json({ updated });
+  } catch (err) {
+    req.log?.error?.({ err }, "Search metrics import failed");
+    const code = (err as { code?: string; cause?: { code?: string } })?.code || (err as { cause?: { code?: string } })?.cause?.code;
+    const missingTable = code === "42P01" || /seo_page_metrics/i.test(String((err as Error)?.message || ""));
+    res.status(500).json({
+      error: missingTable
+        ? "Database table seo_page_metrics is missing. Apply migration 0042_seo_page_metrics.sql in Supabase, then import again."
+        : `Search metrics import failed after ${updated} rows. Check the server logs.`,
+      updated,
+    });
+  }
 });
 
 router.post("/admin/guides/generate", adminAuth, guideAiLimiter, async (req, res) => {

@@ -88,6 +88,8 @@ app.use(
 // with long notes; raise it for this one route only (the global parser below
 // skips a body that has already been parsed).
 app.use("/api/admin/partner-contacts/import", express.json({ limit: "1mb" }));
+// A Search Console export can hold hundreds of page rows (the 100kb default rejects it with 413).
+app.use("/api/admin/guides/search-metrics", express.json({ limit: "2mb" }));
 app.use(
   express.json({
     verify: (req, _res, buf) => {
