@@ -20,7 +20,9 @@ import { fetchVehicle, fetchContent, downloadVehicleProposal } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePageView, trackVehicleView } from "@/hooks/useAnalytics";
 import { CmsContent } from "@/components/CmsContent";
-import { SeoHead, SITE_URL } from "@/components/SeoHead";
+import { SeoHead, SITE_URL, pageUrl } from "@/components/SeoHead";
+import { VEHICLE_TITLE_SUFFIX } from "@/data/pageLabels";
+import { vehicleLangs, withLangPrefix } from "@/lib/langRoutes";
 import { vehiclePath } from "@/lib/vehicleSeo";
 
 function getCarSpecLabels(
@@ -208,9 +210,7 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
         setVehicle(v);
         trackVehicleView(v);
         if (window.location.pathname.startsWith("/vehicle/")) {
-          const query = new URLSearchParams(window.location.search);
-          query.set("lang", lang);
-          window.history.replaceState(null, "", `${vehiclePath(v)}/?${query.toString()}`);
+          window.history.replaceState(null, "", withLangPrefix(`${vehiclePath(v)}/`, lang));
         }
         if (v?.specs?.unitSystem) setViewUnits(v.specs.unitSystem);
         setLoading(false);
@@ -397,7 +397,7 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
     `${seoName} available from Trans Yacht Group on the French Riviera.`;
   const seoImage = allImages[0] || vehicle.image || "/opengraph.jpg";
   const seoPath = vehiclePath(vehicle);
-  const vehicleUrl = `${SITE_URL}${seoPath}/`;
+  const vehicleUrl = pageUrl(seoPath, lang);
   const productJsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": isCar ? ["Product", "Vehicle"] : "Product",
@@ -432,10 +432,11 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
   return (
     <div className="min-h-screen bg-card text-white">
       <SeoHead
-        title={`${seoName} ${isCar ? "Luxury Car Rental" : "Yacht Charter"}`}
+        title={`${seoName} ${isCar ? VEHICLE_TITLE_SUFFIX[lang].car : VEHICLE_TITLE_SUFFIX[lang].yacht}`}
         description={seoDescription}
         path={seoPath}
         lang={lang}
+        langs={vehicleLangs(vehicle)}
         image={seoImage}
         type="product"
         jsonLd={[
@@ -448,13 +449,13 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
                 "@type": "ListItem",
                 position: 1,
                 name: "Home",
-                item: `${SITE_URL}/`,
+                item: pageUrl("/", lang),
               },
               {
                 "@type": "ListItem",
                 position: 2,
                 name: isCar ? t("cars") : t("yachts"),
-                item: `${SITE_URL}${backPath}/`,
+                item: pageUrl(backPath, lang),
               },
               { "@type": "ListItem", position: 3, name: seoName, item: vehicleUrl },
             ],

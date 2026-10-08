@@ -1,10 +1,17 @@
-﻿import {
+import {
   createContext,
   useContext,
-  useState,
   useEffect,
   type ReactNode,
 } from "react";
+import { usePathname } from "wouter/use-browser-location";
+
+import {
+  langFromPathname,
+  stripLangPrefix,
+  withLangPrefix,
+  withTrailingSlash,
+} from "@/lib/langRoutes";
 
 export const LANGUAGES = [
   { code: "en", label: "English", flag: "🇬🇧", dir: "ltr" },
@@ -510,9 +517,12 @@ const UI_TRANSLATIONS: Record<LangCode, Record<string, string>> = {
 
 interface LanguageContextType {
   lang: LangCode;
+  /** Navigates to the same page in another language (real prefixed URL, no JS-only state). */
   setLang: (lang: LangCode) => void;
   t: (key: string) => string;
   dir: "ltr" | "rtl";
+  /** Same-language href for an internal path: lp("/cars/") -> "/fr/cars/" on a French page. */
+  lp: (path: string) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType>({
@@ -520,30 +530,45 @@ const LanguageContext = createContext<LanguageContextType>({
   setLang: () => {},
   t: (key: string) => key,
   dir: "ltr",
+  lp: (path: string) => path,
 });
 
+/** URL of the current page in another language: prefix swapped, query/hash kept, legacy ?lang= dropped. */
+export function currentPageInLanguage(code: LangCode): string {
+  const { pathname, search, hash } = window.location;
+  const params = new URLSearchParams(search);
+  params.delete("lang");
+  const query = params.toString();
+  const base = stripLangPrefix(pathname);
+  const path = /^\/(admin|api)(\/|$)/.test(base) ? base : withTrailingSlash(base);
+  return withLangPrefix(path, code) + (query ? "?" + query : "") + hash;
+}
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<LangCode>(() => {
+  // The URL is the single source of truth for the language; localStorage never overrides it.
+  const lang = langFromPathname(usePathname()) as LangCode;
+  const dir = LANGUAGES.find((l) => l.code === lang)!.dir as "ltr" | "rtl";
+
+  // Legacy links used ?lang=fr on the shared URL. Send them to the real language URL once.
+  useEffect(() => {
     const queryLang = new URLSearchParams(window.location.search).get("lang");
-    if (queryLang && LANGUAGES.some((item) => item.code === queryLang)) {
-      return queryLang as LangCode;
-    }
-    const saved = localStorage.getItem("tyg_lang");
-    return saved && LANGUAGES.some((l) => l.code === saved)
-      ? (saved as LangCode)
-      : "en";
-  });
+    if (!queryLang) return;
+    const known = LANGUAGES.some((item) => item.code === queryLang);
+    const target = currentPageInLanguage(known && langFromPathname(window.location.pathname) === "en" ? (queryLang as LangCode) : lang);
+    window.history.replaceState(window.history.state, "", target);
+  }, [lang]);
 
   const setLang = (newLang: LangCode) => {
-    setLangState(newLang);
-    localStorage.setItem("tyg_lang", newLang);
-    const url = new URL(window.location.href);
-    url.searchParams.delete("lang");
-    window.history.replaceState(window.history.state, "", url);
+    try {
+      localStorage.setItem("tyg_lang", newLang);
+    } catch {
+      /* storage can be unavailable (private mode); the URL carries the language anyway */
+    }
+    const target = currentPageInLanguage(newLang);
+    if (target !== window.location.pathname + window.location.search + window.location.hash) {
+      window.history.pushState(window.history.state, "", target);
+    }
   };
-
-  const langInfo = LANGUAGES.find((l) => l.code === lang)!;
-  const dir = langInfo.dir as "ltr" | "rtl";
 
   useEffect(() => {
     document.documentElement.dir = dir;
@@ -553,9 +578,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const t = (key: string): string => {
     return UI_TRANSLATIONS[lang]?.[key] || UI_TRANSLATIONS.en[key] || key;
   };
+  const lp = (path: string) => withLangPrefix(path, lang);
 
   return (
-    <LanguageContext.Provider value={{ lang, setLang, t, dir }}>
+    <LanguageContext.Provider value={{ lang, setLang, t, dir, lp }}>
       {children}
     </LanguageContext.Provider>
   );

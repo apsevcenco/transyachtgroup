@@ -1,15 +1,16 @@
 import { Car, ChevronRight, MapPin, Ship } from "lucide-react";
 
 import { Navbar } from "@/components/Navbar";
-import { SeoHead, SITE_URL } from "@/components/SeoHead";
+import { SeoHead, SITE_URL, pageUrl } from "@/components/SeoHead";
 import { useLanguage, type LangCode } from "@/contexts/LanguageContext";
 
 import { RelatedAnswers, useAnswers } from "@/components/RelatedAnswers";
 import { answersForLocation } from "@/data/answerLinks";
-import { LOCATIONS, LOCATION_SERVICES, TEXT, type LocationKey } from "@/data/locations";
+import { LOCATIONS, LOCATION_SERVICES, TEXT, locationName, type LocationKey } from "@/data/locations";
+import { landingTitle } from "@/data/serviceLandingsI18n";
 
 export default function LocationPage({ city }: { city: string }) {
-  const { lang } = useLanguage();
+  const { lang, lp } = useLanguage();
   const answers = useAnswers();
   const key = city as LocationKey;
   const location = LOCATIONS[key];
@@ -27,10 +28,11 @@ export default function LocationPage({ city }: { city: string }) {
   }
 
   const text = TEXT[lang];
-  const title = text.title(location.name);
-  const description = text.description(location.name);
+  const cityName = locationName(key, lang);
+  const title = text.title(cityName);
+  const description = text.description(cityName);
   const path = `/locations/${key}`;
-  const faqItems = text.faq(location.name);
+  const faqItems = text.faq(cityName);
 
   return (
     <div className="min-h-screen bg-background text-white">
@@ -55,7 +57,7 @@ export default function LocationPage({ city }: { city: string }) {
               "Yacht charter",
               "Private concierge",
             ],
-            url: `${SITE_URL}${path}/`,
+            url: pageUrl(path, lang),
           },
           {
             "@context": "https://schema.org",
@@ -65,12 +67,12 @@ export default function LocationPage({ city }: { city: string }) {
                 "@type": "ListItem",
                 position: 1,
                 name: "Home",
-                item: `${SITE_URL}/`,
+                item: pageUrl("/", lang),
               },
               {
                 "@type": "ListItem",
                 position: 2,
-                name: location.name,
+                name: cityName,
               },
             ],
           },
@@ -102,12 +104,12 @@ export default function LocationPage({ city }: { city: string }) {
           </h1>
           <div className="my-10 h-px w-28 bg-gold/50" />
           <p className="max-w-3xl text-base font-light leading-8 text-white/60 md:text-lg">
-            {text.intro(location.name, location.detail)}
+            {text.intro(cityName, location.detail)}
           </p>
 
           <div className="mt-14 grid gap-5 md:grid-cols-2">
             <a
-              href="/cars/"
+              href={lp("/cars/")}
               className="group rounded-xl border border-white/10 bg-white/[0.02] p-7 transition hover:border-gold/40"
             >
               <Car className="mb-5 text-gold" />
@@ -117,7 +119,7 @@ export default function LocationPage({ city }: { city: string }) {
               </span>
             </a>
             <a
-              href="/yachts/"
+              href={lp("/yachts/")}
               className="group rounded-xl border border-white/10 bg-white/[0.02] p-7 transition hover:border-gold/40"
             >
               <Ship className="mb-5 text-gold" />
@@ -129,14 +131,14 @@ export default function LocationPage({ city }: { city: string }) {
           </div>
 
           {LOCATION_SERVICES[key]?.length ? (
-            <nav aria-label={`${location.name} services`} className="mt-8 flex flex-wrap gap-3">
+            <nav aria-label={`${cityName} services`} className="mt-8 flex flex-wrap gap-3">
               {LOCATION_SERVICES[key]!.map((service) => (
                 <a
                   key={service.slug}
-                  href={`/services/${service.slug}/`}
+                  href={lp(`/services/${service.slug}/`)}
                   className="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-sm text-white/65 transition hover:border-gold/40 hover:text-gold"
                 >
-                  {service.label} <ChevronRight size={14} />
+                  {landingTitle(service.slug, lang) ?? service.label} <ChevronRight size={14} />
                 </a>
               ))}
             </nav>
@@ -144,10 +146,10 @@ export default function LocationPage({ city }: { city: string }) {
 
           <section className="mt-14 rounded-xl border border-white/10 bg-white/[0.02] p-8 md:p-10">
             <h2 className="mb-4 font-serif text-2xl sm:text-3xl">
-              {text.commercialTitle(location.name)}
+              {text.commercialTitle(cityName)}
             </h2>
             <p className="max-w-3xl font-light leading-8 text-white/60">
-              {text.commercialCopy(location.name)}
+              {text.commercialCopy(cityName)}
             </p>
           </section>
 
@@ -176,7 +178,7 @@ export default function LocationPage({ city }: { city: string }) {
               {text.concierge}
             </p>
             <a
-              href="/#request"
+              href={lp("/#request")}
               className="inline-flex items-center gap-2 rounded bg-gold px-6 py-3 font-porter text-[10px] uppercase tracking-[0.2em] text-black"
             >
               {text.contact} <ChevronRight size={15} />

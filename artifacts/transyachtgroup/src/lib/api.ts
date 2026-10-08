@@ -1,3 +1,4 @@
+import { langFromPathname } from "@/lib/langRoutes";
 const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
 export type Guide = {
@@ -97,8 +98,9 @@ function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+// The language comes from the URL prefix (/fr/...); a stored preference never overrides it.
 function getLang(): string {
-  return localStorage.getItem("tyg_lang") || "en";
+  return langFromPathname(window.location.pathname);
 }
 
 export async function adminLogin(password: string, otp?: string) {

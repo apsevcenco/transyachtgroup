@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 
 import { Navbar } from "@/components/Navbar";
-import { SeoHead, SITE_URL } from "@/components/SeoHead";
+import { SeoHead, SITE_URL, pageUrl } from "@/components/SeoHead";
+import { articleLangs } from "@/lib/langRoutes";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { fetchNewsItem, type News } from "@/lib/api";
 
 export default function NewsDetail({ slug }: { slug: string }) {
-  const { lang } = useLanguage();
+  const { lang, lp } = useLanguage();
   const [item, setItem] = useState<News | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -16,7 +17,7 @@ export default function NewsDetail({ slug }: { slug: string }) {
   }, [slug, lang]);
 
   const canonicalPath = `/news/${slug}`;
-  const articleUrl = `${SITE_URL}${canonicalPath}/`;
+  const articleUrl = pageUrl(canonicalPath, lang);
   const articleImage = item?.coverImage ? new URL(item.coverImage, `${SITE_URL}/`).toString() : `${SITE_URL}/opengraph.jpg`;
   const publishedDate = item?.publishedAt || item?.createdAt || undefined;
   const modifiedDate = item?.updatedAt || publishedDate;
@@ -42,11 +43,11 @@ export default function NewsDetail({ slug }: { slug: string }) {
 
   return (
     <div className="min-h-screen bg-background text-white">
-      <SeoHead title={item?.metaTitle || item?.title || "News"} description={item?.metaDescription || item?.excerpt || ""} path={canonicalPath} lang={lang} image={articleImage} type="website" jsonLd={newsArticleJsonLd} />
+      <SeoHead title={item?.metaTitle || item?.title || "News"} description={item?.metaDescription || item?.excerpt || ""} path={canonicalPath} lang={lang} langs={item ? articleLangs(item) : [lang]} image={articleImage} type="website" jsonLd={newsArticleJsonLd} />
       <Navbar />
       <main className="px-5 pb-24 pt-36">
         <article className="mx-auto max-w-4xl">
-          <a href="/news/" className="mb-8 inline-flex items-center gap-2 text-sm text-white/45 hover:text-gold"><ArrowLeft size={15} /> News</a>
+          <a href={lp("/news/")} className="mb-8 inline-flex items-center gap-2 text-sm text-white/45 hover:text-gold"><ArrowLeft size={15} /> News</a>
           {loading ? (
             <p className="text-white/35">Loading news…</p>
           ) : !item ? (

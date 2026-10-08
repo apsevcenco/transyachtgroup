@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   CONSENT_CHANGE_EVENT,
   CONSENT_STORAGE_KEY,
@@ -6,6 +7,7 @@ import {
 } from "@/lib/googleAnalytics";
 
 export function CookieBanner() {
+  const { lp } = useLanguage();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -47,7 +49,7 @@ export function CookieBanner() {
   With your permission, we use analytics cookies to understand site traffic and improve our services.
   You can accept or reject analytics cookies. See our{" "}
   <a
-    href="/privacy"
+    href={lp("/privacy")}
     className="text-[hsl(43,67%,55%)] hover:underline"
   >
     Privacy Policy

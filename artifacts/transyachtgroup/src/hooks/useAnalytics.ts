@@ -73,7 +73,7 @@ export function usePageView() {
   const pathname = window.location.pathname;
 
   useEffect(() => {
-    const guideMatch = pathname.match(/^\/guides\/([^/?]+)/);
+    const guideMatch = pathname.match(/^(?:\/(?:fr|ru|ro|ar))?\/guides\/([^/?]+)/);
     if (guideMatch) setGuideAttribution(guideMatch[1]);
     startTime.current = Date.now();
     track("page_view");

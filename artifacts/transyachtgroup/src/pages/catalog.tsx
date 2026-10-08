@@ -634,7 +634,7 @@ function CatalogCard({
   siteContent: Record<string, string>;
 }) {
   const [, setLocation] = useLocation();
-  const { lang, t } = useLanguage();
+  const { lang, t, lp } = useLanguage();
   const specs = item.specs || {};
   const getInlineStyle = (value: unknown) => {
     const html = String(value || "");
@@ -698,7 +698,7 @@ function CatalogCard({
       onClick={goToDetail}
     >
       <a
-        href={`${vehiclePath(item)}/`}
+        href={lp(`${vehiclePath(item)}/`)}
         aria-label={`${t("view_details")}: ${stripHtml(item.name || "")}`}
         onClick={(event) => {
           event.preventDefault();

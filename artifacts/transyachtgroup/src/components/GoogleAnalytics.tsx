@@ -23,7 +23,7 @@ function getContactPlacement(link: HTMLAnchorElement): string {
 }
 
 function getVehicleContext(): string | undefined {
-  const match = window.location.pathname.match(/^\/(?:cars|yachts|vehicles)\/([^/?]+)/i);
+  const match = window.location.pathname.match(/^(?:\/(?:fr|ru|ro|ar))?\/(?:cars|yachts|vehicles)\/([^/?]+)/i);
   return match?.[1];
 }
 

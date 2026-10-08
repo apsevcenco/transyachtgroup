@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "@/lib/motion-shim";
 import { Menu, X, Globe } from "lucide-react";
 import { useLocation } from "wouter";
-import { useLanguage, LANGUAGES } from "@/contexts/LanguageContext";
+import { useLanguage, LANGUAGES, currentPageInLanguage } from "@/contexts/LanguageContext";
+import { englishPath, stripLangPrefix } from "@/lib/langRoutes";
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -11,7 +12,7 @@ export function Navbar() {
   const desktopLangRef = useRef<HTMLDivElement>(null);
   const mobileLangRef = useRef<HTMLDivElement>(null);
   const [, setLocation] = useLocation();
-  const { lang, setLang, t } = useLanguage();
+  const { lang, setLang, t, lp } = useLanguage();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -40,7 +41,8 @@ export function Navbar() {
     { name: t("about_us"), href: "/about" },
     { name: "Guides", href: "/guides/" },
     { name: "News", href: "/news/" },
-    { name: "Answers", href: "/answers/" },
+    // Answers exist in English only, so they always link to the English URL.
+    { name: "Answers", href: englishPath("/answers/") },
     { name: t("contact"), href: "/#request", hash: "request" },
   ];
 
@@ -62,7 +64,7 @@ export function Navbar() {
     (e: React.MouseEvent, link: { href: string; hash?: string }) => {
       e.preventDefault();
       if (link.hash) {
-        const currentPath = window.location.pathname.replace(/\/$/, "");
+        const currentPath = stripLangPrefix(window.location.pathname).replace(/\/$/, "");
         if (currentPath === "" || currentPath === "/") {
           scrollToHash(link.hash);
         } else {
@@ -84,11 +86,8 @@ export function Navbar() {
     setLangMenuOpen(false);
   };
 
-  const languageHref = (code: typeof lang) => {
-    const url = new URL(window.location.href);
-    url.searchParams.delete("lang");
-    return `${url.pathname}${url.search}${url.hash}`;
-  };
+  // Real, crawlable URL of the current page in each language.
+  const languageHref = (code: typeof lang) => currentPageInLanguage(code);
 
   const langDropdown = (
     <motion.div
@@ -103,6 +102,8 @@ export function Navbar() {
           hrefLang={l.code}
           lang={l.code}
           onClick={(event) => {
+            // Let the browser handle "open in new tab" style clicks with the real href.
+            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
             event.preventDefault();
             handleLangSelect(l.code);
           }}
@@ -132,7 +133,7 @@ export function Navbar() {
     >
       <div className="w-full px-4 sm:px-6 py-8 flex justify-between items-center">
         <a
-          href="/"
+          href={lp("/")}
           onClick={(e) => {
             e.preventDefault();
             setLocation("/");
@@ -151,7 +152,7 @@ export function Navbar() {
           {navLinks.map((link) => (
             <a
               key={link.name}
-              href={link.href}
+              href={lp(link.href)}
               onClick={(e) => handleNavClick(e, link)}
               className="font-porter text-[13px] uppercase tracking-[0.25em] text-white/70 hover:text-gold transition-all duration-500 font-medium relative after:content-[''] after:absolute after:-bottom-1.5 after:left-1/2 after:-translate-x-1/2 after:w-0 after:h-[1px] after:bg-gold/60 hover:after:w-full after:transition-all after:duration-500 cursor-pointer"
             >
@@ -222,7 +223,7 @@ export function Navbar() {
               {navLinks.map((link) => (
                 <a
                   key={link.name}
-                  href={link.href}
+                  href={lp(link.href)}
                   onClick={(e) => {
                     setMobileMenuOpen(false);
                     handleNavClick(e, link);

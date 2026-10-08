@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { answersTable, guidesTable, newsTable, vehiclesTable } from "@workspace/db/schema";
 import { and, asc, desc, eq, isNotNull, lte, ne, or } from "drizzle-orm";
 import { vehiclePath } from "../lib/vehicleSeo";
+import { availableLangs, urlBlocks } from "../lib/langAlternates";
 
 const router: IRouter = Router();
 const SITE_URL = "https://www.transyachtgroup.com";
@@ -45,6 +46,7 @@ router.get("/vehicles-sitemap.xml", async (req, res) => {
         category: vehiclesTable.category,
         image: vehiclesTable.image,
         images: vehiclesTable.images,
+        translations: vehiclesTable.translations,
       })
       .from(vehiclesTable)
       .where(ne(vehiclesTable.visible, false))
@@ -65,12 +67,15 @@ router.get("/vehicles-sitemap.xml", async (req, res) => {
         .join("\n");
 
       // No updatedAt column on vehicles: createdAt would be a misleading lastmod, so none is emitted.
-      return `  <url>
-    <loc>${SITE_URL}${path}/</loc>
-    <changefreq>weekly</changefreq>
+      // A language URL exists only for vehicles with a translated name and description.
+      return urlBlocks(
+        SITE_URL,
+        path,
+        availableLangs(vehicle.translations, ["name", "description"]),
+        () => `    <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-${images}
-  </url>`;
+${images}`,
+      );
     });
 
     res.set({
@@ -96,6 +101,7 @@ router.get("/guides-sitemap.xml", async (req, res) => {
       coverImage: guidesTable.coverImage,
       title: guidesTable.title,
       updatedAt: guidesTable.updatedAt,
+      translations: guidesTable.translations,
     }).from(guidesTable)
       .where(or(eq(guidesTable.published, true), and(isNotNull(guidesTable.scheduledAt), lte(guidesTable.scheduledAt, new Date()))))
       .orderBy(desc(guidesTable.publishedAt));
@@ -106,12 +112,14 @@ router.get("/guides-sitemap.xml", async (req, res) => {
       const lastmod = (guide.updatedAt || new Date()).toISOString();
 
       const imageXml = image ? `\n    <image:image><image:loc>${escapeXml(image)}</image:loc><image:title>${escapeXml(plainTitle(guide.title))}</image:title></image:image>` : "";
-      return `  <url>
-    <loc>${SITE_URL}${path}/</loc>
-    <lastmod>${lastmod}</lastmod>
+      return urlBlocks(
+        SITE_URL,
+        path,
+        availableLangs(guide.translations, ["title", "content"]),
+        () => `    <lastmod>${lastmod}</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>${imageXml}
-  </url>`;
+    <priority>0.7</priority>${imageXml}`,
+      );
     });
 
     res.set({ "Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, max-age=300, stale-while-revalidate=3600" });
@@ -134,6 +142,7 @@ router.get("/news-sitemap.xml", async (req, res) => {
       coverImage: newsTable.coverImage,
       title: newsTable.title,
       updatedAt: newsTable.updatedAt,
+      translations: newsTable.translations,
     }).from(newsTable)
       .where(or(eq(newsTable.published, true), and(isNotNull(newsTable.scheduledAt), lte(newsTable.scheduledAt, new Date()))))
       .orderBy(desc(newsTable.publishedAt));
@@ -144,12 +153,14 @@ router.get("/news-sitemap.xml", async (req, res) => {
       const lastmod = (item.updatedAt || new Date()).toISOString();
 
       const imageXml = image ? `\n    <image:image><image:loc>${escapeXml(image)}</image:loc><image:title>${escapeXml(plainTitle(item.title))}</image:title></image:image>` : "";
-      return `  <url>
-    <loc>${SITE_URL}${path}/</loc>
-    <lastmod>${lastmod}</lastmod>
+      return urlBlocks(
+        SITE_URL,
+        path,
+        availableLangs(item.translations, ["title", "content"]),
+        () => `    <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.7</priority>${imageXml}
-  </url>`;
+    <priority>0.7</priority>${imageXml}`,
+      );
     });
 
     res.set({ "Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, max-age=300, stale-while-revalidate=3600" });

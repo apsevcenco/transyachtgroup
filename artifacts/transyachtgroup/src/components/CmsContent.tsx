@@ -1,5 +1,8 @@
 import DOMPurify from "dompurify";
 
+import { useLanguage } from "@/contexts/LanguageContext";
+import { localizeInternalHref } from "@/lib/langRoutes";
+
 interface CmsContentProps {
   html: string;
   className?: string;
@@ -37,6 +40,7 @@ export function CmsContent({
   style,
   as: Tag = "span",
 }: CmsContentProps) {
+  const { lang } = useLanguage();
   if (!html) return null;
 
   const clean = DOMPurify.sanitize(html, {
@@ -44,11 +48,17 @@ export function CmsContent({
     ALLOWED_ATTR: ["style", "href", "target", "rel"],
   });
 
+  // Internal links in translated copy point at the same-language page when that page exists.
+  const localized =
+    lang === "en"
+      ? clean
+      : clean.replace(/href="(\/[^"]*)"/g, (_match, href: string) => `href="${localizeInternalHref(href, lang)}"`);
+
   return (
     <Tag
       className={className}
       style={style}
-      dangerouslySetInnerHTML={{ __html: clean }}
+      dangerouslySetInnerHTML={{ __html: localized }}
     />
   );
 }

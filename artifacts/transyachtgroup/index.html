@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
       // The static host cannot 301 "/about" -> "/about/", and serves this shell for slash-less URLs.
-      // Normalise to the canonical trailing-slash URL before anything renders.
+      // Normalise to the canonical trailing-slash URL before anything renders. Language-prefixed
+      // URLs (/fr/cars, /ru, ...) are covered by the same rule; /admin and /api are never rewritten.
       (function () {
         var l = location;
         var p = l.pathname;
@@ -64,26 +65,6 @@
     <link
       rel="alternate"
       hreflang="en"
-      href="https://www.transyachtgroup.com/"
-    />
-    <link
-      rel="alternate"
-      hreflang="fr"
-      href="https://www.transyachtgroup.com/"
-    />
-    <link
-      rel="alternate"
-      hreflang="ru"
-      href="https://www.transyachtgroup.com/"
-    />
-    <link
-      rel="alternate"
-      hreflang="ro"
-      href="https://www.transyachtgroup.com/"
-    />
-    <link
-      rel="alternate"
-      hreflang="ar"
       href="https://www.transyachtgroup.com/"
     />
     <link

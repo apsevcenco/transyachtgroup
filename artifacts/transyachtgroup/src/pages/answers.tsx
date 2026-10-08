@@ -22,6 +22,7 @@ export default function AnswersPage() {
         description="Direct answers about luxury car rental, VIP transfers, yacht charter, Monaco, the French Riviera and Courchevel."
         path="/answers"
         lang={lang}
+        langs={["en"]}
       />
       <Navbar />
       <main className="px-5 pb-24 pt-36">

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
 
 import type { LangCode } from "@/contexts/LanguageContext";
+import { RELATED_QUESTIONS } from "@/data/pageLabels";
 import { fetchAnswers, type Answer } from "@/lib/api";
 
 // One shared request per page load; answers are small and the same for every caller.
@@ -30,20 +31,12 @@ export function useAnswers(): Answer[] {
   return answers;
 }
 
-const HEADING: Record<LangCode, string> = {
-  en: "Related questions",
-  fr: "Questions associées",
-  ru: "Связанные вопросы",
-  ro: "Întrebări conexe",
-  ar: "أسئلة ذات صلة",
-};
-
 /** Additive link block: renders nothing until at least one matching answer exists. */
 export function RelatedAnswers({ answers, lang, className = "mt-14" }: { answers: Answer[]; lang: LangCode; className?: string }) {
   if (!answers.length) return null;
   return (
     <section className={className}>
-      <h2 className="mb-5 font-serif text-2xl sm:text-3xl">{HEADING[lang] || HEADING.en}</h2>
+      <h2 className="mb-5 font-serif text-2xl sm:text-3xl">{RELATED_QUESTIONS[lang] || RELATED_QUESTIONS.en}</h2>
       <ul className="grid gap-3 sm:grid-cols-2">
         {answers.map((answer) => (
           <li key={answer.slug}>

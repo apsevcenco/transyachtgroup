@@ -57,7 +57,7 @@ export default function AnswerDetail({ slug }: { slug: string }) {
 
   return (
     <div className="min-h-screen bg-background text-white">
-      <SeoHead title={item?.metaTitle || item?.question || "Answer"} description={item?.metaDescription || item?.directAnswer || ""} path={path} lang={lang} jsonLd={jsonLd} />
+      <SeoHead title={item?.metaTitle || item?.question || "Answer"} description={item?.metaDescription || item?.directAnswer || ""} path={path} lang={lang} langs={["en"]} jsonLd={jsonLd} />
       <Navbar />
       <main className="px-5 pb-24 pt-36">
         <article className="mx-auto max-w-4xl">

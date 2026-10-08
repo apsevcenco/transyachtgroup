@@ -35,6 +35,19 @@ export const LOCATIONS = {
 
 export type LocationKey = keyof typeof LOCATIONS;
 
+/**
+ * City names as written in running text. English names are kept where the language uses them
+ * (fr) or where the sentence templates cannot decline a name (ru); Arabic and Romanian get their own.
+ */
+const LOCAL_NAMES: Partial<Record<LangCode, Partial<Record<string, string>>>> = {
+  ro: { nice: "Nisa" },
+  ar: { cannes: "كان", monaco: "موناكو", nice: "نيس", antibes: "أنتيب", "saint-tropez": "سان تروبيه", courchevel: "كورشوفيل" },
+};
+
+export function locationName(key: LocationKey, lang: LangCode): string {
+  return LOCAL_NAMES[lang]?.[key] ?? LOCATIONS[key].name;
+}
+
 export const LOCATION_SERVICES: Partial<Record<LocationKey, { slug: string; label: string }[]>> = {
   cannes: [
     { slug: "luxury-car-rental-cannes", label: "Luxury car rental in Cannes" },

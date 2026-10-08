@@ -73,7 +73,7 @@ export default function Home() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [, setLocation] = useLocation();
-  const { lang, t } = useLanguage();
+  const { lang, t, lp } = useLanguage();
   usePageView();
 
   const { data: collection = [] } = useQuery<VehicleItem[]>({
@@ -399,7 +399,7 @@ export default function Home() {
                 onClick={() => setLocation(vehiclePath(item))}
               >
                 <a
-                  href={`${vehiclePath(item)}/`}
+                  href={lp(`${vehiclePath(item)}/`)}
                   aria-label={`${t("view_details")}: ${stripCmsText(item.name)}`}
                   onClick={(event) => {
                     event.preventDefault();
@@ -650,7 +650,7 @@ export default function Home() {
                 </h2>
               </div>
               <a
-                href="/news/"
+                href={lp("/news/")}
                 className="inline-flex items-center text-gold/70 hover:text-gold text-[11px] uppercase tracking-[0.25em] transition-colors"
               >
                 View all news <ChevronRight size={13} className="ml-1" />
@@ -660,7 +660,7 @@ export default function Home() {
               {latestNews.map((item) => (
                 <article key={item.id} className="overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.02]">
                   {item.coverImage && (
-                    <a href={`/news/${item.slug}/`}>
+                    <a href={lp(`/news/${item.slug}/`)}>
                       <img src={item.coverImage} alt="" className="aspect-[16/10] w-full object-cover" loading="lazy" />
                     </a>
                   )}
@@ -674,7 +674,7 @@ export default function Home() {
                     <p className="mt-4 line-clamp-3 text-sm font-light leading-6 text-white/45">
                       {item.excerpt}
                     </p>
-                    <a href={`/news/${item.slug}/`} className="mt-6 inline-flex items-center text-sm text-gold">
+                    <a href={lp(`/news/${item.slug}/`)} className="mt-6 inline-flex items-center text-sm text-gold">
                       Read more <ChevronRight size={13} className="ml-1" />
                     </a>
                   </div>
@@ -906,7 +906,7 @@ export default function Home() {
                   <ul className="space-y-3">
                     <li>
                       <a
-                        href="/yachts/"
+                        href={lp("/yachts/")}
                         className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                       >
                         {stripCmsText(siteContent.yacht_section_title) ||
@@ -916,7 +916,7 @@ export default function Home() {
 
                     <li>
                       <a
-                        href="/cars/"
+                        href={lp("/cars/")}
                         className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                       >
                         {stripCmsText(siteContent.car_section_title) ||
@@ -925,7 +925,7 @@ export default function Home() {
                     </li>
                     <li>
                       <a
-                        href="/about/"
+                        href={lp("/about/")}
                         className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                       >
                         {t("off_market")}
@@ -940,7 +940,7 @@ export default function Home() {
                   <ul className="space-y-3">
                     <li>
                       <a
-                        href="/about/"
+                        href={lp("/about/")}
                         className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                       >
                         {t("about_us")}
@@ -967,7 +967,7 @@ export default function Home() {
 
                     <li>
                       <a
-                        href="/privacy/"
+                        href={lp("/privacy/")}
                         className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                       >
                         Privacy Policy
@@ -976,7 +976,7 @@ export default function Home() {
 
                     <li>
                       <a
-                        href="/legal/"
+                        href={lp("/legal/")}
                         className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                       >
                         Legal Notice
@@ -991,7 +991,7 @@ export default function Home() {
                   <ul className="space-y-3">
                     <li>
                       <a
-                        href="/locations/courchevel/"
+                        href={lp("/locations/courchevel/")}
                         className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                       >
                         Courchevel
@@ -999,7 +999,7 @@ export default function Home() {
                     </li>
                     <li>
                       <a
-                        href="/services/luxury-car-rental-courchevel/"
+                        href={lp("/services/luxury-car-rental-courchevel/")}
                         className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                       >
                         Car rental in Courchevel
@@ -1007,7 +1007,7 @@ export default function Home() {
                     </li>
                     <li>
                       <a
-                        href="/services/courchevel-private-transfers/"
+                        href={lp("/services/courchevel-private-transfers/")}
                         className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                       >
                         Transfers to Courchevel
@@ -1015,7 +1015,7 @@ export default function Home() {
                     </li>
                     <li>
                       <a
-                        href="/services/geneva-airport-to-courchevel-transfer/"
+                        href={lp("/services/geneva-airport-to-courchevel-transfer/")}
                         className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                       >
                         Geneva to Courchevel
@@ -1023,7 +1023,7 @@ export default function Home() {
                     </li>
                     <li>
                       <a
-                        href="/services/lyon-airport-to-courchevel-transfer/"
+                        href={lp("/services/lyon-airport-to-courchevel-transfer/")}
                         className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                       >
                         Lyon to Courchevel
@@ -1038,7 +1038,7 @@ export default function Home() {
                   <ul className="space-y-3">
                     <li>
                       <a
-                        href="/guides/"
+                        href={lp("/guides/")}
                         className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                       >
                         Guides
@@ -1046,7 +1046,7 @@ export default function Home() {
                     </li>
                     <li>
                       <a
-                        href="/news/"
+                        href={lp("/news/")}
                         className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                       >
                         News
@@ -1076,7 +1076,7 @@ export default function Home() {
                     ].map(([slug, city]) => (
                       <li key={slug}>
                         <a
-                          href={`/locations/${slug}/`}
+                          href={lp(`/locations/${slug}/`)}
                           className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                         >
                           {city}

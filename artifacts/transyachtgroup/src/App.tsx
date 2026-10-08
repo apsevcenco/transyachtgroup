@@ -17,6 +17,7 @@ import { CookieBanner } from "@/components/CookieBanner";
 import { RouteSeo } from "@/components/RouteSeo";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { vehicleIdFromSlug } from "@/lib/vehicleSeo";
+import { useLangLocation } from "@/lib/useLangLocation";
 
 const Home = lazy(() => import("@/pages/home"));
 const Catalog = lazy(() => import("@/pages/catalog"));
@@ -199,7 +200,10 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <LanguageProvider>
           <TooltipProvider>
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <WouterRouter
+              hook={useLangLocation}
+              base={import.meta.env.BASE_URL.replace(/\/$/, "")}
+            >
               <RouteSeo />
               <GoogleAnalytics />
               <Router />
