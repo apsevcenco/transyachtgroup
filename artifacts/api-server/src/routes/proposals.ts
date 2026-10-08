@@ -39,6 +39,14 @@ const languageNames = {
   ar: "Arabic",
 } as const;
 
+const businessLetterLabels: Record<keyof typeof languageNames, { advantages: string }> = {
+  en: { advantages: "Key advantages" },
+  fr: { advantages: "Avantages clés" },
+  ru: { advantages: "Ключевые преимущества" },
+  ro: { advantages: "Avantaje cheie" },
+  ar: { advantages: "المزايا الرئيسية" },
+};
+
 type BusinessLetterCopy = {
   headline: string;
   subheadline: string;
@@ -245,6 +253,7 @@ function renderBusinessLetterHtml(input: {
   const dir = input.language === "ar" ? "rtl" : "ltr";
   const c = input.copy;
   const benefits = c.benefits.map((benefit) => `<li>${escapeHtml(benefit)}</li>`).join("");
+  const labels = businessLetterLabels[input.language] || businessLetterLabels.en;
   const currentDate = new Intl.DateTimeFormat(input.language === "en" ? "en-GB" : input.language, { dateStyle: "long" }).format(new Date());
   const greeting = c.greeting;
   const formatLines = (value: string) => escapeHtml(value).replace(/\r?\n/g, "<br/>");
@@ -328,7 +337,7 @@ function renderBusinessLetterHtml(input: {
         </div>
         <div class="cta">${escapeHtml(c.callToAction)}</div>
       </div>
-      <aside class="panel"><h2>Key advantages</h2><ul>${benefits}</ul></aside>
+      <aside class="panel"><h2>${escapeHtml(labels.advantages)}</h2><ul>${benefits}</ul></aside>
     </section>
     <footer class="footer">
       ${footerItems.map(([label, value]) => `<span><strong>${escapeHtml(label)}</strong> ${escapeHtml(value)}</span>`).join("")}
