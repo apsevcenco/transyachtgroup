@@ -91,10 +91,11 @@ function auditAnswerInput(input: ReturnType<typeof parseAnswerInput>) {
   if (!input.metaTitle || metaTitleLength < 35 || metaTitleLength > 70) issues.push({ code: "meta_title_length", severity: "warning", message: "SEO title should be about 35–70 characters.", points: -7 });
   if (!input.metaDescription || metaDescriptionLength < 110 || metaDescriptionLength > 155) issues.push({ code: "meta_description_length", severity: "warning", message: "SEO description should contain 110–155 characters.", points: -8 });
 
-  const unsupported = haystack.match(/\b(?:wi-?fi|catering(?! to)|refreshments|child seats?|baby seats?|limousines?|helicopters?|24\/7|24 hours|guaranteed availability|award-winning|years of experience)\b/g);
+  const unsupported = haystack.match(/\b(?:wi-?fi|catering(?! to)|refreshments|child seats?|baby seats?|limousines?|helicopters?|24\/7|24 hours|guaranteed availability|award-winning|years of experience|always (?:included|provided|available|guaranteed|prepared|factored)|tarmac|we guarantee|fully insured|chauffeur-driven fleet)\b/g);
   if (unsupported?.length) issues.push({ code: "unsupported_claims", severity: "error", message: `Remove claims we cannot verify: ${[...new Set(unsupported)].join(", ")}.`, points: -20 });
-  const fluff = haystack.match(/\b(?:unparalleled|epitomi[sz]es|unforgettable|seamless|world-class|second to none|bespoke luxury)\b/g);
+  const fluff = haystack.match(/\b(?:unparalleled|epitomi[sz]es|unforgettable|seamless|world-class|second to none|bespoke|dedicated|exclusive|opulent|exceptional|renowned|tailor-made|tailored)\b/g);
   if (fluff && fluff.length >= 2) issues.push({ code: "marketing_fluff", severity: "warning", message: `Replace marketing filler with concrete facts: ${[...new Set(fluff)].join(", ")}.`, points: -8 });
+  if (linkCount > 5) issues.push({ code: "too_many_links", severity: "warning", message: `Too many internal links (${linkCount}); keep 2-5, one per target page.`, points: -6 });
   if (!/\d/.test(input.directAnswer) && !/^(yes|no|it depends|usually)\b/i.test(input.directAnswer.trim())) issues.push({ code: "direct_answer_not_concrete", severity: "warning", message: "Direct answer should state the concrete fact first (a figure, or a clear yes/no with the key condition).", points: -8 });
 
   const score = Math.max(0, Math.min(100, 100 + issues.reduce((sum, issue) => sum + issue.points, 0)));
@@ -203,6 +204,7 @@ const BUSINESS_FACTS = `WHAT TRANS YACHT GROUP ACTUALLY OFFERS (describe nothing
 - Vehicles are delivered to hotels, villas, chalets, marinas and airports at an agreed time and address, and collected at the end of the rental.
 - Every request is handled individually: availability, rental terms (deposit, mileage, insurance, driver requirements) and the final quotation are confirmed personally before booking. No fixed prices are published.
 - Vehicle categories include executive saloons, SUVs, supercars and ultra-luxury cars (Mercedes-Benz, Rolls-Royce, Bentley, Ferrari, Lamborghini and similar); a specific model is subject to live availability.
+Never say anything is "always included", "always provided" or guaranteed. Winter equipment, route plans, pick-up points and vehicle choice are "confirmed in the individual offer". Do not claim airside/tarmac meetings, specific pick-up procedures or customs services.
 FORBIDDEN CLAIMS: in-car Wi-Fi, catering or refreshments, child seats, limousines, helicopters, fixed prices, discounts, 24/7 availability, guaranteed availability, response-time promises, awards, years in business, number of clients, insurance specifics, licences held. Do not describe our "professional chauffeurs", fleet size or vehicle features unless stated above.
 
 ROUTE FACTS (approximate, normal conditions, to Courchevel 1850 via Moûtiers):
