@@ -32,6 +32,9 @@ English stays at the unprefixed URLs. French, Russian, Romanian and Arabic live 
 
 * **Sitemaps.** `pages-sitemap.xml` and the API sitemaps (`/api/vehicles|guides|news-sitemap.xml`) list every language URL with
   `xhtml:link` alternates identical to the page's hreflang tags. The old fake alternates (all pointing at one URL) are gone.
+* **Vehicle pages.** The English tidy-ups (`seoVehicleName`, `vehicleShortName`) and the generated factual yacht summary (`yachtSummary`) are
+  English-only: language pages use the translated name and never show or prerender the summary. The "Explore" links point to the
+  same-language service pages and only to related vehicles that exist in that language.
 * **Vehicle slugs** always come from the English name (the API sends `seoSlug` for translated vehicles), so
   `/fr/cars/<slug>/` and `/cars/<slug>/` share one slug.
 

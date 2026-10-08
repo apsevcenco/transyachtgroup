@@ -217,6 +217,21 @@ for (const code of translatedLangs) {
   }
 }
 
+// 4b. vehicle pages: the English-only yacht summary and English Explore links never appear on language pages
+for (const code of translatedLangs) {
+  const vehiclePages = dirs.filter((dir) => new RegExp(`^${code}/(cars|yachts)/.+-\\d+/$`).test(dir));
+  for (const dir of vehiclePages) {
+    const page = pages.get(dir);
+    assert.ok(!/available for private charter on the French Riviera/.test(page), `/${dir} shows the English yacht summary`);
+    assert.ok(!/<h2>Explore<\/h2>/.test(page), `/${dir} has the English Explore heading`);
+    const explore = page.match(/id="seo-content"[\s\S]*?<\/article>/)?.[0] || "";
+    for (const [, href] of explore.matchAll(/<a href="(\/[^"#]*)"/g)) {
+      assert.ok(href.startsWith(`/${code}/`), `/${dir} links to a non-${code} URL: ${href}`);
+      assert.ok(pages.has(href.slice(1)), `/${dir} links to a missing page: ${href}`);
+    }
+  }
+}
+
 // 5. sitemap: language URLs with xhtml alternates that match the hreflang tags; no fake alternates
 assert.match(pagesSitemap, /xmlns:xhtml="http:\/\/www\.w3\.org\/1999\/xhtml"/);
 const sitemapLocs = new Set();

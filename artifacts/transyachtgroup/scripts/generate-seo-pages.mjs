@@ -53,6 +53,7 @@ const { GUIDES_COPY, NEWS_COPY } = await importTsModule("src/data/hubCopy.ts");
 const { vehiclePath } = await importTsModule("src/lib/vehicleSeo.ts");
 const { alternateLinks, articleLangs, languageUrl, localizeInternalHref, vehicleLangs } = await importTsModule("src/lib/langRoutes.ts");
 const { answersForService, answersForLocation, moreAnswers } = await importTsModule("src/data/answerLinks.ts");
+const { seoVehicleName, vehicleShortName, vehicleServiceLinks, relatedVehicles, yachtSummary } = await importTsModule("src/data/vehicleContent.ts");
 
 // ---------------------------------------------------------------- helpers
 function escapeHtml(value) {
@@ -451,10 +452,24 @@ function vehiclePageEntry(rawVehicle, lang, mapHref) {
   const vehicle = vehicleView(rawVehicle, lang);
   const L = PAGE_LABELS[lang];
   const isCar = vehicle.category !== "yacht";
-  const name = stripHtml(vehicle.name);
+  // The tidy-up rules, the factual yacht summary and the English link labels are English-only:
+  // language pages use the translated name and never show the generated summary.
+  const english = lang === "en";
+  const name = english ? seoVehicleName(vehicle) : stripHtml(vehicle.name);
+  const shortName = english ? vehicleShortName(vehicle) : name;
   const specs = vehicle.specs && typeof vehicle.specs === "object" ? vehicle.specs : {};
   const fullDescription = typeof specs.fullDescription === "string" ? specs.fullDescription : "";
-  const description = stripHtml(fullDescription || vehicle.description).slice(0, 300) || `${name} available from ${brand} on the French Riviera.`;
+  const summary = fullDescription || !english ? [] : yachtSummary(vehicle);
+  // Explore links: same-language service pages (all exist) and related vehicles that exist in this language.
+  const services = vehicleServiceLinks(rawVehicle).map((item) => {
+    const slug = item.href.split("/")[2];
+    return { href: rel(`/services/${slug}`, lang), label: landingTitle(slug, lang) ?? item.label };
+  });
+  const related = relatedVehicles(vehicleSets[lang], rawVehicle).map((item) => ({
+    href: rel(vehiclePath(item), lang),
+    label: english ? seoVehicleName(item) : stripHtml(vehicleView(item, lang).name),
+  }));
+  const description = stripHtml(fullDescription || summary.join(" ") || vehicle.description).slice(0, 300) || `${name} available from ${brand} on the French Riviera.`;
   const metaDescription = description.length > 155 ? `${description.slice(0, 152).trim()}…` : description;
   const path = vehiclePath(rawVehicle); // slug always comes from the English name
   const images = [vehicle.image, ...(Array.isArray(vehicle.images) ? vehicle.images : [])].map(publicAssetUrl).filter(Boolean);
@@ -467,7 +482,7 @@ function vehiclePageEntry(rawVehicle, lang, mapHref) {
   return {
     path,
     lang,
-    title: withBrand(`${name} ${isCar ? VEHICLE_TITLE_SUFFIX[lang].car : VEHICLE_TITLE_SUFFIX[lang].yacht}`),
+    title: withBrand(`${shortName} ${isCar ? VEHICLE_TITLE_SUFFIX[lang].car : VEHICLE_TITLE_SUFFIX[lang].yacht}`),
     description: metaDescription,
     heading: name,
     image,
@@ -477,8 +492,9 @@ function vehiclePageEntry(rawVehicle, lang, mapHref) {
 <h1>${escapeHtml(name)}</h1>
 ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" loading="lazy">` : ""}
 <p>${escapeHtml(stripHtml(vehicle.description))}</p>
-${fullDescription ? sanitizeHtml(fullDescription, mapHref) : ""}
+${fullDescription ? sanitizeHtml(fullDescription, mapHref) : summary.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}
 ${specRows.length ? `<h2>${escapeHtml(L.specifications)}</h2><ul>${specRows.join("")}</ul>` : ""}
+${services.length || related.length ? `<h2>${escapeHtml(L.explore)}</h2>${li([...services, ...related].map((item) => `<li>${link(item.href, item.label)}</li>`))}` : ""}
 <p>${link(`${rel("/", lang)}#request`, L.requestOffer)}</p>
 </article>`,
     jsonLd: [

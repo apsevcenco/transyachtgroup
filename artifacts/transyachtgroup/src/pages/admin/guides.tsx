@@ -284,13 +284,13 @@ export default function AdminGuides() {
     try {
       let rows: Array<Record<string, unknown>> = [];
       if (file.name.toLowerCase().endsWith(".xlsx")) {
-        const excel = await import("read-excel-file/browser") as typeof import("read-excel-file/browser") & { readSheetNames?: (input: File) => Promise<string[]> };
-        const readXlsxFile = excel.default as unknown as (input: File, options?: { sheet?: string }) => Promise<unknown[][]>;
-        const sheetNames = await excel.readSheetNames?.(file).catch(() => []) || [];
-        const sheetsToRead = sheetNames.length ? sheetNames : [undefined];
-        for (const sheet of sheetsToRead) {
-          const rawRows = await readXlsxFile(file, sheet ? { sheet } : undefined);
-          rows.push(...mapSearchMetricRows(rawRows as unknown as unknown[][]));
+        const { default: readWorkbook } = await import("read-excel-file/browser") as typeof import("read-excel-file/browser");
+        const workbook = await (readWorkbook as unknown as (input: File) => Promise<unknown>)(file);
+        const sheets = Array.isArray(workbook) && workbook.some((sheet) => sheet && typeof sheet === "object" && "data" in (sheet as Record<string, unknown>))
+          ? workbook as Array<{ sheet?: string; data?: unknown[][] }>
+          : [{ sheet: file.name, data: workbook as unknown[][] }];
+        for (const sheet of sheets) {
+          rows.push(...mapSearchMetricRows((sheet.data || []) as unknown[][]));
         }
       } else {
         rows = parseSearchMetricsInput(await file.text());
@@ -298,7 +298,7 @@ export default function AdminGuides() {
       if (!rows.length) throw new Error("The file did not contain recognizable Search Console URL metrics.");
       const result = await importGuideSearchMetrics(rows);
       await load();
-      setMessage(`${result.updated} page metrics updated from ${rows.length} rows in ${file.name}.`);
+      setMessage(`${result.updated} page metrics saved from ${rows.length} Search Console row${rows.length === 1 ? "" : "s"} in ${file.name}.`);
     } catch (err) { setMessage(err instanceof Error ? err.message : "Search Console file import failed"); }
     finally { setBusy(false); }
   };

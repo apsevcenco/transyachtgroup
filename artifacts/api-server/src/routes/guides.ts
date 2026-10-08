@@ -6,6 +6,7 @@ import rateLimit from "express-rate-limit";
 import { db } from "@workspace/db";
 import { analyticsEventsTable, answersTable, guidesTable, newsTable, seoCompetitorsTable, seoCompetitorSnapshotsTable, seoContentPlansTable, seoOpportunitiesTable, seoPageMetricsTable, vehiclesTable } from "@workspace/db/schema";
 import { vehiclePath } from "../lib/vehicleSeo";
+import { canonicalInternalHref } from "../lib/siteLinks";
 import { adminAuth } from "../middleware/auth";
 import { auditGuide, type SeoAuditInput, type SeoAuditIssue } from "../lib/guideSeoAudit";
 import { uploadPublicImage } from "../lib/privateStorage";
@@ -268,7 +269,7 @@ function cleanGeneratedCopy(value: unknown): GeneratedCopy {
   const item = value && typeof value === "object" ? value as Record<string, unknown> : {};
   const field = (name: string, max: number) => {
     const result = typeof item[name] === "string" ? item[name].trim() : "";
-    if (!result || result.length > max) throw new Error("INVALID_AI_RESPONSE");
+    if (!result || result.length > max) throw new Error(`INVALID_AI_RESPONSE:${name}:${result ? "too_long" : "missing"}`);
     return result;
   };
   return {
@@ -300,20 +301,6 @@ function plainLabel(value: unknown): string {
   return String(value || "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/gi, " ").replace(/\s+/g, " ").trim().slice(0, 180);
 }
 
-function canonicalInternalHref(value: string): string | null {
-  try {
-    const url = value.startsWith("/") && !value.startsWith("//")
-      ? new URL(value, "https://www.transyachtgroup.com")
-      : new URL(value);
-    if (url.protocol !== "https:" || url.hostname !== "www.transyachtgroup.com") return null;
-    url.search = "";
-    url.hash = "";
-    if (url.pathname !== "/" && !url.pathname.endsWith("/")) url.pathname += "/";
-    url.searchParams.set("lang", "en");
-    return `${url.pathname}${url.search}`;
-  } catch { return null; }
-}
-
 async function loadInternalLinkCandidates(extraLinks = "", excludeGuideId?: number): Promise<InternalLinkCandidate[]> {
   const [vehicles, guides, answers] = await Promise.all([
     db.select({ id: vehiclesTable.id, name: vehiclesTable.name, category: vehiclesTable.category }).from(vehiclesTable).where(eq(vehiclesTable.visible, true)).orderBy(vehiclesTable.name),
@@ -336,8 +323,8 @@ async function loadInternalLinkCandidates(extraLinks = "", excludeGuideId?: numb
 function validateGeneratedLinks(copy: GeneratedCopy, candidates: InternalLinkCandidate[]): GeneratedCopy {
   const allowed = new Set(candidates.map((item) => item.url));
   const hrefs = [...copy.content.matchAll(/<a\s[^>]*href=["']([^"']+)["']/gi)].map((match) => canonicalInternalHref(match[1]));
-  if (hrefs.some((href) => !href || !allowed.has(href))) throw new Error("INVALID_AI_RESPONSE");
-  if (new Set(hrefs.filter(Boolean)).size < 3) throw new Error("INVALID_AI_RESPONSE");
+  if (hrefs.some((href) => !href || !allowed.has(href))) throw new Error("INVALID_AI_RESPONSE:links:not_approved");
+  if (new Set(hrefs.filter(Boolean)).size < 3) throw new Error("INVALID_AI_RESPONSE:links:fewer_than_3");
   return copy;
 }
 
@@ -988,7 +975,7 @@ CURRENT ARTICLE=${JSON.stringify(checkedSource)}`));
     const code = err instanceof Error ? err.message : "";
     const error = code.startsWith("OPENAI_401") ? "OpenAI rejected the API key"
       : code.startsWith("OPENAI_429") ? "OpenAI quota or billing limit reached"
-        : code === "INVALID_AI_RESPONSE" ? "OpenAI returned an incomplete correction. Please try again"
+        : code.startsWith("INVALID_AI_RESPONSE") ? `OpenAI returned an incomplete correction (${code.split(":").slice(1).join(":") || "format"}). Please try again`
           : code === "AI_SEO_LENGTH_TARGET_NOT_MET" ? "OpenAI did not reach the required article length after three attempts. Please try again"
           : code.startsWith("AI_SEO_FIX_TARGET_NOT_MET") ? "OpenAI did not fix the requested SEO audit items. Please try again or edit the highlighted fields manually"
           : "AI SEO correction failed. Check the backend logs for the recorded OpenAI error";

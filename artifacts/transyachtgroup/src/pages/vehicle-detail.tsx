@@ -16,10 +16,12 @@ import {
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { useLocation } from "wouter";
-import { fetchVehicle, fetchContent, downloadVehicleProposal } from "@/lib/api";
+import { fetchVehicle, fetchVehicles, fetchContent, downloadVehicleProposal } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePageView, trackVehicleView } from "@/hooks/useAnalytics";
 import { CmsContent } from "@/components/CmsContent";
+import { VehicleLinks } from "@/components/VehicleLinks";
+import { seoVehicleName, vehicleShortName, yachtSummary } from "@/data/vehicleContent";
 import { SeoHead, SITE_URL, pageUrl } from "@/components/SeoHead";
 import { VEHICLE_TITLE_SUFFIX } from "@/data/pageLabels";
 import { vehicleLangs, withLangPrefix } from "@/lib/langRoutes";
@@ -232,6 +234,15 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
       .catch(() => {});
   }, [id, lang]);
 
+  const [categoryVehicles, setCategoryVehicles] = useState<any[]>([]);
+  const vehicleCategory = vehicle?.category;
+  useEffect(() => {
+    if (!vehicleCategory) return;
+    fetchVehicles(lang, false, vehicleCategory)
+      .then((list) => setCategoryVehicles(Array.isArray(list) ? list : []))
+      .catch(() => {});
+  }, [vehicleCategory, lang]);
+
   const phoneNumber = siteContent.phone_number || "+41 79 000 00 00";
   const whatsappNumber = siteContent.whatsapp_number || phoneNumber;
   const stripHtml = (s: string) => s.replace(/<[^>]*>/g, "");
@@ -391,9 +402,11 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
       label,
       value: formatSpecDisplay(key, specs[key]),
     }));
-  const seoName = stripHtmlTags(vehicle.name);
+  // Tidy-up rules (typos, French yacht names) are English-only; translated names are used as written.
+  const seoName = lang === "en" ? seoVehicleName(vehicle) : stripHtmlTags(vehicle.name);
+  const summary = lang === "en" && !fullDescription ? yachtSummary(vehicle) : [];
   const seoDescription =
-    stripHtmlTags(fullDescription || vehicle.description).slice(0, 300) ||
+    stripHtmlTags(fullDescription || summary.join(" ") || vehicle.description).slice(0, 300) ||
     `${seoName} available from Trans Yacht Group on the French Riviera.`;
   const seoImage = allImages[0] || vehicle.image || "/opengraph.jpg";
   const seoPath = vehiclePath(vehicle);
@@ -432,7 +445,7 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
   return (
     <div className="min-h-screen bg-card text-white">
       <SeoHead
-        title={`${seoName} ${isCar ? VEHICLE_TITLE_SUFFIX[lang].car : VEHICLE_TITLE_SUFFIX[lang].yacht}`}
+        title={`${lang === "en" ? vehicleShortName(vehicle) : seoName} ${isCar ? VEHICLE_TITLE_SUFFIX[lang].car : VEHICLE_TITLE_SUFFIX[lang].yacht}`}
         description={seoDescription}
         path={seoPath}
         lang={lang}
@@ -596,6 +609,19 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
                 />
               )}
 
+              {!fullDescription && summary.length > 0 && (
+                <div className="mb-10">
+                  <h2 className="text-[10px] uppercase tracking-[0.4em] text-white/30 font-light mb-4">
+                    Description
+                  </h2>
+                  <div className="text-white/70 text-[15px] leading-relaxed font-light font-wix space-y-4">
+                    {summary.map((paragraph) => (
+                      <p key={paragraph}>{paragraph}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {fullDescription && (
                 <div className="mb-10">
                   <h2 className="text-[10px] uppercase tracking-[0.4em] text-white/30 font-light mb-4">
@@ -608,6 +634,8 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
                   />
                 </div>
               )}
+
+              <VehicleLinks vehicle={vehicle} vehicles={categoryVehicles} />
 
               {displaySpecs.length > 0 && (
                 <div className="mb-8">

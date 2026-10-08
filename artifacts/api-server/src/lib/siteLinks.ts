@@ -29,6 +29,23 @@ export function normalizeInternalPath(value: string): string | null {
   return INTERNAL_SET.has(withSlash) ? withSlash : null;
 }
 
+/**
+ * Public path for any link on our own domain, or null for anything else. Query strings and hashes are
+ * dropped and a trailing slash is added, matching the URLs we publish (no language query parameters).
+ */
+export function canonicalInternalHref(value: string): string | null {
+  try {
+    const url = value.startsWith("/") && !value.startsWith("//")
+      ? new URL(value, "https://www.transyachtgroup.com")
+      : new URL(value);
+    if (url.protocol !== "https:" || url.hostname !== "www.transyachtgroup.com") return null;
+    if (url.pathname !== "/" && !url.pathname.endsWith("/")) url.pathname += "/";
+    return url.pathname;
+  } catch {
+    return null;
+  }
+}
+
 /** Keeps links to real pages (normalised to the canonical trailing-slash form); unwraps all others. */
 export function restrictInternalLinks(html: string): string {
   return html.replace(/<a\b[^>]*?\bhref\s*=\s*(?:"([^"]*)"|'([^']*)')[^>]*>([\s\S]*?)<\/a>/gi, (_match, dq, sq, inner) => {
