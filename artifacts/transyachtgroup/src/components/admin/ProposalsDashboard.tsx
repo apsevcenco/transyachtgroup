@@ -571,8 +571,8 @@ export function ProposalsDashboard() {
     setError("");
     setBusinessNotice("");
     try {
-      const saved = await saveBusinessLetter(payload);
-      const translated = await translateBusinessLetter(saved.id, businessLang);
+      const sourceId = businessLetterId || (await saveBusinessLetter(payload)).id;
+      const translated = await translateBusinessLetter(sourceId, businessLang, payload);
       handleLoadBusinessLetter(translated);
       setBusinessNotice(`Created separate ${businessLang.toUpperCase()} translation: ${translated.title}`);
       loadBusinessLetters();

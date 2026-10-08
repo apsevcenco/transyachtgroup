@@ -882,12 +882,28 @@ router.post("/admin/proposals/business-letters/:id/translate", adminAuth, pdfLim
       return;
     }
 
-    const [source] = await db.select().from(businessLettersTable).where(eq(businessLettersTable.id, id)).limit(1);
-    if (!source) {
+    const [savedSource] = await db.select().from(businessLettersTable).where(eq(businessLettersTable.id, id)).limit(1);
+    if (!savedSource) {
       res.status(404).json({ error: "Business letter not found" });
       return;
     }
-    if (source.language === targetLanguage) {
+    const sourcePayload = value.source && typeof value.source === "object"
+      ? value.source as Partial<BusinessLetterRecordInput> & { contactName?: unknown }
+      : null;
+    const source = {
+      title: typeof sourcePayload?.title === "string" ? sourcePayload.title : savedSource.title,
+      recipientType: typeof sourcePayload?.recipientType === "string" ? sourcePayload.recipientType : savedSource.recipientType,
+      recipientName: typeof sourcePayload?.recipientName === "string" ? sourcePayload.recipientName : savedSource.recipientName,
+      language: sourcePayload?.language || savedSource.language,
+      topic: typeof sourcePayload?.topic === "string" ? sourcePayload.topic : savedSource.topic,
+      service: typeof sourcePayload?.service === "string" ? sourcePayload.service : savedSource.service,
+      notes: typeof sourcePayload?.notes === "string" ? sourcePayload.notes : savedSource.notes,
+      imageUrl: typeof sourcePayload?.imageUrl === "string" ? sourcePayload.imageUrl : savedSource.imageUrl,
+      signerName: typeof sourcePayload?.contactName === "string" ? sourcePayload.contactName : savedSource.signerName,
+      signerRole: typeof sourcePayload?.signerRole === "string" ? sourcePayload.signerRole : savedSource.signerRole,
+      copy: sourcePayload?.copy || savedSource.copy,
+    };
+    if (!sourcePayload && source.language === targetLanguage) {
       res.status(400).json({ error: "The letter is already in this language" });
       return;
     }

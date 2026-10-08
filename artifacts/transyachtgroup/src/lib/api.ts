@@ -1544,11 +1544,12 @@ export async function deleteBusinessLetter(id: number): Promise<void> {
 export async function translateBusinessLetter(
   id: number,
   language: BusinessLetterRequest["language"],
+  source?: BusinessLetterRequest & { id?: number; title?: string },
 ): Promise<BusinessLetterRecord> {
   const res = await fetch(`${API_BASE}/admin/proposals/business-letters/${id}/translate`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({ language }),
+    body: JSON.stringify({ language, source }),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
