@@ -91,7 +91,7 @@ function auditAnswerInput(input: ReturnType<typeof parseAnswerInput>) {
   if (!input.metaTitle || metaTitleLength < 35 || metaTitleLength > 70) issues.push({ code: "meta_title_length", severity: "warning", message: "SEO title should be about 35–70 characters.", points: -7 });
   if (!input.metaDescription || metaDescriptionLength < 110 || metaDescriptionLength > 155) issues.push({ code: "meta_description_length", severity: "warning", message: "SEO description should contain 110–155 characters.", points: -8 });
 
-  const unsupported = haystack.match(/\b(?:wi-?fi|catering|refreshments|child seats?|baby seats?|limousines?|helicopters?|24\/7|24 hours|guaranteed availability|award-winning|years of experience)\b/g);
+  const unsupported = haystack.match(/\b(?:wi-?fi|catering(?! to)|refreshments|child seats?|baby seats?|limousines?|helicopters?|24\/7|24 hours|guaranteed availability|award-winning|years of experience)\b/g);
   if (unsupported?.length) issues.push({ code: "unsupported_claims", severity: "error", message: `Remove claims we cannot verify: ${[...new Set(unsupported)].join(", ")}.`, points: -20 });
   const fluff = haystack.match(/\b(?:unparalleled|epitomi[sz]es|unforgettable|seamless|world-class|second to none|bespoke luxury)\b/g);
   if (fluff && fluff.length >= 2) issues.push({ code: "marketing_fluff", severity: "warning", message: `Replace marketing filler with concrete facts: ${[...new Set(fluff)].join(", ")}.`, points: -8 });
@@ -145,8 +145,9 @@ async function requestOpenAiJson(instructions: string, input: string): Promise<u
   const baseUrl = (process.env.OPENAI_BASE_URL || process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
   const apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_NOT_CONFIGURED");
-  const configuredModel = process.env.OPENAI_CONTENT_MODEL?.trim().toLowerCase();
-  const preferredModel = configuredModel && !configuredModel.startsWith("gpt-5") && !configuredModel.includes("5.6") ? configuredModel : "gpt-4o";
+  // Answers need long, instruction-following output; gpt-4o fell short on length and facts, so default higher.
+  const configuredModel = process.env.OPENAI_ANSWERS_MODEL?.trim().toLowerCase();
+  const preferredModel = configuredModel && !configuredModel.startsWith("gpt-5") && !configuredModel.includes("5.6") ? configuredModel : "gpt-4.1";
   const models = Array.from(new Set([preferredModel, "gpt-4o", "gpt-4o-mini"]));
   let response: Response | null = null;
   let detail = "";
