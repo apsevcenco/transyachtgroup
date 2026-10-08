@@ -243,7 +243,7 @@ export default function VehicleDetail({ id }: VehicleDetailProps) {
       .catch(() => {});
   }, [vehicleCategory, lang]);
 
-  const phoneNumber = siteContent.phone_number || "+41 79 000 00 00";
+  const phoneNumber = siteContent.phone_number || "+33625340827";
   const whatsappNumber = siteContent.whatsapp_number || phoneNumber;
   const stripHtml = (s: string) => s.replace(/<[^>]*>/g, "");
   const cleanPhone = stripHtml(phoneNumber).replace(/\s+/g, "");

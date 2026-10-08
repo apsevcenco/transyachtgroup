@@ -36,13 +36,12 @@ Never commit values. Store them in the hosting secret manager (Render → Enviro
 
 | Variable | Required | Purpose |
 |---|---|---|
-| `VITE_SUPABASE_URL` | yes | Supabase project URL (browser image uploads). Without it the admin panel fails on load |
-| `VITE_SUPABASE_ANON_KEY` | yes | Supabase anon (public) key |
 | `VITE_API_URL` / `API_URL` | optional | Absolute API URL used by the prerender at build time. If unset the prerender reads `https://www.transyachtgroup.com/api` |
 | `VITE_SITE_URL` | optional | Canonical site URL override |
 | `VITE_GOOGLE_ADS_ID`, `VITE_GOOGLE_ADS_FORM_CONVERSION_LABEL`, `VITE_GOOGLE_ADS_PHONE_CONVERSION_LABEL`, `VITE_GOOGLE_ADS_WHATSAPP_CONVERSION_LABEL` | optional | Google Ads conversion tracking |
 | `BASE_PATH` | optional | Sub-path deployment (default `/`) |
 
 ## Notes
+- `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are **no longer read** (image uploads go through the API now); they can be deleted from the static site's environment in Render.
 - Rotate any key that was ever shared in chat, email or screenshots.
 - After a sale, revoke the seller's keys and issue new ones in the buyer's accounts.

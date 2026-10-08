@@ -53,7 +53,7 @@ This document describes what a buyer receives and how the transfer is carried ou
 - Answers are English-only.
 - A weak news article (`mercedes-wedding-cars-on-the-french-riviera…`) scores low in the SEO audit.
 - Migrations are applied manually in Supabase (see DATABASE.md).
-- A few build-time leftovers from an earlier hosting setup remain (`@replit/*` Vite plugins, the `mockup-sandbox` package); they are harmless and listed in [ENGINEERING.md](ENGINEERING.md).
+- A few build-time leftovers from an earlier hosting setup remain (the `@replit/*` Vite plugins); they are harmless and listed in [ENGINEERING.md](ENGINEERING.md).
 
 ## 6. Support and handover period
 

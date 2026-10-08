@@ -28,7 +28,6 @@ export default [
       "attached_assets/**",
       "lib/api-client-react/**",
       "lib/api-zod/**",
-      "artifacts/mockup-sandbox/**",
       "artifacts/transyachtgroup/public/**",
     ],
   },

@@ -949,7 +949,7 @@ export default function Home() {
 
                     <li>
                       <a
-                        href="#"
+                        href="#request"
                         className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                       >
                         {t("concierge")}
@@ -1093,20 +1093,6 @@ export default function Home() {
                 &copy; {new Date().getFullYear()} TRANSYACHTGROUP.{" "}
                 {t("rights_reserved")}
               </p>
-              <div className="flex gap-8">
-                <a
-                  href="#"
-                  className="text-white/20 hover:text-gold/60 transition-all duration-500 text-[10px] uppercase tracking-[0.3em] font-light"
-                >
-                  {t("instagram")}
-                </a>
-                <a
-                  href="#"
-                  className="text-white/20 hover:text-gold/60 transition-all duration-500 text-[10px] uppercase tracking-[0.3em] font-light"
-                >
-                  {t("linkedin")}
-                </a>
-              </div>
             </div>
           </div>
         </div>

@@ -19,7 +19,7 @@ Production runs as two Render services built from the `main` branch of the GitHu
 | Build | `pnpm install` and `pnpm --filter @workspace/transyachtgroup run build` |
 | Publish directory | `artifacts/transyachtgroup/dist/public` |
 | What the build does | `vite build` → `generate-seo-pages.mjs` (prerender, sitemap, `404.html`) → `verify-seo.mjs` (fails the build if SEO signals are missing) |
-| Env | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, optional ads variables |
+| Env | optional Google Ads variables only (see ENVIRONMENT.md); no Supabase keys are needed in the frontend |
 
 If the public API is unreachable during the build the prerender skips dynamic content (guides, news, answers, vehicles) with a warning instead of failing; the next successful build restores it.
 

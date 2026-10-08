@@ -11,7 +11,7 @@ Visitors / crawlers
         ▼
  API (Render Web Service, Node + Express 5)
         ├── PostgreSQL (Supabase)  — all business data
-        ├── Supabase Storage       — images (browser uploads; private booking photos via server key)
+        ├── Supabase Storage       — images (uploaded through the API; private booking photos via the server key)
         ├── OpenAI                 — article / answer generation, SEO fixes, partner assistant
         ├── Resend                 — outgoing partner & proposal emails, inbound replies (webhook)
         └── Optional: WhatsApp Cloud API (review requests)
@@ -29,7 +29,6 @@ The browser calls `/api/...` on the same domain; the static host proxies it to t
 | `artifacts/api-server` | Express API: routes in `src/routes`, helpers in `src/lib`, auth in `src/middleware` |
 | `lib/db` | Drizzle ORM schema (`src/schema`) and the SQL migrations (`migrations/*.sql`) |
 | `lib/api-spec`, `lib/api-zod`, `lib/api-client-react` | OpenAPI contract and generated validators / hooks |
-| `artifacts/mockup-sandbox` | Design sandbox, not used in production |
 | `scripts` | Utility scripts (fonts, PDF/proposal tests, data seeds) |
 | `docs` | This documentation |
 

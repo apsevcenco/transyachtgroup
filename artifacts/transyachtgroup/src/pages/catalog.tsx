@@ -294,8 +294,7 @@ export default function Catalog({ category }: CatalogProps) {
       .then((v: any[]) => {
         setAllCollection(Array.isArray(v) ? v : []);
       })
-      .catch((err) => {
-        console.log("ERROR FETCH VEHICLES:", err);
+      .catch(() => {
         setAllCollection([]);
       });
 
@@ -303,8 +302,8 @@ export default function Catalog({ category }: CatalogProps) {
       .then((data) => {
         setSiteContent(data || {});
       })
-      .catch((err) => {
-        console.log("ERROR CONTENT:", err);
+      .catch(() => {
+        // keep the default site texts when the content request fails
       });
 
     loadRates();
@@ -598,20 +597,6 @@ export default function Catalog({ category }: CatalogProps) {
                 &copy; {new Date().getFullYear()} TRANSYACHTGROUP.{" "}
                 {t("rights_reserved")}
               </p>
-              <div className="flex gap-8">
-                <a
-                  href="#"
-                  className="text-white/20 hover:text-gold/60 transition-all duration-500 text-[10px] uppercase tracking-[0.3em] font-light"
-                >
-                  {t("instagram")}
-                </a>
-                <a
-                  href="#"
-                  className="text-white/20 hover:text-gold/60 transition-all duration-500 text-[10px] uppercase tracking-[0.3em] font-light"
-                >
-                  {t("linkedin")}
-                </a>
-              </div>
             </div>
           </div>
         </div>

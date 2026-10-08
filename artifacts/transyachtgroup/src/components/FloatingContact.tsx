@@ -14,7 +14,7 @@ export function FloatingContact() {
   }, [lang]);
 
   const stripHtml = (s: string) => s.replace(/<[^>]*>/g, "");
-  const phoneNumber = siteContent.phone_number || "+41 79 000 00 00";
+  const phoneNumber = siteContent.phone_number || "+33625340827";
   const whatsappNumber = siteContent.whatsapp_number || phoneNumber;
   const cleanPhone = stripHtml(phoneNumber).replace(/\s+/g, "");
   const cleanWhatsapp = stripHtml(whatsappNumber).replace(/[\s+]/g, "");

@@ -32,6 +32,9 @@ How the code is checked, the conventions it follows and what is still to be clea
 ## Formatting
 Prettier is configured but intentionally **not run over the whole repository yet**: a single reformat would rewrite thousands of lines and make history and parallel work harder. Plan: finish the file splits below first, then run `pnpm run format` once in its own commit (and turn `format:check` into a CI gate).
 
+## Cleanup already done
+Removed because nothing used them (verified by import search, typecheck and builds): the `artifacts/mockup-sandbox` package, the old PDF layout engine files in `api-server/src/documents` (`paginateBlocks`, `renderBlocksToHtml`, `measure`, `renderModelToBlocks`, `renderModelToPdfHtml`), the browser Supabase client, the `scripts/scraper` import tools for a third-party site, the template `scripts` package (`hello.ts`) and the Replit `post-merge.sh` hook (it ran `db push` against the database), plus 48 unused frontend dependencies (Radix primitives, Uppy, react-hook-form, recharts and others). Dead `href="#"` footer links (Instagram, LinkedIn) were removed and a made-up fallback phone number was replaced by the real business number.
+
 ## Refactoring backlog
 **Done:** `web/src/lib/api.ts` (1,783 lines) is now `web/src/lib/api/` with 14 modules by area (auth, vehicles, guides, seo, news, answers, agents, site, bookings, customers, partners, proposals, contracts, reviews; the largest is ~260 lines) and an `index.ts` that re-exports everything, so `import … from "@/lib/api"` is unchanged. Shared request helpers live in `core.ts`. New API calls go into the module of their area.
 
@@ -48,6 +51,6 @@ Measured with `pnpm run lint:report` (rule `max-lines`, 800 lines) and a line co
 | `api/src/routes/proposals.ts` | ~1,320 | Split PDF building from the routes |
 | `web/src/pages/home.tsx`, `ContractGenerator.tsx`, `catalog.tsx`, `vehicle-detail.tsx`, `contracts.ts` | 880–1,120 | Extract sections / helpers |
 
-Other cleanups: remove the `@replit/*` Vite plugins and the `REPLIT_PLAYWRIGHT_CHROMIUM_EXECUTABLE` fallback, decide whether `artifacts/mockup-sandbox` is still needed, replace the 68 explicit `any` types in the lint report, resolve unused variables, and consolidate the duplicated small text helpers (`plainText`, `slugify`) only after adding tests for each variant (their behaviour differs slightly between files).
+Other cleanups: remove the `@replit/*` Vite plugins and the `REPLIT_PLAYWRIGHT_CHROMIUM_EXECUTABLE` fallback, replace the 68 explicit `any` types in the lint report, resolve unused variables, and consolidate the duplicated small text helpers (`plainText`, `slugify`) only after adding tests for each variant (their behaviour differs slightly between files).
 
 Lint baseline when this guide was written: 183 files, 0 errors, ~170 warnings (explicit `any` 68, undefined globals in the old scraper scripts 33, unused variables 32, files over 800 lines 12).
