@@ -6,6 +6,7 @@ import rateLimit from "express-rate-limit";
 import { db } from "@workspace/db";
 import { analyticsEventsTable, answersTable, guidesTable, newsTable, seoCompetitorsTable, seoCompetitorSnapshotsTable, seoContentPlansTable, seoOpportunitiesTable, seoPageMetricsTable, vehiclesTable } from "@workspace/db/schema";
 import { vehiclePath } from "../lib/vehicleSeo";
+import { canonicalInternalHref } from "../lib/siteLinks";
 import { adminAuth } from "../middleware/auth";
 import { auditGuide, type SeoAuditInput, type SeoAuditIssue } from "../lib/guideSeoAudit";
 import { uploadPublicImage } from "../lib/privateStorage";
@@ -298,20 +299,6 @@ function approvedInternalLinks(value: string): string {
 
 function plainLabel(value: unknown): string {
   return String(value || "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/gi, " ").replace(/\s+/g, " ").trim().slice(0, 180);
-}
-
-function canonicalInternalHref(value: string): string | null {
-  try {
-    const url = value.startsWith("/") && !value.startsWith("//")
-      ? new URL(value, "https://www.transyachtgroup.com")
-      : new URL(value);
-    if (url.protocol !== "https:" || url.hostname !== "www.transyachtgroup.com") return null;
-    url.search = "";
-    url.hash = "";
-    if (url.pathname !== "/" && !url.pathname.endsWith("/")) url.pathname += "/";
-    url.searchParams.set("lang", "en");
-    return `${url.pathname}${url.search}`;
-  } catch { return null; }
 }
 
 async function loadInternalLinkCandidates(extraLinks = "", excludeGuideId?: number): Promise<InternalLinkCandidate[]> {

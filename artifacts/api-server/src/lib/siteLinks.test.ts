@@ -1,12 +1,20 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeInternalPath, restrictInternalLinks } from "./siteLinks.ts";
+import { canonicalInternalHref, normalizeInternalPath, restrictInternalLinks } from "./siteLinks.ts";
 
 test("normalises known internal paths and rejects unknown ones", () => {
   assert.equal(normalizeInternalPath("/services/luxury-car-rental-cannes"), "/services/luxury-car-rental-cannes/");
   assert.equal(normalizeInternalPath("https://www.transyachtgroup.com/cars?x=1"), "/cars/");
   assert.equal(normalizeInternalPath("/services/made-up-page/"), null);
   assert.equal(normalizeInternalPath("https://example.com/cars/"), null);
+});
+
+test("canonicalInternalHref matches the candidate URLs we publish (no language query)", () => {
+  assert.equal(canonicalInternalHref("/cars/"), "/cars/");
+  assert.equal(canonicalInternalHref("/answers/x"), "/answers/x/");
+  assert.equal(canonicalInternalHref("https://www.transyachtgroup.com/services/a/?lang=fr#top"), "/services/a/");
+  assert.equal(canonicalInternalHref("https://example.com/cars/"), null);
+  assert.equal(canonicalInternalHref("//evil.test/x"), null);
 });
 
 test("keeps valid links and unwraps invented or external ones", () => {
