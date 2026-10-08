@@ -9,7 +9,7 @@ import { INTERNAL_PATHS, normalizeInternalPath, restrictInternalLinks } from "..
 
 const router: IRouter = Router();
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const answerAiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 12, standardHeaders: true, legacyHeaders: false });
+const answerAiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 40, standardHeaders: true, legacyHeaders: false });
 
 type AnswerFaq = { question: string; answer: string };
 
@@ -52,6 +52,19 @@ function plainText(value: string): string {
 
 type AnswerAuditIssue = { code: string; severity: "error" | "warning" | "info"; message: string; points: number };
 
+const KEYWORD_STOPWORDS = new Set(["a", "an", "the", "in", "on", "of", "to", "for", "and", "or", "with", "by", "at", "from", "is", "do", "i", "my", "can", "how", "what"]);
+
+/** Exact phrase, or (for natural questions) most of the keyword's meaningful words are present. */
+function mentionsKeyword(text: string, keyword: string): boolean {
+  const haystack = text.toLowerCase();
+  if (haystack.includes(keyword)) return true;
+  const tokens = keyword.split(/[^a-z0-9À-ɏ]+/i).filter((token) => token && !KEYWORD_STOPWORDS.has(token));
+  if (tokens.length < 2) return false;
+  const words = haystack.split(/[^a-z0-9À-ɏ]+/i).filter(Boolean);
+  const present = tokens.filter((token) => words.some((word) => word === token || word.startsWith(token))).length;
+  return present / tokens.length >= 0.8;
+}
+
 function auditAnswerInput(input: ReturnType<typeof parseAnswerInput>) {
   const issues: AnswerAuditIssue[] = [];
   const directWords = plainText(input.directAnswer).split(/\s+/).filter(Boolean).length;
@@ -66,8 +79,8 @@ function auditAnswerInput(input: ReturnType<typeof parseAnswerInput>) {
 
   if (!keyword) issues.push({ code: "missing_keyword", severity: "error", message: "Primary keyword is missing.", points: -10 });
   else {
-    if (!input.question.toLowerCase().includes(keyword)) issues.push({ code: "keyword_not_in_question", severity: "warning", message: "Use the primary keyword naturally in the question/title.", points: -8 });
-    if (!haystack.includes(keyword)) issues.push({ code: "keyword_not_used", severity: "error", message: "Primary keyword is not used in the answer body.", points: -12 });
+    if (!mentionsKeyword(input.question, keyword)) issues.push({ code: "keyword_not_in_question", severity: "warning", message: "Use the primary keyword naturally in the question/title.", points: -8 });
+    if (!mentionsKeyword(haystack, keyword)) issues.push({ code: "keyword_not_used", severity: "error", message: "Primary keyword is not used in the answer body.", points: -12 });
   }
   if (directWords < 60 || directWords > 160) issues.push({ code: "direct_answer_length", severity: "warning", message: "Direct answer should be roughly 60–160 words.", points: -8 });
   if (explanationWords < 350) issues.push({ code: "explanation_short", severity: "error", message: `Explanation is too short (${explanationWords} words). Target 450–900 useful words.`, points: -14 });
@@ -200,12 +213,13 @@ Create one answer page.`
   return cleanGeneratedAnswer(result);
 }
 
-async function fixAnswerDraft(input: ReturnType<typeof parseAnswerInput>, issues: AnswerAuditIssue[]) {
+async function fixAnswerDraft(input: ReturnType<typeof parseAnswerInput>, issues: AnswerAuditIssue[], stats: unknown) {
   const result = await requestOpenAiJson(
     `You improve existing GEO/AI-search answer pages for Trans Yacht Group. Return only valid JSON.
-Revise only enough to resolve the deterministic audit issues. Preserve the business facts, luxury tone and internal links. Do not invent prices.
+Resolve every deterministic audit issue. When the explanation is too short, EXPAND it with genuinely useful sections (conditions, process, practical tips, what to prepare) until it has at least 520 words, at least 3 <h2> sections and 2-4 internal links; never pad with filler. Preserve the business facts, luxury tone and existing internal links. Links may ONLY point to these paths: ${INTERNAL_PATHS.join(" ")}. Do not invent prices, statistics, models, awards or legal claims.
 Return {"slug":"...","question":"...","directAnswer":"60-160 words","explanation":"safe HTML with h2/p/ul and at least one internal link","faq":[{"question":"...","answer":"..."}],"metaTitle":"35-70 characters","metaDescription":"110-155 characters","primaryKeyword":"...","audience":"...","relatedServicePath":"/services/..."}.`,
     `AUDIT ISSUES: ${JSON.stringify(issues)}
+CURRENT STATS: ${JSON.stringify(stats)}
 CURRENT ANSWER: ${JSON.stringify(input)}
 Improve the answer for AI search/GEO and SEO.`
   );
@@ -277,7 +291,7 @@ router.post("/admin/answers/fix-seo", adminAuth, answerAiLimiter, async (req, re
     const data = parseAnswerInput(req.body);
     const before = auditAnswerInput(data);
     if (!before.issues.length) return void res.json({ draft: { ...data, published: false }, audit: before });
-    const fixed = await fixAnswerDraft(data, before.issues);
+    const fixed = await fixAnswerDraft(data, before.issues, before.stats);
     const draft = parseAnswerInput({ ...fixed, language: data.language, published: false });
     const audit = auditAnswerInput(draft);
     res.json({ draft, audit, unresolvedAutoFixes: audit.issues.map((issue) => issue.code) });

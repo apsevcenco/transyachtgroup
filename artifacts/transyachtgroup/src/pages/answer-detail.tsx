@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 
+import { CmsContent } from "@/components/CmsContent";
 import { Navbar } from "@/components/Navbar";
 import { SeoHead, SITE_URL } from "@/components/SeoHead";
 import { fetchAnswer, type Answer } from "@/lib/api";
@@ -68,7 +69,7 @@ export default function AnswerDetail({ slug }: { slug: string }) {
                 <h2 className="text-sm uppercase tracking-[0.22em] text-gold">Direct answer</h2>
                 <p className="mt-4 font-light leading-8 text-white/75">{item.directAnswer}</p>
               </section>
-              <div className="prose prose-invert prose-a:text-gold prose-headings:font-serif prose-headings:text-white prose-p:font-light prose-p:leading-8 prose-p:text-white/65 mt-12 max-w-none" dangerouslySetInnerHTML={{ __html: item.explanation }} />
+              <CmsContent html={item.explanation} as="div" className="prose prose-invert prose-a:text-gold prose-headings:font-serif prose-headings:text-white prose-p:font-light prose-p:leading-8 prose-p:text-white/65 mt-12 max-w-none" />
               {item.faq?.length > 0 && (
                 <section className="mt-12 border-t border-white/10 pt-8">
                   <h2 className="font-serif text-3xl">Frequently asked questions</h2>
