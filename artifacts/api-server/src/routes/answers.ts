@@ -91,6 +91,12 @@ function auditAnswerInput(input: ReturnType<typeof parseAnswerInput>) {
   if (!input.metaTitle || metaTitleLength < 35 || metaTitleLength > 70) issues.push({ code: "meta_title_length", severity: "warning", message: "SEO title should be about 35–70 characters.", points: -7 });
   if (!input.metaDescription || metaDescriptionLength < 110 || metaDescriptionLength > 155) issues.push({ code: "meta_description_length", severity: "warning", message: "SEO description should contain 110–155 characters.", points: -8 });
 
+  const unsupported = haystack.match(/(wi-?fi|catering|refreshments|child seats?|baby seats?|limousines?|helicopters?|24/7|24 hours|guaranteed availability|award-winning|years of experience)/g);
+  if (unsupported?.length) issues.push({ code: "unsupported_claims", severity: "error", message: `Remove claims we cannot verify: ${[...new Set(unsupported)].join(", ")}.`, points: -20 });
+  const fluff = haystack.match(/(unparalleled|epitomi[sz]es|unforgettable|seamless|world-class|second to none|bespoke luxury)/g);
+  if (fluff && fluff.length >= 2) issues.push({ code: "marketing_fluff", severity: "warning", message: `Replace marketing filler with concrete facts: ${[...new Set(fluff)].join(", ")}.`, points: -8 });
+  if (!/d/.test(input.directAnswer) && !/^(yes|no|it depends|usually)/i.test(input.directAnswer.trim())) issues.push({ code: "direct_answer_not_concrete", severity: "warning", message: "Direct answer should state the concrete fact first (a figure, or a clear yes/no with the key condition).", points: -8 });
+
   const score = Math.max(0, Math.min(100, 100 + issues.reduce((sum, issue) => sum + issue.points, 0)));
   return {
     score,
@@ -190,6 +196,25 @@ function cleanGeneratedAnswer(value: unknown) {
   };
 }
 
+// Verified background for AI answers. Figures are deliberately approximate; widen them rather than invent precision.
+const BUSINESS_FACTS = `WHAT TRANS YACHT GROUP ACTUALLY OFFERS (describe nothing beyond this):
+- A private concierge for luxury car rental, private transfers with a driver, and yacht charter on the French Riviera and in Courchevel.
+- Vehicles are delivered to hotels, villas, chalets, marinas and airports at an agreed time and address, and collected at the end of the rental.
+- Every request is handled individually: availability, rental terms (deposit, mileage, insurance, driver requirements) and the final quotation are confirmed personally before booking. No fixed prices are published.
+- Vehicle categories include executive saloons, SUVs, supercars and ultra-luxury cars (Mercedes-Benz, Rolls-Royce, Bentley, Ferrari, Lamborghini and similar); a specific model is subject to live availability.
+FORBIDDEN CLAIMS: in-car Wi-Fi, catering or refreshments, child seats, limousines, helicopters, fixed prices, discounts, 24/7 availability, guaranteed availability, response-time promises, awards, years in business, number of clients, insurance specifics, licences held. Do not describe our "professional chauffeurs", fleet size or vehicle features unless stated above.
+
+ROUTE FACTS (approximate, normal conditions, to Courchevel 1850 via Moûtiers):
+- Geneva Airport (GVA): about 150-170 km, roughly 2.5-3 hours; main route A41 to Annecy/Albertville, then the N90 to Moûtiers and the mountain road up to Courchevel. Geneva Airport has a French sector, which matters for customs and pick-up point.
+- Lyon-Saint-Exupéry (LYS): about 200-230 km, roughly 2.5-3.5 hours via Chambéry and Albertville.
+- Chambéry Savoie Mont Blanc (CMF): about 100-120 km, roughly 1.5-2 hours; the closest main airport, with seasonal winter flights.
+- Turin Airport (TRN): about 230-270 km, roughly 3.5-4.5 hours via the Fréjus road tunnel and Modane; tolls apply and it is the longest option.
+- The last 20-25 km from Moûtiers is a mountain road with hairpin bends that can be slow in snowfall. Courchevel has several villages (1850, 1650, 1550, Le Praz); 1850 is the most exclusive. Courchevel also has an altiport used by private aircraft.
+- French winter-equipment rules for mountain roads (snow tyres or chains) apply roughly from 1 November to 31 March. Say that winter preparation and conditions are confirmed in the individual offer.
+- Peak Courchevel demand: Christmas/New Year and the February school holidays; arrivals and departures cluster on Saturdays, so early booking matters. Do not state a numeric notice period.
+- Monaco is about 20 km from Nice Airport (roughly 30-45 min); Cannes about 30 km (roughly 35-50 min).
+`;
+
 async function generateAnswerDraft(input: { topic: string; keyword?: string; audience?: string; relatedServicePath?: string }) {
   const result = await requestOpenAiJson(
     `You create GEO-ready direct-answer pages for Trans Yacht Group. Return only valid JSON.
@@ -203,7 +228,12 @@ Hard rules:
 - "relatedServicePath" must be one of the allowed paths above.
 - Use the primary keyword naturally in the question, directAnswer, metaTitle and body, without stuffing.
 - Do not invent prices, fleet models, statistics, awards, legal claims or opening hours. Say that availability, conditions and the final quote are confirmed individually on request. Avoid claims you cannot verify.
-- Write in clear, factual English for an international, high-value audience.`,
+- The "directAnswer" must contain the concrete answer (distance, duration, yes/no and the key condition) from the facts provided, not a generic description of luxury.
+- Be specific and useful: use the route facts and practical details below; if something is not covered by the facts, say that it is confirmed individually instead of guessing.
+- No fluff, no repeated sentences, no superlatives such as "unparalleled" or "epitomizes".
+- Write in clear, factual English for an international, high-value audience.
+
+${BUSINESS_FACTS}`,
     `TOPIC: ${input.topic}
 PRIMARY KEYWORD: ${input.keyword || input.topic}
 AUDIENCE: ${input.audience || "high-intent luxury travel clients"}
@@ -216,7 +246,9 @@ Create one answer page.`
 async function fixAnswerDraft(input: ReturnType<typeof parseAnswerInput>, issues: AnswerAuditIssue[], stats: unknown) {
   const result = await requestOpenAiJson(
     `You improve existing GEO/AI-search answer pages for Trans Yacht Group. Return only valid JSON.
-Resolve every deterministic audit issue. When the explanation is too short, EXPAND it with genuinely useful sections (conditions, process, practical tips, what to prepare) until it has at least 520 words, at least 3 <h2> sections and 2-4 internal links; never pad with filler. Preserve the business facts, luxury tone and existing internal links. Links may ONLY point to these paths: ${INTERNAL_PATHS.join(" ")}. Do not invent prices, statistics, models, awards or legal claims.
+Resolve every deterministic audit issue. When the explanation is too short, EXPAND it with genuinely useful sections (conditions, process, practical tips, what to prepare) until it has at least 520 words, at least 3 <h2> sections and 2-4 internal links; never pad with filler. Preserve the business facts, luxury tone and existing internal links. Links may ONLY point to these paths: ${INTERNAL_PATHS.join(" ")}. Do not invent prices, statistics, models, awards or legal claims. Remove any claim not supported by the facts below, and make the directAnswer concrete (distance, duration, yes/no, key condition).
+
+${BUSINESS_FACTS}
 Return {"slug":"...","question":"...","directAnswer":"60-160 words","explanation":"safe HTML with h2/p/ul and at least one internal link","faq":[{"question":"...","answer":"..."}],"metaTitle":"35-70 characters","metaDescription":"110-155 characters","primaryKeyword":"...","audience":"...","relatedServicePath":"/services/..."}.`,
     `AUDIT ISSUES: ${JSON.stringify(issues)}
 CURRENT STATS: ${JSON.stringify(stats)}
