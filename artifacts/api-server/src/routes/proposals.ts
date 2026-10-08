@@ -865,6 +865,120 @@ router.put("/admin/proposals/business-letters/:id", adminAuth, async (req, res) 
   }
 });
 
+router.post("/admin/proposals/business-letters/:id/translate", adminAuth, pdfLimiter, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) {
+      res.status(400).json({ error: "Invalid letter id" });
+      return;
+    }
+    const value = req.body && typeof req.body === "object" ? req.body as Record<string, unknown> : {};
+    const requestedLanguage = typeof value.language === "string" ? value.language.trim() : "";
+    const targetLanguage = Object.keys(languageNames).includes(requestedLanguage)
+      ? requestedLanguage as keyof typeof languageNames
+      : null;
+    if (!targetLanguage) {
+      res.status(400).json({ error: "Choose a valid target language" });
+      return;
+    }
+
+    const [source] = await db.select().from(businessLettersTable).where(eq(businessLettersTable.id, id)).limit(1);
+    if (!source) {
+      res.status(404).json({ error: "Business letter not found" });
+      return;
+    }
+    if (source.language === targetLanguage) {
+      res.status(400).json({ error: "The letter is already in this language" });
+      return;
+    }
+
+    const sourceCopy = cleanBusinessLetter(source.copy);
+    const translated = await requestOpenAiJson(
+      `You are a senior luxury B2B translator and editor for Trans Yacht Group.
+Return only valid JSON. Translate the existing one-page business proposal into the target language.
+Preserve the luxury hospitality tone, commercial meaning, paragraph structure, benefits count and call to action.
+Do not add new services, prices, guarantees or legal claims. Keep proper names, company names, hotel names, URLs and personal names unchanged unless they are ordinary words.
+The translated letter will be saved as a new separate business letter record, so make the title clearly indicate the target language.`,
+      `Source language: ${languageNames[(source.language as keyof typeof languageNames) || "en"] || source.language}
+Target language: ${languageNames[targetLanguage]}
+Existing metadata:
+${JSON.stringify({
+  title: source.title,
+  recipientType: source.recipientType,
+  recipientName: source.recipientName,
+  topic: source.topic,
+  service: source.service,
+  notes: source.notes,
+  signerName: source.signerName,
+  signerRole: source.signerRole,
+}, null, 2)}
+
+Existing copy:
+${JSON.stringify(sourceCopy, null, 2)}
+
+Return JSON with:
+{
+  "title": "translated title ending with language marker if natural",
+  "recipientType": "translated recipient type",
+  "recipientName": "translated addressed-to block; keep names and organizations unchanged",
+  "topic": "translated topic",
+  "service": "translated service",
+  "notes": "translated internal notes if useful, or original notes if they are operational",
+  "signerRole": "translated signer role, or original if it is a proper title/name",
+  "copy": {
+    "headline": "...",
+    "subheadline": "...",
+    "greeting": "...",
+    "opening": "...",
+    "valueProposition": "...",
+    "benefits": ["...", "...", "..."],
+    "partnerAngle": "...",
+    "callToAction": "...",
+    "signature": "keep personal names unchanged; translate only surrounding words if any"
+  }
+}`,
+    ) as Record<string, unknown>;
+
+    const text = (key: string, fallback: string | null | undefined, max: number) =>
+      typeof translated[key] === "string" && translated[key].trim()
+        ? translated[key].trim().slice(0, max)
+        : (fallback || "").slice(0, max);
+    const translatedCopy = cleanBusinessLetter(translated.copy);
+    const languageMarker = targetLanguage.toUpperCase();
+    const title = text("title", `${source.title || source.topic || translatedCopy.headline} — ${languageMarker}`, 180);
+    const normalizedTitle = title.toUpperCase().includes(languageMarker) ? title : `${title} — ${languageMarker}`;
+
+    const [letter] = await db
+      .insert(businessLettersTable)
+      .values({
+        title: normalizedTitle,
+        recipientType: text("recipientType", source.recipientType, 120) || source.recipientType,
+        recipientName: text("recipientName", source.recipientName, 500) || null,
+        language: targetLanguage,
+        topic: text("topic", source.topic, 180) || source.topic,
+        service: text("service", source.service, 180) || source.service,
+        notes: text("notes", source.notes, 2_000) || null,
+        imageUrl: source.imageUrl,
+        signerName: source.signerName,
+        signerRole: text("signerRole", source.signerRole, 140) || null,
+        copy: translatedCopy,
+        updatedAt: new Date(),
+      })
+      .returning();
+    res.json(letter);
+  } catch (err: unknown) {
+    const code = err instanceof Error ? err.message : "";
+    logger.error({ err: code || String(err) }, "business letter translate error");
+    const error = code === "OPENAI_NOT_CONFIGURED" ? "OpenAI is not configured on the server"
+      : code.startsWith("OPENAI_401") ? "OpenAI rejected the API key"
+        : code.startsWith("OPENAI_429") ? "OpenAI quota or billing limit reached"
+          : code.startsWith("OPENAI_403") ? "This OpenAI account does not have access to the configured model"
+            : code === "INVALID_AI_RESPONSE" ? "AI translation returned incomplete letter text"
+              : "Failed to translate business letter";
+    res.status(code === "OPENAI_NOT_CONFIGURED" ? 503 : 500).json({ error });
+  }
+});
+
 router.delete("/admin/proposals/business-letters/:id", adminAuth, async (req, res) => {
   try {
     const id = Number(req.params.id);

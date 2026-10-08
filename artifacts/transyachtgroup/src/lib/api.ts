@@ -1541,6 +1541,22 @@ export async function deleteBusinessLetter(id: number): Promise<void> {
   if (!res.ok) throw new Error("Failed to delete business letter");
 }
 
+export async function translateBusinessLetter(
+  id: number,
+  language: BusinessLetterRequest["language"],
+): Promise<BusinessLetterRecord> {
+  const res = await fetch(`${API_BASE}/admin/proposals/business-letters/${id}/translate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ language }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Failed to translate business letter");
+  }
+  return res.json();
+}
+
 export async function sendBusinessLetter(
   id: number,
   recipients: string,

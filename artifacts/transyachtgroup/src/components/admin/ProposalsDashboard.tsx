@@ -15,6 +15,7 @@ import {
   fetchBusinessLetters,
   saveBusinessLetter,
   deleteBusinessLetter,
+  translateBusinessLetter,
   sendBusinessLetter,
   fetchPartnerContacts,
   type Booking,
@@ -563,6 +564,25 @@ export function ProposalsDashboard() {
     }
   };
 
+  const handleTranslateBusinessLetter = async () => {
+    const payload = currentBusinessLetterPayload();
+    if (!payload) return;
+    setGenerating(true);
+    setError("");
+    setBusinessNotice("");
+    try {
+      const saved = await saveBusinessLetter(payload);
+      const translated = await translateBusinessLetter(saved.id, businessLang);
+      handleLoadBusinessLetter(translated);
+      setBusinessNotice(`Created separate ${businessLang.toUpperCase()} translation: ${translated.title}`);
+      loadBusinessLetters();
+    } catch (err: any) {
+      setError(err.message || "Failed to translate business letter");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const handleLoadBusinessLetter = (letter: BusinessLetterRecord) => {
     setBusinessLetterId(letter.id);
     setBusinessRecipientType(letter.recipientType);
@@ -819,6 +839,17 @@ export function ProposalsDashboard() {
                     <option value="ro">Romanian</option>
                     <option value="ar">Arabic</option>
                   </select>
+                  <button
+                    type="button"
+                    onClick={handleTranslateBusinessLetter}
+                    disabled={!businessCopy || !businessTopic.trim() || generating}
+                    className="mt-2 w-full min-h-[44px] rounded-md border border-gold/30 px-3 py-2 text-[10px] uppercase tracking-[0.14em] text-gold hover:bg-gold/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {generating ? "Translating…" : "Translate & save as new letter"}
+                  </button>
+                  <span className="mt-1 block text-[10px] leading-4 text-white/30">
+                    Saves the current letter first, then creates a separate copy in the selected language.
+                  </span>
                 </label>
                 <label className="text-[10px] uppercase tracking-wide text-white/40 md:col-span-2">
                   Topic
