@@ -33,13 +33,16 @@ How the code is checked, the conventions it follows and what is still to be clea
 Prettier is configured but intentionally **not run over the whole repository yet**: a single reformat would rewrite thousands of lines and make history and parallel work harder. Plan: finish the file splits below first, then run `pnpm run format` once in its own commit (and turn `format:check` into a CI gate).
 
 ## Refactoring backlog
+**Done:** `web/src/lib/api.ts` (1,783 lines) is now `web/src/lib/api/` with 14 modules by area (auth, vehicles, guides, seo, news, answers, agents, site, bookings, customers, partners, proposals, contracts, reviews; the largest is ~260 lines) and an `index.ts` that re-exports everything, so `import … from "@/lib/api"` is unchanged. Shared request helpers live in `core.ts`. New API calls go into the module of their area.
+
+**Remaining:**
+
 Measured with `pnpm run lint:report` (rule `max-lines`, 800 lines) and a line count. Order = risk-adjusted value; each step must keep behaviour identical and ship on its own.
 
 | File | Lines | Plan |
 |---|---|---|
 | `web/src/pages/admin/dashboard.tsx` | ~4,000 | Split by dashboard tab into modules; highest risk, needs browser verification per tab |
 | `web/src/components/admin/ProposalsDashboard.tsx` | ~1,850 | Extract forms, list and PDF dialogs |
-| `web/src/lib/api.ts` | ~1,800 | Split by area (vehicles, content, guides/news/answers, CRM, bookings) behind the same exports |
 | `web/src/components/admin/CarBookingCalendar.tsx` | ~1,650 | Extract calendar grid, booking form, helpers |
 | `api/src/routes/guides.ts` | ~1,330 | Split generation, audit/fix, SEO plan and sitemap-related code |
 | `api/src/routes/proposals.ts` | ~1,320 | Split PDF building from the routes |
