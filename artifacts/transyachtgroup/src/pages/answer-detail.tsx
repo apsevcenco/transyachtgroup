@@ -16,8 +16,8 @@ export default function AnswerDetail({ slug }: { slug: string }) {
   const allAnswers = useAnswers();
 
   useEffect(() => {
-    fetchAnswer(slug).then(setItem).catch(() => setItem(null)).finally(() => setLoading(false));
-  }, [slug]);
+    fetchAnswer(slug, lang).then(setItem).catch(() => setItem(null)).finally(() => setLoading(false));
+  }, [slug, lang]);
 
   const path = `/answers/${slug}`;
   const url = `${SITE_URL}${path}/`;

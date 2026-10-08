@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Pencil, RefreshCw, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Languages, Loader2, Pencil, RefreshCw, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
 import { useLocation } from "wouter";
 
 import {
@@ -10,9 +10,11 @@ import {
   fetchAdminAnswers,
   fixAnswerSeoWithAi,
   generateAnswerWithAi,
+  translateAnswerWithAi,
   updateAnswer,
   type Answer,
   type AnswerInput,
+  type AnswerTranslation,
   type SeoAuditResult,
 } from "@/lib/api";
 
@@ -28,8 +30,17 @@ const emptyForm: AnswerInput = {
   audience: "",
   relatedServicePath: "",
   language: "en",
+  translations: {},
   published: false,
 };
+
+const TRANSLATION_LANGUAGES = [
+  { code: "fr", label: "French" },
+  { code: "ru", label: "Russian" },
+  { code: "ro", label: "Romanian" },
+  { code: "ar", label: "Arabic" },
+] as const;
+const languageLabel = (code: string) => TRANSLATION_LANGUAGES.find((item) => item.code === code)?.label || code;
 
 function faqToText(faq: AnswerInput["faq"]) {
   return (faq || []).map((item) => `${item.question}\n${item.answer}`).join("\n\n");
@@ -65,6 +76,10 @@ export default function AdminAnswers() {
   const [message, setMessage] = useState("");
   const [seoAudit, setSeoAudit] = useState<SeoAuditResult | null>(null);
   const [query, setQuery] = useState("");
+  const [translationLang, setTranslationLang] = useState<string>("fr");
+  const [trFaqText, setTrFaqText] = useState("");
+  const [trVersion, setTrVersion] = useState(0);
+  const [trStatus, setTrStatus] = useState<{ state: "idle" | "working" | "success" | "error"; text: string; done?: number; total?: number }>({ state: "idle", text: "" });
 
   const payload = useMemo(() => ({ ...form, faq: textToFaq(faqText) }), [form, faqText]);
   const canSave = useMemo(() => form.slug && form.question && form.directAnswer.length >= 40 && form.explanation.length >= 120, [form]);
@@ -76,6 +91,12 @@ export default function AdminAnswers() {
 
   const load = async () => setItems(await fetchAdminAnswers());
 
+  // Keep the FAQ text box of the selected language in sync when translations are replaced (not while typing).
+  useEffect(() => {
+    setTrFaqText(faqToText(form.translations?.[translationLang]?.faq || []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [translationLang, trVersion]);
+
   useEffect(() => {
     checkAuth().then((ok) => {
       if (!ok) setLocation("/admin");
@@ -84,7 +105,7 @@ export default function AdminAnswers() {
   }, [setLocation]);
 
   const set = <K extends keyof AnswerInput>(key: K, value: AnswerInput[K]) => setForm((current) => ({ ...current, [key]: value }));
-  const resetDraft = () => { setEditing(null); setForm(emptyForm); setFaqText(""); setSeoAudit(null); setMessage(""); };
+  const resetDraft = () => { setEditing(null); setForm(emptyForm); setFaqText(""); setSeoAudit(null); setMessage(""); setTrStatus({ state: "idle", text: "" }); setTrVersion((v) => v + 1); };
 
   const generate = async () => {
     setBusy(true); setMessage("AI is creating a GEO-ready direct-answer page…");
@@ -109,7 +130,7 @@ export default function AdminAnswers() {
     setBusy(true); const before = seoAudit?.score;
     try {
       const result = await fixAnswerSeoWithAi(payload);
-      setForm({ ...emptyForm, ...result.draft, published: false });
+      setForm((current) => ({ ...emptyForm, ...result.draft, translations: current.translations || {}, published: false }));
       setFaqText(faqToText(result.draft.faq));
       setSeoAudit(result.audit);
       setMessage(`AI corrected the answer. SEO/GEO score: ${before ?? "?"}/100 → ${result.audit.score}/100. Review before saving; publication is off.`);
@@ -123,7 +144,7 @@ export default function AdminAnswers() {
       const saved = editing ? await updateAnswer(editing.id, payload) : await createAnswer(payload);
       setMessage(editing ? "Answer updated." : "Answer created.");
       setEditing(saved);
-      setForm({ slug: saved.slug, question: saved.question, directAnswer: saved.directAnswer, explanation: saved.explanation, faq: saved.faq || [], metaTitle: saved.metaTitle || "", metaDescription: saved.metaDescription || "", primaryKeyword: saved.primaryKeyword || "", audience: saved.audience || "", relatedServicePath: saved.relatedServicePath || "", language: saved.language || "en", published: saved.published });
+      setForm({ slug: saved.slug, question: saved.question, directAnswer: saved.directAnswer, explanation: saved.explanation, faq: saved.faq || [], metaTitle: saved.metaTitle || "", metaDescription: saved.metaDescription || "", primaryKeyword: saved.primaryKeyword || "", audience: saved.audience || "", relatedServicePath: saved.relatedServicePath || "", language: saved.language || "en", translations: saved.translations || {}, published: saved.published });
       setFaqText(faqToText(saved.faq || []));
       await load();
     } catch (err) { setMessage(err instanceof Error ? err.message : "Save failed"); }
@@ -132,8 +153,8 @@ export default function AdminAnswers() {
 
   const edit = (item: Answer) => {
     setEditing(item);
-    setForm({ slug: item.slug, question: item.question, directAnswer: item.directAnswer, explanation: item.explanation, faq: item.faq || [], metaTitle: item.metaTitle || "", metaDescription: item.metaDescription || "", primaryKeyword: item.primaryKeyword || "", audience: item.audience || "", relatedServicePath: item.relatedServicePath || "", language: item.language || "en", published: item.published });
-    setFaqText(faqToText(item.faq || [])); setSeoAudit(null); setMessage("");
+    setForm({ slug: item.slug, question: item.question, directAnswer: item.directAnswer, explanation: item.explanation, faq: item.faq || [], metaTitle: item.metaTitle || "", metaDescription: item.metaDescription || "", primaryKeyword: item.primaryKeyword || "", audience: item.audience || "", relatedServicePath: item.relatedServicePath || "", language: item.language || "en", translations: item.translations || {}, published: item.published });
+    setFaqText(faqToText(item.faq || [])); setSeoAudit(null); setMessage(""); setTrStatus({ state: "idle", text: "" }); setTrVersion((v) => v + 1);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -143,6 +164,34 @@ export default function AdminAnswers() {
     try { await deleteAnswer(id); await load(); if (editing?.id === id) resetDraft(); setMessage("Answer deleted."); }
     catch (err) { setMessage(err instanceof Error ? err.message : "Delete failed"); }
     finally { setBusy(false); }
+  };
+
+  const translationFor = (code: string): AnswerTranslation | undefined => form.translations?.[code];
+  const setTranslationField = <K extends keyof AnswerTranslation>(key: K, value: AnswerTranslation[K]) => setForm((current) => {
+    const existing = current.translations?.[translationLang];
+    if (!existing) return current;
+    return { ...current, translations: { ...(current.translations || {}), [translationLang]: { ...existing, [key]: value } } };
+  });
+  const removeTranslation = () => {
+    setForm((current) => { const next = { ...(current.translations || {}) }; delete next[translationLang]; return { ...current, translations: next }; });
+    setTrVersion((v) => v + 1);
+    setTrStatus({ state: "success", text: `${languageLabel(translationLang)} translation removed from the draft. Click Save changes to apply.` });
+  };
+  const translateTo = async (codes: string[]) => {
+    if (!canSave) { setTrStatus({ state: "error", text: "Complete the English answer first (slug, question, direct answer of 40+ characters and explanation of 120+ characters)." }); return; }
+    setBusy(true);
+    try {
+      for (const [index, code] of codes.entries()) {
+        setTrStatus({ state: "working", text: `Translating into ${languageLabel(code)} (${index + 1} of ${codes.length}). This takes about 30 seconds per language, please wait…`, done: index, total: codes.length });
+        const result = await translateAnswerWithAi(payload, code);
+        setForm((current) => ({ ...current, translations: { ...(current.translations || {}), ...result } }));
+      }
+      if (codes.length === 1) setTranslationLang(codes[0]);
+      setTrVersion((v) => v + 1);
+      setTrStatus({ state: "success", text: `Done: ${codes.map(languageLabel).join(", ")} translated. Read the text below, then click Save changes to store it.` });
+    } catch (err) {
+      setTrStatus({ state: "error", text: err instanceof Error ? err.message : "AI translation failed" });
+    } finally { setBusy(false); }
   };
 
   if (!authorized) return <div className="min-h-screen bg-background p-10 text-white">Checking access…</div>;
@@ -204,6 +253,30 @@ export default function AdminAnswers() {
                 <button disabled={busy || !form.question} onClick={() => setAi({ topic: form.question, keyword: form.primaryKeyword || "", audience: form.audience || "", relatedServicePath: form.relatedServicePath || "" })} className="inline-flex items-center gap-2 rounded border border-white/15 px-5 py-3 text-sm text-white/65 disabled:opacity-40"><RefreshCw size={16} /> Use as AI prompt</button>
               </div>
               {seoAudit && <div className="mt-6 rounded-lg border border-white/10 bg-black/30 p-5"><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-xs uppercase tracking-wider text-white/35">SEO/GEO readiness</p><p className={`mt-1 text-4xl font-semibold ${seoAudit.score >= 80 ? "text-emerald-400" : seoAudit.score >= 60 ? "text-gold" : "text-red-400"}`}>{seoAudit.score}/100</p></div><div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-white/45 md:grid-cols-3"><span>Direct: {seoAudit.stats.directWords || 0} words</span><span>Explanation: {seoAudit.stats.explanationWords || 0} words</span><span>FAQ: {seoAudit.stats.faqCount || 0}</span><span>H2: {seoAudit.stats.h2Count || 0}</span><span>Links: {seoAudit.stats.linkCount || 0}</span><span>Meta: {seoAudit.stats.metaDescriptionLength || 0} chars</span></div></div>{seoAudit.issues.length ? <ul className="mt-4 space-y-2">{seoAudit.issues.map((issue) => <li key={issue.code} className="rounded border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white/65"><span className="mr-2 text-gold">{issue.code}</span>{issue.message}</li>)}</ul> : <p className="mt-4 flex items-center gap-2 text-sm text-emerald-400"><CheckCircle2 size={16} /> No critical issues found.</p>}</div>}
+            </section>
+            <section className="rounded-xl border border-white/10 bg-white/[0.02] p-5">
+              <div className="flex items-start gap-3"><Languages className="mt-1 text-gold" size={20} /><div><h2 className="font-serif text-2xl">Translations (AI)</h2><p className="mt-1 text-sm text-white/45">Translate the English answer into French, Russian, Romanian and Arabic. Facts, links and structure are kept; review the text, then save.</p></div></div>
+              <div className="mt-5 flex flex-wrap gap-2">
+                {TRANSLATION_LANGUAGES.map((item) => <button key={item.code} type="button" onClick={() => setTranslationLang(item.code)} className={`inline-flex items-center gap-2 rounded border px-4 py-2 text-xs ${translationLang === item.code ? "border-gold/50 bg-gold/10 text-gold" : "border-white/15 text-white/60 hover:border-gold/30"}`}><span className={`h-2 w-2 rounded-full ${translationFor(item.code) ? "bg-emerald-400" : "bg-white/20"}`} />{item.label}{translationFor(item.code) ? "" : " · none"}</button>)}
+              </div>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button type="button" disabled={busy || !canSave} onClick={() => translateTo([translationLang])} className="inline-flex items-center gap-2 rounded bg-gold px-5 py-3 text-sm font-medium text-black disabled:opacity-40"><Sparkles size={16} /> {translationFor(translationLang) ? `Re-translate ${languageLabel(translationLang)}` : `Translate into ${languageLabel(translationLang)}`}</button>
+                <button type="button" disabled={busy || !canSave} onClick={() => translateTo(TRANSLATION_LANGUAGES.map((item) => item.code))} className="inline-flex items-center gap-2 rounded border border-gold/35 bg-gold/5 px-5 py-3 text-sm text-gold disabled:opacity-40"><Languages size={16} /> Translate all 4 languages</button>
+                {translationFor(translationLang) && <button type="button" disabled={busy} onClick={removeTranslation} className="rounded border border-white/15 px-5 py-3 text-sm text-white/55 hover:border-red-400/40 hover:text-red-300 disabled:opacity-40">Remove {languageLabel(translationLang)}</button>}
+              </div>
+              {!canSave && <p className="mt-3 text-xs text-white/35">Fill in the English slug, question, direct answer and explanation first.</p>}
+              {trStatus.state !== "idle" && (<div role="status" className={`mt-4 flex items-start gap-2 rounded border px-3 py-2 text-xs ${trStatus.state === "error" ? "border-red-500/30 bg-red-500/10 text-red-300" : trStatus.state === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" : "border-gold/30 bg-gold/5 text-gold"}`}>{trStatus.state === "working" ? <Loader2 size={14} className="mt-0.5 shrink-0 animate-spin" /> : trStatus.state === "success" ? <CheckCircle2 size={14} className="mt-0.5 shrink-0" /> : <AlertTriangle size={14} className="mt-0.5 shrink-0" />}<div className="min-w-0 flex-1"><p className="break-words">{trStatus.text}</p>{trStatus.state === "working" && trStatus.total ? <div className="mt-2 h-1 overflow-hidden rounded bg-white/10"><div className="h-full bg-gold transition-all" style={{ width: `${Math.round((((trStatus.done || 0) + 0.5) / trStatus.total) * 100)}%` }} /></div> : null}</div></div>)}
+              {translationFor(translationLang) ? (
+                <div className="mt-5 grid gap-4 md:grid-cols-2" dir={translationLang === "ar" ? "rtl" : "ltr"}>
+                  <label className="text-xs text-white/55 md:col-span-2">Question / title ({languageLabel(translationLang)})<input value={translationFor(translationLang)?.question || ""} onChange={(e) => setTranslationField("question", e.target.value)} className={fieldClass()} /></label>
+                  <label className="text-xs text-white/55 md:col-span-2">Direct answer<textarea value={translationFor(translationLang)?.directAnswer || ""} onChange={(e) => setTranslationField("directAnswer", e.target.value)} rows={5} className={fieldClass()} /></label>
+                  <label className="text-xs text-white/55 md:col-span-2">Explanation HTML<textarea value={translationFor(translationLang)?.explanation || ""} onChange={(e) => setTranslationField("explanation", e.target.value)} rows={12} dir="ltr" className={fieldClass("font-mono text-xs leading-6")} /></label>
+                  <label className="text-xs text-white/55">Meta title<input value={translationFor(translationLang)?.metaTitle || ""} onChange={(e) => setTranslationField("metaTitle", e.target.value)} className={fieldClass()} /></label>
+                  <label className="text-xs text-white/55">Meta description<input value={translationFor(translationLang)?.metaDescription || ""} onChange={(e) => setTranslationField("metaDescription", e.target.value)} className={fieldClass()} /></label>
+                  <label className="text-xs text-white/55 md:col-span-2">FAQ blocks — question line, answer line, blank line between blocks<textarea value={trFaqText} onChange={(e) => { setTrFaqText(e.target.value); setTranslationField("faq", textToFaq(e.target.value)); }} rows={8} className={fieldClass()} /></label>
+                </div>
+              ) : <p className="mt-5 text-sm text-white/35">No {languageLabel(translationLang)} translation yet. Click the gold button to create one.</p>}
+              <p className="mt-4 text-[11px] leading-5 text-white/30">Translations are stored with the answer. After you save and publish, visitors on the language version of the site see the translated text; a language without a translation shows English.</p>
             </section>
           </main>
 

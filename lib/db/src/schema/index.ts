@@ -151,6 +151,7 @@ export const answersTable = pgTable(
     audience: text("audience"),
     relatedServicePath: text("related_service_path"),
     language: varchar("language", { length: 10 }).notNull().default("en"),
+    translations: jsonb("translations").notNull().default({}),
     published: boolean("published").notNull().default(false),
     publishedAt: timestamp("published_at"),
     createdAt: timestamp("created_at").defaultNow(),

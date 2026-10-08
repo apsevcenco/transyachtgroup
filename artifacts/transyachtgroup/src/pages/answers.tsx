@@ -12,8 +12,8 @@ export default function AnswersPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchAnswers().then(setItems).catch(() => setItems([])).finally(() => setLoading(false));
-  }, []);
+    fetchAnswers(lang).then(setItems).catch(() => setItems([])).finally(() => setLoading(false));
+  }, [lang]);
 
   return (
     <div className="min-h-screen bg-background text-white">
