@@ -3,6 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // The static host cannot 301 "/about" -> "/about/", and serves this shell for slash-less URLs.
+      // Normalise to the canonical trailing-slash URL before anything renders.
+      (function () {
+        var l = location;
+        var p = l.pathname;
+        if (
+          p.length > 1 &&
+          p.charAt(p.length - 1) !== "/" &&
+          p.split("/").pop().indexOf(".") === -1 &&
+          !/^\/(admin|api)(\/|$)/.test(p) &&
+          l.hostname !== "localhost" &&
+          l.hostname !== "127.0.0.1"
+        ) {
+          l.replace(p + "/" + l.search + l.hash);
+        }
+      })();
+    </script>
     <title>Luxury Car Rental &amp; Yacht Charter | Trans Yacht Group</title>
     <meta
       name="description"
