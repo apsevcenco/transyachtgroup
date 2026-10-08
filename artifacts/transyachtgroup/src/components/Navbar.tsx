@@ -36,9 +36,9 @@ export function Navbar() {
   }, []);
 
   const navLinks = [
-    { name: t("yachts"), href: "/yachts" },
-    { name: t("cars"), href: "/cars" },
-    { name: t("about_us"), href: "/about" },
+    { name: t("yachts"), href: "/yachts/" },
+    { name: t("cars"), href: "/cars/" },
+    { name: t("about_us"), href: "/about/" },
     { name: "Guides", href: "/guides/" },
     { name: "News", href: "/news/" },
     // Answers exist in English only, so they always link to the English URL.

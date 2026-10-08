@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { vehiclesTable, vehicleDeletionLogTable, insertVehicleSchema } from "@workspace/db/schema";
 import { eq, and, ne, isNull, isNotNull, desc } from "drizzle-orm";
 import { adminAuth } from "../middleware/auth";
+import { vehicleSlug } from "../lib/vehicleSeo";
 
 const router: IRouter = Router();
 
@@ -13,6 +14,8 @@ function applyLang(vehicle: any, lang: string) {
   if (!langData) return vehicle;
   const result = {
     ...vehicle,
+    // Public URLs are built from the English name; a translated name must not change the slug.
+    seoSlug: vehicleSlug(vehicle.name),
     name: langData.name || vehicle.name,
     description: langData.description || vehicle.description,
   };

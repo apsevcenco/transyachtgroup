@@ -607,6 +607,15 @@ function buildLanguageBasePages(lang) {
   return out;
 }
 
+const englishPages = basePages.map((page) => ({ ...page, lang: "en" }));
+const hubPages = [
+  ...englishPages,
+  ...translatedLanguages.flatMap(buildLanguageBasePages),
+].map((page) => (page.body ? page : { ...page, body: listingBody(page) }));
+
+// Hub pages that exist per language; links to a hub that was not generated are left out.
+const hubPaths = Object.fromEntries(languages.map((code) => [code, new Set(hubPages.filter((page) => page.lang === code).map((page) => page.path))]));
+
 const homePages = languages.map((lang) => {
   const L = PAGE_LABELS[lang];
   const locationPages = locationPagesByLang[lang];
@@ -628,7 +637,7 @@ const homePages = languages.map((lang) => {
     body: `<article>
 <h1>${escapeHtml(heading)}</h1>
 <p>${escapeHtml(intro)}</p>
-<p>${link(rel("/cars", lang), L.cars)} · ${link(rel("/yachts", lang), L.yachts)} · ${link(rel("/about", lang), L.about)}</p>
+<p>${link(rel("/cars", lang), L.cars)} · ${link(rel("/yachts", lang), L.yachts)}${hubPaths[lang].has("/about") ? ` · ${link(rel("/about", lang), L.about)}` : ""}</p>
 <h2>${escapeHtml(L.destinations)}</h2>
 ${li(locationPages.map((p) => `<li>${link(rel(p.path, lang), p.heading)}</li>`))}
 <h2>${escapeHtml(L.services)}</h2>
@@ -641,12 +650,6 @@ ${answerList.length ? `<h2>Answers</h2>${li(answerList.slice(0, 12).map((p) => `
 });
 const homePage = homePages.find((page) => page.lang === "en");
 const languageHomePages = homePages.filter((page) => page.lang !== "en");
-
-const englishPages = basePages.map((page) => ({ ...page, lang: "en" }));
-const hubPages = [
-  ...englishPages,
-  ...translatedLanguages.flatMap(buildLanguageBasePages),
-].map((page) => (page.body ? page : { ...page, body: listingBody(page) }));
 
 const pages = [
   ...hubPages,

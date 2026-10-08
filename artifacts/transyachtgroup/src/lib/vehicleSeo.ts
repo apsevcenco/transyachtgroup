@@ -22,13 +22,18 @@ export function vehicleSlug(name: unknown): string {
   );
 }
 
+/**
+ * `seoSlug` is sent by the API for translated vehicles: the URL is always built from the English
+ * name, so /fr/cars/<slug>/ and /cars/<slug>/ share one slug whatever the display language is.
+ */
 export function vehiclePath(vehicle: {
   id: number | string;
   name: unknown;
   category?: string | null;
+  seoSlug?: string | null;
 }): string {
   const collection = vehicle.category === "yacht" ? "yachts" : "cars";
-  return `/${collection}/${vehicleSlug(vehicle.name)}-${vehicle.id}`;
+  return `/${collection}/${vehicle.seoSlug || vehicleSlug(vehicle.name)}-${vehicle.id}`;
 }
 
 export function vehicleIdFromSlug(value: string): string | null {

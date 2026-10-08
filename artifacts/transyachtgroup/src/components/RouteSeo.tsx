@@ -189,7 +189,8 @@ const buildBreadcrumbSchema = (
 export function RouteSeo() {
   const [location] = useLocation();
   const { lang } = useLanguage();
-  const path = location.split("?")[0] || "/";
+  // /cars/ and /cars are the same route; the trailing slash must not turn it into the home page.
+  const path = (location.split("?")[0] || "/").replace(/\/+$/, "") || "/";
   const isAdmin = path.startsWith("/admin");
   const isVehicle =
     path.startsWith("/vehicle/") ||
