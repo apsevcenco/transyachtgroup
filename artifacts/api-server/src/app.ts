@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { siteRebuildMiddleware } from "./lib/siteRebuild";
 
 dotenv.config();
 
@@ -104,7 +105,7 @@ app.get("/healthz", (req, res) => {
 });
 
 // Routes
-app.use("/api", router);
+app.use("/api", siteRebuildMiddleware, router);
 
 // 404
 app.use((req, res) => {
