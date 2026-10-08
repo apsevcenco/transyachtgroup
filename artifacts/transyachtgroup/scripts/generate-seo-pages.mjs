@@ -49,7 +49,7 @@ const { localizeLanding, landingLangs, landingTitle } = await importTsModule("sr
 const { LOCATIONS, LOCATION_SERVICES, TEXT, locationName } = await importTsModule("src/data/locations.ts");
 const { ROUTE_COPY } = await importTsModule("src/data/routeSeoCopy.ts");
 const { PAGE_LABELS, VEHICLE_TITLE_SUFFIX, RELATED_QUESTIONS } = await importTsModule("src/data/pageLabels.ts");
-const { GUIDES_COPY, NEWS_COPY } = await importTsModule("src/data/hubCopy.ts");
+const { GUIDES_COPY, NEWS_COPY, ANSWERS_COPY } =await importTsModule("src/data/hubCopy.ts");
 const { vehiclePath } = await importTsModule("src/lib/vehicleSeo.ts");
 const { alternateLinks, articleLangs, languageUrl, localizeInternalHref, vehicleLangs } = await importTsModule("src/lib/langRoutes.ts");
 const { answersForService, answersForLocation, moreAnswers } = await importTsModule("src/data/answerLinks.ts");
@@ -167,10 +167,16 @@ function sanitizeHtml(html, mapHref = (href) => href) {
 const li = (items) => `<ul>${items.join("")}</ul>`;
 const link = (href, label) => `<a href="${escapeHtml(href)}">${escapeHtml(label)}</a>`;
 const RELATED_TOKEN = "<!--RELATED_ANSWERS-->";
+/**
+ * "Related questions" block. `items` are the English answers; on a language page each one links to its
+ * translated answer (translated question, /<lang>/answers/<slug>/) when that translation exists, else to English.
+ */
 function relatedBlock(items, lang = "en") {
-  return items.length
-    ? `<h2>${escapeHtml(RELATED_QUESTIONS[lang])}</h2>${li(items.map((a) => `<li>${link(`/answers/${a.slug}/`, stripHtml(a.question))}</li>`))}`
-    : "";
+  const row = (a) => {
+    const translated = lang === "en" ? null : translatedAnswers[lang]?.get(a.slug);
+    return `<li>${link(rel(`/answers/${a.slug}`, translated ? lang : "en"), stripHtml((translated || a).question))}</li>`;
+  };
+  return items.length ? `<h2>${escapeHtml(RELATED_QUESTIONS[lang])}</h2>${li(items.map(row))}` : "";
 }
 
 // ---------------------------------------------------------------- API content
@@ -202,14 +208,23 @@ async function loadObject(path, label) {
   }
 }
 
-const [guides, news, answers, vehicles, ...cmsContents] = await Promise.all([
+const [guides, news, answers, vehicles, ...rest] = await Promise.all([
   loadList("/guides?lang=en", "guides"),
   loadList("/news?lang=en", "news"),
   loadList("/answers", "answers"),
   loadList("/vehicles?lang=en", "vehicles"),
   ...languages.map((code) => loadObject(`/content?lang=${code}`, `CMS texts (${code})`)),
+  ...translatedLanguages.map((code) => loadList(`/answers?lang=${code}`, `answers (${code})`)),
 ]);
+const cmsContents = rest.slice(0, languages.length);
 const cms = Object.fromEntries(languages.map((code, index) => [code, cmsContents[index]]));
+// The API falls back to English per answer; only items served in the requested language have a real translation.
+const translatedAnswers = Object.fromEntries(
+  translatedLanguages.map((code, index) => [
+    code,
+    new Map(rest.slice(languages.length)[index].filter((item) => item?.slug && item?.question && item.language === code).map((item) => [item.slug, item])),
+  ]),
+);
 
 /** CMS text of one language, only when it really differs from the English text (the API falls back to English). */
 function cmsText(lang, key) {
@@ -405,33 +420,38 @@ ${sanitizeHtml(item.content, mapHref)}
   };
 }
 
-function answerPage(item) {
+/** Answer page in one language. \`pool\` is the list of answers that exist in that language (for related links). */
+function answerPage(item, lang = "en", mapHref = (href) => href, pool = validAnswers) {
+  const L = PAGE_LABELS[lang];
   const path = `/answers/${item.slug}`;
   const question = stripHtml(item.question);
   const directAnswer = stripHtml(item.directAnswer);
   const faq = (Array.isArray(item.faq) ? item.faq : []).filter((entry) => entry?.question && entry?.answer);
   const description = compactDescription(item.metaDescription, item.directAnswer);
   const modified = toIso(item.updatedAt) || toIso(item.publishedAt);
+  const inLanguage = lang === "en" ? {} : { inLanguage: lang };
+  const servicePath = item.relatedServicePath ? String(item.relatedServicePath).replace(/\/?$/, "/") : "";
+  const serviceLabel = landingTitle(servicePath.split("/")[2] || "", lang) ?? L.relatedService;
   return {
     path,
-    lang: "en",
+    lang,
     title: withBrand(item.metaTitle || question),
     description,
     heading: question,
     modified,
     body: `<article>
-<p>${link("/answers/", "All answers")}</p>
+<p>${link(rel("/answers", lang), L.allAnswers)}</p>
 <h1>${escapeHtml(question)}</h1>
 <p><strong>${escapeHtml(directAnswer)}</strong></p>
-${sanitizeHtml(item.explanation)}
-${faq.length ? `<h2>FAQ</h2>${faq.map((entry) => `<h3>${escapeHtml(stripHtml(entry.question))}</h3><p>${escapeHtml(stripHtml(entry.answer))}</p>`).join("\n")}` : ""}
-${relatedBlock(moreAnswers(validAnswers, item))}
-${item.relatedServicePath ? `<p>${link(String(item.relatedServicePath).replace(/\/?$/, "/"), "Related service")}</p>` : ""}
+${sanitizeHtml(item.explanation, mapHref)}
+${faq.length ? `<h2>${escapeHtml(L.faq)}</h2>${faq.map((entry) => `<h3>${escapeHtml(stripHtml(entry.question))}</h3><p>${escapeHtml(stripHtml(entry.answer))}</p>`).join("\n")}` : ""}
+${relatedBlock(moreAnswers(pool, item), lang)}
+${servicePath ? `<p>${link(lang === "en" ? servicePath : localizeInternalHref(servicePath, lang), serviceLabel)}</p>` : ""}
 </article>`,
     jsonLd: [
-      { "@context": "https://schema.org", "@type": "QAPage", mainEntity: { "@type": "Question", name: question, acceptedAnswer: { "@type": "Answer", text: directAnswer } } },
-      ...(faq.length ? [{ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faq.map((entry) => ({ "@type": "Question", name: stripHtml(entry.question), acceptedAnswer: { "@type": "Answer", text: stripHtml(entry.answer) } })) }] : []),
-      breadcrumb([{ name: "Home", path: "/" }, { name: "Answers", path: "/answers" }, { name: question, path }]),
+      { "@context": "https://schema.org", "@type": "QAPage", ...inLanguage, mainEntity: { "@type": "Question", name: question, ...inLanguage, acceptedAnswer: { "@type": "Answer", text: directAnswer, ...inLanguage } } },
+      ...(faq.length ? [{ "@context": "https://schema.org", "@type": "FAQPage", ...inLanguage, mainEntity: faq.map((entry) => ({ "@type": "Question", name: stripHtml(entry.question), acceptedAnswer: { "@type": "Answer", text: stripHtml(entry.answer) } })) }] : []),
+      breadcrumb([{ name: lang === "en" ? "Home" : L.home, path: "/" }, { name: L.answers, path: "/answers" }, { name: question, path }], lang),
     ],
   };
 }
@@ -526,6 +546,8 @@ const articleSets = {
   news: Object.fromEntries(languages.map((code) => [code, validNews.filter((item) => articleLangs(item).includes(code))])),
 };
 const vehicleSets = Object.fromEntries(languages.map((code) => [code, validVehicles.filter((item) => vehicleLangs(item).includes(code))]));
+// Answers: English plus, per language, exactly the answers the API serves translated (complete translation only).
+const answerSets = Object.fromEntries(languages.map((code) => [code, code === "en" ? validAnswers : [...translatedAnswers[code].values()]]));
 
 /** Internal links inside translated copy go to the same-language page when it was generated. */
 function hrefMapper(lang) {
@@ -534,13 +556,14 @@ function hrefMapper(lang) {
     ...articleSets.guides[lang].map((item) => `/guides/${item.slug}`),
     ...articleSets.news[lang].map((item) => `/news/${item.slug}`),
     ...vehicleSets[lang].map((item) => vehiclePath(item)),
+    ...answerSets[lang].map((item) => `/answers/${item.slug}`),
   ]);
   return (href) => localizeInternalHref(href, lang, (normalized) => existing.has(normalized));
 }
 
 const guidePages = languages.flatMap((code) => articleSets.guides[code].map((item) => articlePage("guides", item, code, hrefMapper(code))));
 const newsPages = languages.flatMap((code) => articleSets.news[code].map((item) => articlePage("news", item, code, hrefMapper(code))));
-const answerPages = validAnswers.map(answerPage);
+const answerPages = languages.flatMap((code) => answerSets[code].map((item) => answerPage(item, code, hrefMapper(code), answerSets[code])));
 const vehiclePages = languages.flatMap((code) => vehicleSets[code].map((item) => vehiclePageEntry(item, code, hrefMapper(code))));
 
 const servicePagesByLang = Object.fromEntries(languages.map((code) => [code, buildServicePages(code)]));
@@ -575,7 +598,7 @@ ${services.length ? `<h2>${escapeHtml(L.relatedServices)}</h2>${li(services.map(
   }
   if (page.kind === "guides" || page.kind === "news" || page.kind === "answers") {
     const entries = page.kind === "answers"
-      ? validAnswers.map((raw, index) => ({ entry: answerPages[index], raw }))
+      ? answerPages.filter((entry) => entry.lang === lang).map((entry) => ({ entry, raw: lang === "en" ? validAnswers.find((answer) => `/answers/${answer.slug}` === entry.path) : undefined }))
       : (page.kind === "guides" ? guidePages : newsPages)
         .filter((entry) => entry.lang === lang)
         .map((entry) => ({ entry, raw: (page.kind === "guides" ? articleSets.guides : articleSets.news)[lang].find((item) => `/${page.kind}/${item.slug}` === entry.path) }));
@@ -617,7 +640,8 @@ function buildLanguageBasePages(lang) {
     });
   }
 
-  // Hubs for guides/news need at least one translated article, otherwise they would be empty shells.
+  // Hubs for guides/news/answers need at least one translated item, otherwise they would be empty shells.
+  if (answerSets[lang].length) out.push({ path: "/answers", lang, title: withBrand(ANSWERS_COPY[lang].title), description: ANSWERS_COPY[lang].intro, heading: ANSWERS_COPY[lang].title, kind: "answers" });
   if (articleSets.guides[lang].length) out.push({ path: "/guides", lang, title: withBrand(GUIDES_COPY[lang].title), description: GUIDES_COPY[lang].intro, heading: GUIDES_COPY[lang].title, kind: "guides" });
   if (articleSets.news[lang].length) out.push({ path: "/news", lang, title: withBrand(NEWS_COPY[lang].title), description: NEWS_COPY[lang].intro, heading: NEWS_COPY[lang].title, kind: "news" });
   return out;
@@ -638,7 +662,7 @@ const homePages = languages.map((lang) => {
   const servicePages = servicePagesByLang[lang];
   const guideList = pagesOf(guidePages, lang);
   const newsList = pagesOf(newsPages, lang);
-  const answerList = lang === "en" ? answerPages : [];
+  const answerList = pagesOf(answerPages, lang);
   const heading = lang === "en" ? "Luxury Car Rental and Yacht Charter on the French Riviera" : ROUTE_COPY[lang].home.title;
   const intro = lang === "en"
     ? "Trans Yacht Group provides private luxury car rental, VIP transfers and yacht charter in Cannes, Monaco, Nice, Antibes, Saint-Tropez and Courchevel, with a dedicated concierge for every request."
@@ -660,7 +684,7 @@ ${li(locationPages.map((p) => `<li>${link(rel(p.path, lang), p.heading)}</li>`))
 ${li(servicePages.map((p) => `<li>${link(rel(p.path, lang), p.heading)}</li>`))}
 ${guideList.length ? `<h2>${escapeHtml(L.guides)}</h2>${li(guideList.slice(0, 12).map((p) => `<li>${link(rel(p.path, lang), p.heading)}</li>`))}` : ""}
 ${newsList.length ? `<h2>${escapeHtml(L.news)}</h2>${li(newsList.slice(0, 12).map((p) => `<li>${link(rel(p.path, lang), p.heading)}</li>`))}` : ""}
-${answerList.length ? `<h2>Answers</h2>${li(answerList.slice(0, 12).map((p) => `<li>${link(`${p.path}/`, p.heading)}</li>`))}` : ""}
+${answerList.length ? `<h2>${escapeHtml(L.answers)}</h2>${li(answerList.slice(0, 12).map((p) => `<li>${link(rel(p.path, lang), p.heading)}</li>`))}` : ""}
 </article>`,
   };
 });
@@ -844,5 +868,5 @@ const perLanguage = translatedLanguages
   .map((code) => `${code}: ${[...homePages, ...pages, ...contentPages].filter((page) => page.lang === code).length}`)
   .join(", ");
 console.log(
-  `Prerendered ${pages.filter((page) => page.lang === "en").length + 1} static pages + ${articleSets.guides.en.length} guides, ${articleSets.news.en.length} news, ${answerPages.length} answers, ${vehicleSets.en.length} vehicles (API: ${apiBase}); language pages — ${perLanguage}`,
+  `Prerendered ${pages.filter((page) => page.lang === "en").length + 1} static pages + ${articleSets.guides.en.length} guides, ${articleSets.news.en.length} news, ${answerSets.en.length} answers, ${vehicleSets.en.length} vehicles (API: ${apiBase}); language pages — ${perLanguage}`,
 );

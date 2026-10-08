@@ -4,6 +4,7 @@ Disallow: /admin
 Allow: /api/vehicles-sitemap.xml
 Allow: /api/guides-sitemap.xml
 Allow: /api/news-sitemap.xml
+Allow: /api/answers-sitemap.xml
 Disallow: /api/
 
 Sitemap: https://www.transyachtgroup.com/sitemap.xml

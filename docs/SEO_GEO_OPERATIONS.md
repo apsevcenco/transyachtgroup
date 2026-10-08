@@ -41,7 +41,7 @@ Goal: be found in Google and cited by AI assistants for luxury car rental, VIP t
 ## Current status and gaps
 - Language versions (fr/ru/ro/ar) have their own URLs (`/fr/...`, `/ru/...`, `/ro/...`, `/ar/...`) with real hreflang, language sitemaps and prerendered translated text; English stays at the unprefixed URLs. A language page is only generated where a translation exists (service and location pages, hubs, CMS texts, and guides/news/vehicles with a translation for that language). Untranslated content is never published under a prefix. See [LANGUAGE-URLS.md](LANGUAGE-URLS.md); the Render rewrite rules for the prefixes must be added in the dashboard ([DEPLOYMENT.md](DEPLOYMENT.md)).
 - To get a guide, news item or vehicle indexed in another language, fill its translations in the admin panel (all of title and content, or name and description) and let the site rebuild; nothing else is needed.
-- Answers exist in English only.
+- Answers are indexed in English and, where a complete translation exists, in fr/ru/ro/ar (`/fr/answers/<slug>/` etc.). Create the translations in the admin (Answers → edit an answer → AI translations → check and save, then publish); the next site rebuild writes the language pages, hubs and sitemap entries. An answer without a complete translation stays English-only.
 - Off-site authority (directories, partner mentions, press) is the main remaining lever for AI-search citations.
 - The list endpoints `/api/guides` and `/api/news` return full article text; a lighter list endpoint would speed up pages and builds.
 

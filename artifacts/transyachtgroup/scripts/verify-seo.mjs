@@ -41,6 +41,7 @@ assert.match(
 assert.match(robots, /Allow:\s*\/api\/vehicles-sitemap\.xml/);
 assert.match(robots, /Allow:\s*\/api\/guides-sitemap\.xml/);
 assert.match(robots, /Allow:\s*\/api\/news-sitemap\.xml/);
+assert.match(robots, /Allow:\s*\/api\/answers-sitemap\.xml/);
 assert.match(sitemap, /<sitemapindex[\s>]/);
 assert.match(sitemap, /\/pages-sitemap\.xml/);
 assert.match(sitemap, /\/api\/vehicles-sitemap\.xml/);
@@ -190,8 +191,7 @@ for (const code of translatedLangs) {
   assert.ok(own.filter((dir) => dir.startsWith(`${code}/services/`)).length >= 20, `/${code}/services/ is missing pages`);
   assert.equal(own.filter((dir) => dir.startsWith(`${code}/locations/`)).length, 6, `/${code}/locations/ must have 6 pages`);
   assert.ok(pages.has(`${code}/cars/`) && pages.has(`${code}/yachts/`), `/${code}/ cars and yachts hubs are required`);
-  assert.ok(!own.some((dir) => dir.startsWith(`${code}/answers`)), "answers are English-only and must not exist under a language prefix");
-  for (const dir of own) {
+    for (const dir of own) {
     const page = pages.get(dir);
     const english = pages.get(dir.slice(code.length + 1));
     if (!english) continue;
@@ -231,6 +231,36 @@ for (const code of translatedLangs) {
   }
 }
 
+// 4a. translated answers: only where the answer really has a complete translation
+let languageAnswerPages = 0;
+for (const code of translatedLangs) {
+  const answerDirs = dirs.filter((dir) => dir.startsWith(`${code}/answers/`) && dir !== `${code}/answers/`);
+  languageAnswerPages += answerDirs.length;
+  if (answerDirs.length) assert.ok(pages.has(`${code}/answers/`), `/${code}/answers/ hub is missing although translated answers exist`);
+  else assert.ok(!pages.has(`${code}/answers/`), `/${code}/answers/ hub exists without any translated answer`);
+  for (const dir of answerDirs) {
+    const page = pages.get(dir);
+    const english = pages.get(dir.slice(code.length + 1));
+    assert.ok(english, `/${dir} has no English original: a language answer page without its English answer`);
+    assert.notEqual(seoText(page), seoText(english), `/${dir} is an English copy, not a translation`);
+    // The whole body must differ (asserted above); an untranslated headline alone is a content defect to fix in the admin.
+    if (page.match(/<h1[^>]*>([^<]+)<\/h1>/)?.[1] === english.match(/<h1[^>]*>([^<]+)<\/h1>/)?.[1]) {
+      console.warn(`WARNING: /${dir} still has the English question as its headline; re-translate it in the admin`);
+    }
+    assert.ok(!/noindex/.test(page), `/${dir} must be indexable`);
+    assert.match(page, /"@type":"QAPage"/, `/${dir} lost its QAPage JSON-LD`);
+    // the English original must advertise exactly the languages that have a page (reciprocity is checked in section 2)
+    assert.ok(alternatesOf(english).some((alternate) => alternate.hreflang === code), `English answer does not list its ${code} version: ${dir}`);
+  }
+  if (answerDirs.length) {
+    const hub = pages.get(`${code}/answers/`);
+    for (const [, href] of hub.matchAll(/<a href="(\/[^"#]*)"/g)) {
+      if (!href.startsWith(`/${code}/answers/`)) continue;
+      assert.ok(pages.has(href.slice(1)), `/${code}/answers/ lists a missing answer: ${href}`);
+    }
+  }
+}
+
 // 4b. vehicle pages: the English-only yacht summary and English Explore links never appear on language pages
 for (const code of translatedLangs) {
   const vehiclePages = dirs.filter((dir) => new RegExp(`^${code}/(cars|yachts)/.+-\\d+/$`).test(dir));
@@ -266,5 +296,5 @@ for (const code of translatedLangs) {
 }
 
 console.log(
-  `SEO verification passed (${pages.size} pages; per language: ${translatedLangs.map((code) => `${code} ${langPageCounts[code]}`).join(", ")})`,
+  `SEO verification passed (${pages.size} pages, ${languageAnswerPages} translated answer pages; per language: ${translatedLangs.map((code) => `${code} ${langPageCounts[code]}`).join(", ")})`,
 );

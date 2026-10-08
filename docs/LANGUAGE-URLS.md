@@ -10,7 +10,7 @@ English stays at the unprefixed URLs. French, Russian, Romanian and Arabic live 
   redirects automatically. Legacy `?lang=fr` links are replaced client-side with the real `/fr/...` URL.
 * **Routing.** `useLangLocation` (a wouter location hook) strips the prefix before routes match and adds the current
   language's prefix to every `setLocation(...)`. Plain `<a href>` links use `lp(path)` from `useLanguage()`.
-  Answers exist in English only, so links to them always use the English URL (`englishPath()`).
+  Answers have language versions when they carry a complete translation (see below); `englishPath()` forces the English URL where a link must not follow the language.
 * **Switcher.** The language menu renders real links to the same page in each language
   (`currentPageInLanguage`); clicks navigate client-side, middle/ctrl-clicks open the real URL.
 * **Head.** `SeoHead` computes canonical, hreflang, `<html lang>` / `dir` from the URL language and the list of languages in
@@ -28,10 +28,16 @@ English stays at the unprefixed URLs. French, Russian, Romanian and Arabic live 
   | Guides, news | `translations[lang]` has non-empty `title` and `content` |
   | Guides / news hub | at least one article is translated into that language |
   | Vehicles | `translations[lang]` has non-empty `name` and `description` |
-  | Answers | never (English only) |
+  | Answers | the API serves a complete translation (`/api/answers?lang=<code>` returns `language` = that code) |
+  | Answers hub | at least one answer is translated into that language |
 
 * **Sitemaps.** `pages-sitemap.xml` and the API sitemaps (`/api/vehicles|guides|news-sitemap.xml`) list every language URL with
   `xhtml:link` alternates identical to the page's hreflang tags. The old fake alternates (all pointing at one URL) are gone.
+* **Answers.** Translations are produced in the admin (Answers → AI translations for fr, ru, ro, ar, stored in the `translations` column) and
+  must be complete (question, direct answer, explanation). The prerender fetches `/answers?lang=<code>` for each language and keeps only items served in
+  that language, so an answer without a translation never gets a language page. Each language page has translated title, H1, direct answer, explanation,
+  FAQ and QAPage/FAQPage JSON-LD (`inLanguage`); "Related questions" blocks on language pages link to the translated answer when it exists, else to the English one.
+  `/api/answers-sitemap.xml` lists every language URL with the same alternates; `robots.txt` allows it.
 * **Vehicle pages.** The English tidy-ups (`seoVehicleName`, `vehicleShortName`) and the generated factual yacht summary (`yachtSummary`) are
   English-only: language pages use the translated name and never show or prerender the summary. The "Explore" links point to the
   same-language service pages and only to related vehicles that exist in that language.
@@ -127,7 +133,8 @@ prefix then return the SPA shell (the React 404 page, `noindex`) instead of the 
 
 ## Known gaps
 
-* Answers are English only; the language switcher on an answer page lands on `/fr/answers/...` (English text, `noindex`, canonical = English).
+* An answer without a complete translation in a language shows English text under `/fr/answers/<slug>/` when reached through the language switcher; the page is `noindex` with an English canonical and is not prerendered or listed in the sitemap.
+* Content check: a translation whose question was left in English (the `book-courchevel-transfer-christmas-new-year` Russian one at the time of writing) is still published; `verify-seo` prints a warning for it. Re-translate it in the admin.
 * Vehicles: only vehicles with a translation get language pages; for the others a `/fr/cars/<slug>/` URL still renders in the
   client (French chrome, English text) but is `noindex` with an English canonical.
 * Location pages keep Latin city names in Russian text (the sentence templates cannot decline them); Arabic and Romanian use local names.

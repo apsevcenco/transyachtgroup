@@ -3,7 +3,8 @@ import { db } from "@workspace/db";
 import { answersTable, guidesTable, newsTable, vehiclesTable } from "@workspace/db/schema";
 import { and, asc, desc, eq, isNotNull, lte, ne, or } from "drizzle-orm";
 import { vehiclePath } from "../lib/vehicleSeo";
-import { availableLangs, urlBlocks } from "../lib/langAlternates";
+import { availableLangs, urlBlocks, type SiteLang } from "../lib/langAlternates";
+import { availableLanguages } from "../lib/answerTranslations";
 
 const router: IRouter = Router();
 const SITE_URL = "https://www.transyachtgroup.com";
@@ -182,23 +183,28 @@ router.get("/answers-sitemap.xml", async (req, res) => {
       slug: answersTable.slug,
       question: answersTable.question,
       updatedAt: answersTable.updatedAt,
+      translations: answersTable.translations,
     }).from(answersTable)
       .where(eq(answersTable.published, true))
       .orderBy(desc(answersTable.publishedAt));
 
     const urls = answers.map((answer) => {
       const lastmod = answer.updatedAt ? new Date(answer.updatedAt).toISOString() : new Date().toISOString();
-      return `  <url>
-    <loc>${SITE_URL}/answers/${escapeXml(answer.slug)}/</loc>
-    <lastmod>${lastmod}</lastmod>
+      // One url per language with a complete translation, each carrying the same alternates.
+      return urlBlocks(
+        SITE_URL,
+        `/answers/${answer.slug}`,
+        availableLanguages(answer.translations) as SiteLang[],
+        () => `    <lastmod>${lastmod}</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>`;
+    <priority>0.7</priority>`,
+      );
     }).join("\n");
 
     res.set({ "Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, max-age=300, stale-while-revalidate=3600" });
     res.send(`<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
 ${urls}
 </urlset>`);
   } catch (err) {

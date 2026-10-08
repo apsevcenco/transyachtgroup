@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "@/lib/motion-shim";
 import { Menu, X, Globe } from "lucide-react";
 import { useLocation } from "wouter";
 import { useLanguage, LANGUAGES, currentPageInLanguage } from "@/contexts/LanguageContext";
-import { englishPath, stripLangPrefix } from "@/lib/langRoutes";
+import { stripLangPrefix } from "@/lib/langRoutes";
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -41,8 +41,7 @@ export function Navbar() {
     { name: t("about_us"), href: "/about/" },
     { name: "Guides", href: "/guides/" },
     { name: "News", href: "/news/" },
-    // Answers exist in English only, so they always link to the English URL.
-    { name: "Answers", href: englishPath("/answers/") },
+    { name: "Answers", href: "/answers/" },
     { name: t("contact"), href: "/#request", hash: "request" },
   ];
 

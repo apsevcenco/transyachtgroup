@@ -1054,7 +1054,7 @@ export default function Home() {
                     </li>
                     <li>
                       <a
-                        href="/answers/"
+                        href={lp("/answers/")}
                         className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                       >
                         Answers
