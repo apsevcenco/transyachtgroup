@@ -4,10 +4,13 @@ import { Navbar } from "@/components/Navbar";
 import { SeoHead, SITE_URL } from "@/components/SeoHead";
 import { useLanguage, type LangCode } from "@/contexts/LanguageContext";
 
+import { RelatedAnswers, useAnswers } from "@/components/RelatedAnswers";
+import { answersForLocation } from "@/data/answerLinks";
 import { LOCATIONS, LOCATION_SERVICES, TEXT, type LocationKey } from "@/data/locations";
 
 export default function LocationPage({ city }: { city: string }) {
   const { lang } = useLanguage();
+  const answers = useAnswers();
   const key = city as LocationKey;
   const location = LOCATIONS[key];
 
@@ -160,6 +163,12 @@ export default function LocationPage({ city }: { city: string }) {
               </article>
             ))}
           </section>
+
+          <RelatedAnswers
+            answers={answersForLocation(answers, location.name, (LOCATION_SERVICES[key] || []).map((service) => service.slug))}
+            lang={lang}
+            className="mt-10"
+          />
 
           <section className="mt-14 rounded-xl border border-gold/20 bg-gold/[0.04] p-8 md:p-10">
             <h2 className="mb-4 font-serif text-2xl sm:text-3xl">{text.contact}</h2>

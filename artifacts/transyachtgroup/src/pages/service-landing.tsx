@@ -8,6 +8,8 @@ import { fetchVehicles } from "@/lib/api";
 import { stripCmsText } from "@/lib/utils";
 import { vehiclePath } from "@/lib/vehicleSeo";
 
+import { RelatedAnswers, useAnswers } from "@/components/RelatedAnswers";
+import { answersForService } from "@/data/answerLinks";
 import { COURCHEVEL_CLUSTER_SLUGS, LANDINGS, UI, type Landing } from "@/data/serviceLandings";
 
 export default function ServiceLanding({ slug }: { slug: string }) {
@@ -15,6 +17,7 @@ export default function ServiceLanding({ slug }: { slug: string }) {
   const page = LANDINGS.find((item) => item.slug === slug);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const text = UI[lang];
+  const answers = useAnswers();
 
   useEffect(() => {
     if (!page) return;
@@ -119,6 +122,8 @@ export default function ServiceLanding({ slug }: { slug: string }) {
               </div>
             </section>
           )}
+
+          <RelatedAnswers answers={answersForService(answers, page.slug, page.area)} lang={lang} />
 
           <section className="mt-14 rounded-xl border border-gold/20 bg-gold/[0.04] p-8 md:flex md:items-center md:justify-between md:p-10"><div><h2 className="font-serif text-2xl sm:text-3xl">{text.request}</h2><p className="mt-3 text-sm text-white/50">{text.process}</p></div><div className="mt-7 flex flex-wrap gap-3 md:mt-0"><a href={`/${page.kind === "yacht" ? "yachts" : "cars"}/`} className="rounded border border-white/20 px-5 py-3 text-xs uppercase tracking-wider">{text.catalog}</a><a href="/#request" className="rounded bg-gold px-5 py-3 text-xs uppercase tracking-wider text-black">{text.request}</a></div></section>
         </article>

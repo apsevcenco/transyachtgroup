@@ -109,7 +109,7 @@ const CORE_INTERNAL_LINKS: InternalLinkCandidate[] = [
   { url: "/cars/", label: "Luxury car collection", kind: "catalog" },
   { url: "/yachts/", label: "Luxury yacht collection", kind: "catalog" },
   { url: "/about/", label: "About Trans Yacht Group", kind: "company" },
-  ...["cannes", "monaco", "nice", "antibes", "saint-tropez"].map((city) => ({
+  ...["cannes", "monaco", "nice", "antibes", "saint-tropez", "courchevel"].map((city) => ({
     url: `/locations/${city}/`, label: `${city.replaceAll("-", " ")} luxury mobility`, kind: "location" as const,
   })),
   ...[
@@ -315,16 +315,18 @@ function canonicalInternalHref(value: string): string | null {
 }
 
 async function loadInternalLinkCandidates(extraLinks = "", excludeGuideId?: number): Promise<InternalLinkCandidate[]> {
-  const [vehicles, guides] = await Promise.all([
+  const [vehicles, guides, answers] = await Promise.all([
     db.select({ id: vehiclesTable.id, name: vehiclesTable.name, category: vehiclesTable.category }).from(vehiclesTable).where(eq(vehiclesTable.visible, true)).orderBy(vehiclesTable.name),
     db.select({ id: guidesTable.id, slug: guidesTable.slug, title: guidesTable.title }).from(guidesTable)
       .where(or(eq(guidesTable.published, true), and(isNotNull(guidesTable.scheduledAt), lte(guidesTable.scheduledAt, new Date()))))
       .orderBy(desc(guidesTable.updatedAt)),
+    db.select({ slug: answersTable.slug, question: answersTable.question }).from(answersTable).where(eq(answersTable.published, true)).orderBy(desc(answersTable.publishedAt)).limit(40),
   ]);
   const candidates: InternalLinkCandidate[] = [
     ...CORE_INTERNAL_LINKS,
     ...vehicles.map((vehicle) => ({ url: `${vehiclePath(vehicle)}/`, label: plainLabel(vehicle.name), kind: "vehicle" as const })),
     ...guides.filter((guide) => guide.id !== excludeGuideId).map((guide) => ({ url: `/guides/${guide.slug}/`, label: plainLabel(guide.title), kind: "guide" as const })),
+    ...answers.map((answer) => ({ url: `/answers/${answer.slug}/`, label: plainLabel(answer.question), kind: "guide" as const })),
   ];
   const preferred = new Set(extraLinks.split(/[\s,]+/).map((raw) => canonicalInternalHref(raw.trim())).filter(Boolean));
   candidates.sort((a, b) => Number(preferred.has(b.url)) - Number(preferred.has(a.url)));

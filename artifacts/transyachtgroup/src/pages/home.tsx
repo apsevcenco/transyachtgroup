@@ -940,7 +940,7 @@ export default function Home() {
                   <ul className="space-y-3">
                     <li>
                       <a
-                        href="#"
+                        href="/about/"
                         className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                       >
                         {t("about_us")}
@@ -980,6 +980,84 @@ export default function Home() {
                         className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
                       >
                         Legal Notice
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="text-gold/60 font-serif text-base mb-6 tracking-wide">
+                    Courchevel
+                  </h4>
+                  <ul className="space-y-3">
+                    <li>
+                      <a
+                        href="/locations/courchevel/"
+                        className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
+                      >
+                        Courchevel
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href="/services/luxury-car-rental-courchevel/"
+                        className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
+                      >
+                        Car rental in Courchevel
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href="/services/courchevel-private-transfers/"
+                        className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
+                      >
+                        Transfers to Courchevel
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href="/services/geneva-airport-to-courchevel-transfer/"
+                        className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
+                      >
+                        Geneva to Courchevel
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href="/services/lyon-airport-to-courchevel-transfer/"
+                        className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
+                      >
+                        Lyon to Courchevel
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="text-gold/60 font-serif text-base mb-6 tracking-wide">
+                    Explore
+                  </h4>
+                  <ul className="space-y-3">
+                    <li>
+                      <a
+                        href="/guides/"
+                        className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
+                      >
+                        Guides
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href="/news/"
+                        className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
+                      >
+                        News
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href="/answers/"
+                        className="text-white/30 hover:text-gold/80 text-sm transition-all duration-500 font-light tracking-wide"
+                      >
+                        Answers
                       </a>
                     </li>
                   </ul>

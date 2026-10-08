@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 
 import { CmsContent } from "@/components/CmsContent";
+import { RelatedAnswers, useAnswers } from "@/components/RelatedAnswers";
+import { moreAnswers } from "@/data/answerLinks";
 import { Navbar } from "@/components/Navbar";
 import { SeoHead, SITE_URL } from "@/components/SeoHead";
 import { fetchAnswer, type Answer } from "@/lib/api";
@@ -11,6 +13,7 @@ export default function AnswerDetail({ slug }: { slug: string }) {
   const { lang } = useLanguage();
   const [item, setItem] = useState<Answer | null>(null);
   const [loading, setLoading] = useState(true);
+  const allAnswers = useAnswers();
 
   useEffect(() => {
     fetchAnswer(slug).then(setItem).catch(() => setItem(null)).finally(() => setLoading(false));
@@ -83,6 +86,7 @@ export default function AnswerDetail({ slug }: { slug: string }) {
                   </div>
                 </section>
               )}
+              <RelatedAnswers answers={moreAnswers(allAnswers, item)} lang={lang} className="mt-12" />
               {item.relatedServicePath && <a href={item.relatedServicePath} className="mt-10 inline-flex rounded bg-gold px-5 py-3 text-sm font-medium text-black">View related service</a>}
             </>
           ) : null}

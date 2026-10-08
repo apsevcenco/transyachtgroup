@@ -40,6 +40,7 @@ async function importTsModule(relativePath) {
 const { LANDINGS, COURCHEVEL_CLUSTER_SLUGS, UI } = await importTsModule("src/data/serviceLandings.ts");
 const { LOCATIONS, LOCATION_SERVICES, TEXT } = await importTsModule("src/data/locations.ts");
 const { vehiclePath } = await importTsModule("src/lib/vehicleSeo.ts");
+const { answersForService, answersForLocation, moreAnswers } = await importTsModule("src/data/answerLinks.ts");
 
 // ---------------------------------------------------------------- helpers
 function escapeHtml(value) {
@@ -138,6 +139,12 @@ function sanitizeHtml(html) {
 
 const li = (items) => `<ul>${items.join("")}</ul>`;
 const link = (href, label) => `<a href="${escapeHtml(href)}">${escapeHtml(label)}</a>`;
+const RELATED_TOKEN = "<!--RELATED_ANSWERS-->";
+function relatedBlock(items) {
+  return items.length
+    ? `<h2>Related questions</h2>${li(items.map((a) => `<li>${link(`/answers/${a.slug}/`, stripHtml(a.question))}</li>`))}`
+    : "";
+}
 
 // ---------------------------------------------------------------- static pages
 const breadcrumb = (items) => ({
@@ -167,6 +174,8 @@ const servicePages = LANDINGS.map((landing) => {
     title: withBrand(landing.title),
     description: landing.description,
     heading: landing.title,
+    serviceSlug: landing.slug,
+    area: landing.area,
     body: `<article>
 <p>${escapeHtml(landing.eyebrow)}</p>
 <h1>${escapeHtml(landing.title)}</h1>
@@ -180,6 +189,7 @@ ${faq.map((item) => `<h3>${escapeHtml(item.q)}</h3><p>${escapeHtml(item.a)}</p>`
 ${li(related.map((item) => `<li>${link(`/services/${item.slug}/`, item.title)}</li>`))}
 ${cluster.length ? `<h2>${escapeHtml(text.cluster)}</h2><p>${escapeHtml(text.clusterIntro)}</p>${li(cluster.map((item) => `<li>${link(`/services/${item.slug}/`, item.title)}</li>`))}` : ""}
 <p>${link(`${catalogPath}/`, text.catalog)} · ${link("/#request", text.request)}</p>
+${RELATED_TOKEN}
 </article>`,
     jsonLd: [
       { "@context": "https://schema.org", "@type": "Service", name: landing.title, description: landing.description, serviceType: landing.serviceType || (landing.kind === "yacht" ? "Luxury yacht charter" : "Luxury car rental"), areaServed: landing.area ? { "@type": "City", name: landing.area } : "French Riviera", provider: { "@id": `${siteUrl}/#organization` }, url: cleanUrl(path) },
@@ -201,6 +211,8 @@ const locationPages = Object.entries(LOCATIONS).map(([key, location]) => {
     title: withBrand(title),
     description,
     heading: title,
+    cityName: location.name,
+    serviceSlugs: services.map((service) => service.slug),
     body: `<article>
 <p>${escapeHtml(text.service)}</p>
 <h1>${escapeHtml(title)}</h1>
@@ -212,6 +224,7 @@ ${services.length ? `<h2>${escapeHtml(`${location.name} services`)}</h2>${li(ser
 ${faq.map((item) => `<h2>${escapeHtml(item.question)}</h2><p>${escapeHtml(item.answer)}</p>`).join("\n")}
 <h2>${escapeHtml(text.contact)}</h2>
 <p>${escapeHtml(text.concierge)}</p>
+${RELATED_TOKEN}
 </article>`,
     jsonLd: [
       { "@context": "https://schema.org", "@type": "Service", name: title, description, areaServed: { "@type": "City", name: location.name }, provider: { "@id": `${siteUrl}/#organization` }, serviceType: ["Luxury car rental", "Yacht charter", "Private concierge"], url: cleanUrl(path) },
@@ -325,6 +338,7 @@ function answerPage(item) {
 <p><strong>${escapeHtml(directAnswer)}</strong></p>
 ${sanitizeHtml(item.explanation)}
 ${faq.length ? `<h2>FAQ</h2>${faq.map((entry) => `<h3>${escapeHtml(stripHtml(entry.question))}</h3><p>${escapeHtml(stripHtml(entry.answer))}</p>`).join("\n")}` : ""}
+${relatedBlock(moreAnswers(validAnswers, item))}
 ${item.relatedServicePath ? `<p>${link(String(item.relatedServicePath).replace(/\/?$/, "/"), "Related service")}</p>` : ""}
 </article>`,
     jsonLd: [
@@ -396,6 +410,12 @@ const validAnswers = answers.filter((item) => item?.slug && item?.question);
 const guidePages = validGuides.map((item) => articlePage("guides", item));
 const newsPages = validNews.map((item) => articlePage("news", item));
 const answerPages = validAnswers.map(answerPage);
+for (const page of servicePages) {
+  page.body = page.body.replace(RELATED_TOKEN, relatedBlock(answersForService(validAnswers, page.serviceSlug, page.area)));
+}
+for (const page of locationPages) {
+  page.body = page.body.replace(RELATED_TOKEN, relatedBlock(answersForLocation(validAnswers, page.cityName, page.serviceSlugs)));
+}
 const vehiclePages = vehicles.filter((item) => item?.id && item?.name).map(vehiclePageEntry);
 
 // Listing pages and the homepage show real text + crawlable links to the detail pages.
@@ -435,6 +455,7 @@ ${li(locationPages.map((p) => `<li>${link(`${p.path}/`, p.heading)}</li>`))}
 ${li(servicePages.map((p) => `<li>${link(`${p.path}/`, p.heading)}</li>`))}
 ${guidePages.length ? `<h2>Guides</h2>${li(guidePages.slice(0, 12).map((p) => `<li>${link(`${p.path}/`, p.heading)}</li>`))}` : ""}
 ${newsPages.length ? `<h2>News</h2>${li(newsPages.slice(0, 12).map((p) => `<li>${link(`${p.path}/`, p.heading)}</li>`))}` : ""}
+${answerPages.length ? `<h2>Answers</h2>${li(answerPages.slice(0, 12).map((p) => `<li>${link(`${p.path}/`, p.heading)}</li>`))}` : ""}
 </article>`,
 };
 
