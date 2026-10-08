@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, BarChart3, CalendarDays, Link2, Pencil, Plus, RefreshCw, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, BarChart3, CalendarDays, CheckCircle2, Link2, Loader2, Pencil, Plus, RefreshCw, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
 import { useLocation } from "wouter";
 
 import RichTextEditor from "@/components/RichTextEditor";
@@ -158,6 +158,7 @@ export default function AdminGuides() {
   const [overview, setOverview] = useState<Awaited<ReturnType<typeof fetchGuideSeoOverview>>>([]);
   const [selectedVehicles, setSelectedVehicles] = useState<number[]>([]);
   const [metricsJson, setMetricsJson] = useState("");
+  const [importStatus, setImportStatus] = useState<{ state: "idle" | "working" | "success" | "error"; text: string; done?: number; total?: number }>({ state: "idle", text: "" });
   const [seoPlan, setSeoPlan] = useState<SeoPlanItem[]>([]);
   const [savedPlans, setSavedPlans] = useState<SeoContentPlan[]>([]);
   const [activePlanId, setActivePlanId] = useState<number | null>(null);
@@ -270,24 +271,38 @@ export default function AdminGuides() {
     const facts = (context?.vehicles || []).filter((vehicle) => ids.includes(vehicle.id)).map(formatFleetFacts).join("\n\n");
     setAi((current) => ({ ...current, featuredAssets: (context?.vehicles || []).filter((vehicle) => ids.includes(vehicle.id)).map((vehicle) => plainFleetText(vehicle.name)).join(", "), notes: facts }));
   };
+  const uploadMetrics = async (rows: Array<Record<string, unknown>>, source: string) => {
+    setImportStatus({ state: "working", text: `Found ${rows.length} page row${rows.length === 1 ? "" : "s"} in ${source}. Uploading…`, done: 0, total: rows.length });
+    const result = await importGuideSearchMetrics(rows, (done, total) => setImportStatus({ state: "working", text: `Uploading… ${done} of ${total} pages`, done, total }));
+    await load();
+    const text = `Done: ${result.updated} page${result.updated === 1 ? "" : "s"} updated from ${source}.`;
+    setImportStatus({ state: "success", text });
+    setMessage(text);
+    return result;
+  };
   const importMetrics = async () => {
     setBusy(true);
+    setImportStatus({ state: "working", text: "Reading the pasted data…" });
     try {
       const rows = parseSearchMetricsInput(metricsJson);
-      if (!rows.length) throw new Error("Paste Search Console CSV, table or JSON rows with site URLs.");
-      const result = await importGuideSearchMetrics(rows);
-      await load();
+      if (!rows.length) throw new Error("No Search Console rows with site URLs were found in the pasted text. Expected columns: Page, Clicks, Impressions, CTR, Position.");
+      await uploadMetrics(rows, "the pasted data");
       setMetricsJson("");
-      setMessage(`${result.updated} page metrics updated from ${rows.length} imported Search Console row${rows.length === 1 ? "" : "s"}.`);
-    } catch (err) { setMessage(err instanceof Error ? err.message : "Paste a valid Search Console CSV or JSON export"); }
-    finally { setBusy(false); }
+    } catch (err) {
+      const text = err instanceof Error ? err.message : "Paste a valid Search Console CSV, table or JSON export";
+      setImportStatus({ state: "error", text });
+      setMessage(text);
+    } finally { setBusy(false); }
   };
   const importMetricsFile = async (file?: File) => {
     if (!file) return;
     setBusy(true);
+    setImportStatus({ state: "working", text: `Reading ${file.name}…` });
     try {
+      const lower = file.name.toLowerCase();
+      if (!/\.(xlsx|csv|txt)$/.test(lower)) throw new Error(`${file.name}: unsupported file type. Use .xlsx, .csv or .txt (an old .xls file must be re-saved as .xlsx).`);
       let rows: Array<Record<string, unknown>> = [];
-      if (file.name.toLowerCase().endsWith(".xlsx")) {
+      if (lower.endsWith(".xlsx")) {
         const { default: readWorkbook } = await import("read-excel-file/browser") as typeof import("read-excel-file/browser");
         const workbook = await (readWorkbook as unknown as (input: File) => Promise<unknown>)(file);
         const sheets = Array.isArray(workbook) && workbook.some((sheet) => sheet && typeof sheet === "object" && "data" in (sheet as Record<string, unknown>))
@@ -296,15 +311,17 @@ export default function AdminGuides() {
         for (const sheet of sheets) {
           rows.push(...mapSearchMetricRows((sheet.data || []) as unknown[][]));
         }
+        setImportStatus({ state: "working", text: `Read ${sheets.length} sheet${sheets.length === 1 ? "" : "s"} from ${file.name}; ${rows.length} page row${rows.length === 1 ? "" : "s"} found.` });
       } else {
         rows = parseSearchMetricsInput(await file.text());
       }
-      if (!rows.length) throw new Error("The file did not contain recognizable Search Console URL metrics.");
-      const result = await importGuideSearchMetrics(rows);
-      await load();
-      setMessage(`${result.updated} page metrics saved from ${rows.length} Search Console row${rows.length === 1 ? "" : "s"} in ${file.name}.`);
-    } catch (err) { setMessage(err instanceof Error ? err.message : "Search Console file import failed"); }
-    finally { setBusy(false); }
+      if (!rows.length) throw new Error(`${file.name}: no rows with site URLs were found. Use the Search Console "Pages" export (columns Page, Clicks, Impressions, CTR, Position) for transyachtgroup.com.`);
+      await uploadMetrics(rows, file.name);
+    } catch (err) {
+      const text = err instanceof Error ? err.message : "The file could not be imported";
+      setImportStatus({ state: "error", text });
+      setMessage(text);
+    } finally { setBusy(false); }
   };
   const makePlan = async () => {
     setBusy(true); setPlanMessage("Generating the plan…"); setSeoPlan([]);
@@ -500,7 +517,7 @@ export default function AdminGuides() {
       <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5 lg:col-span-2"><div className="mb-4 flex flex-wrap items-start justify-between gap-3"><div className="flex items-center gap-2"><BarChart3 className="text-gold" size={18}/><div><h2 className="font-serif text-2xl">SEO performance</h2><p className="mt-1 text-xs leading-5 text-white/35">Tracks the whole site: homepage, services, locations, fleet, guides, news and AI answers. Google Search Console metrics appear after CSV, Excel, table or JSON import.</p></div></div>{overviewSummary.lastImport ? <span className="rounded border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-[10px] text-emerald-300">GSC imported {new Date(overviewSummary.lastImport).toLocaleString()}</span> : <span className="rounded border border-gold/20 bg-gold/5 px-3 py-2 text-[10px] text-gold">No GSC import yet</span>}</div><div className="mb-5 grid gap-3 sm:grid-cols-4"><div className="rounded-lg border border-white/5 bg-black/20 p-3"><p className="text-[10px] uppercase text-white/30">Local views</p><p className="mt-1 text-xl text-white">{overviewSummary.views}</p></div><div className="rounded-lg border border-white/5 bg-black/20 p-3"><p className="text-[10px] uppercase text-white/30">Local leads</p><p className="mt-1 text-xl text-white">{overviewSummary.leads}</p></div><div className="rounded-lg border border-white/5 bg-black/20 p-3"><p className="text-[10px] uppercase text-white/30">GSC clicks</p><p className="mt-1 text-xl text-white">{overviewSummary.gscClicks}</p></div><div className="rounded-lg border border-white/5 bg-black/20 p-3"><p className="text-[10px] uppercase text-white/30">GSC impressions</p><p className="mt-1 text-xl text-white">{overviewSummary.gscImpressions}</p></div></div><div className="overflow-x-auto"><table className="w-full min-w-[920px] text-left text-xs"><thead className="text-white/35"><tr><th className="pb-3">Page</th><th>Type</th><th>Score</th><th>Views</th><th>Leads</th><th>GSC clicks</th><th>Impr.</th><th>CTR</th><th>Position</th><th>Next action</th></tr></thead><tbody>{overview.length ? overview.map((page) => <tr key={page.id} className="border-t border-white/5"><td className="py-3 pr-4 text-white/70"><p>{page.title}</p><p className="mt-1 max-w-[260px] truncate text-[10px] text-white/30">{page.path || page.url}</p></td><td className="capitalize">{page.pageType || "guide"}</td><td>{page.seoScore ?? "—"}</td><td>{page.localMetrics.views}</td><td>{page.localMetrics.leads}</td><td>{page.searchMetrics?.clicks ?? "—"}</td><td>{page.searchMetrics?.impressions ?? "—"}</td><td>{page.searchMetrics?.ctr != null ? `${page.searchMetrics.ctr}%` : "—"}</td><td>{page.searchMetrics?.position ?? "—"}</td><td className="max-w-[180px] py-3 text-gold/60">{page.opportunity || "Monitor"}</td></tr>) : <tr className="border-t border-white/5"><td colSpan={10} className="py-6 text-white/35">No SEO pages yet. Import Search Console data or create site content first.</td></tr>}</tbody></table></div></div>
       <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5"><div className="mb-4 flex items-center gap-2"><CalendarDays className="text-gold" size={18}/><h2 className="font-serif text-2xl">Calendar</h2></div>{scheduled.length ? <div className="space-y-3">{scheduled.map((item) => <div key={item.id} className="border-b border-white/5 pb-3"><div className="flex items-center justify-between gap-2"><p className="text-sm text-white/70">{item.title}</p><span className="rounded border border-white/10 px-2 py-1 text-[9px] uppercase text-white/35">{item.kind}</span></div><p className="mt-1 text-xs text-gold/60">{new Date(item.scheduledAt!).toLocaleString()}</p></div>)}</div> : <p className="text-sm leading-6 text-white/35">No future scheduled guides or news. Set “Schedule publication” to place content here.</p>}</div>
       <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5 lg:col-span-2"><h2 className="font-serif text-2xl">Content clusters</h2><div className="mt-4 grid gap-3 sm:grid-cols-2">{clusters.map(([name, guides]) => <div key={name} className="rounded border border-white/5 bg-black/20 p-4"><p className="text-sm text-gold">{name}</p><p className="mt-1 text-xs text-white/35">{guides.length} article{guides.length === 1 ? "" : "s"} · target {guides.find((guide) => guide.targetPage)?.targetPage || "not set"}</p></div>)}</div></div>
-      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5"><h2 className="font-serif text-2xl">Import search data</h2><p className="mt-2 text-xs leading-5 text-white/35">Paste or upload Search Console data for any site URL: services, locations, cars, yachts, guides, news, answers or homepage. CSV, Excel, copied tables and JSON are supported.</p><textarea value={metricsJson} onChange={(e) => setMetricsJson(e.target.value)} rows={7} className="mt-4 w-full rounded border border-white/10 bg-black/40 p-3 text-xs text-white" placeholder={"Page,Clicks,Impressions,CTR,Position\nhttps://www.transyachtgroup.com/services/yacht-charter-monaco/,10,400,2.5%,12.4"}/><div className="mt-3 flex flex-wrap gap-2"><button disabled={busy || !metricsJson.trim()} onClick={importMetrics} className="rounded border border-gold/30 px-4 py-2 text-xs text-gold disabled:opacity-40">Import pasted metrics</button><label className="cursor-pointer rounded border border-white/15 px-4 py-2 text-xs text-white/60 hover:border-gold/30 hover:text-gold">Upload CSV / Excel<input type="file" accept=".csv,.txt,.xlsx" onChange={(event) => importMetricsFile(event.target.files?.[0])} className="hidden"/></label></div><p className="mt-3 text-[10px] leading-4 text-white/25">If this block shows local views but no GSC data, the site is tracking readers; only external Search Console rows have not been imported yet.</p></div>
+      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5"><h2 className="font-serif text-2xl">Import search data</h2><p className="mt-2 text-xs leading-5 text-white/35">Paste or upload Search Console data for any site URL: services, locations, cars, yachts, guides, news, answers or homepage. CSV, Excel, copied tables and JSON are supported.</p><textarea value={metricsJson} onChange={(e) => setMetricsJson(e.target.value)} rows={7} className="mt-4 w-full rounded border border-white/10 bg-black/40 p-3 text-xs text-white" placeholder={"Page,Clicks,Impressions,CTR,Position\nhttps://www.transyachtgroup.com/services/yacht-charter-monaco/,10,400,2.5%,12.4"}/><div className="mt-3 flex flex-wrap gap-2"><button disabled={busy || !metricsJson.trim()} onClick={importMetrics} className="rounded border border-gold/30 px-4 py-2 text-xs text-gold disabled:opacity-40">Import pasted metrics</button><label className={`rounded border border-white/15 px-4 py-2 text-xs text-white/60 ${busy ? "pointer-events-none opacity-40" : "cursor-pointer hover:border-gold/30 hover:text-gold"}`}>Upload CSV / Excel<input type="file" accept=".csv,.txt,.xlsx" disabled={busy} onChange={(event) => { const input = event.target; const file = input.files?.[0]; input.value = ""; void importMetricsFile(file); }} className="hidden"/></label></div>{importStatus.state !== "idle" && (<div role="status" className={`mt-3 flex items-start gap-2 rounded border px-3 py-2 text-xs ${importStatus.state === "error" ? "border-red-500/30 bg-red-500/10 text-red-300" : importStatus.state === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" : "border-gold/30 bg-gold/5 text-gold"}`}>{importStatus.state === "working" ? <Loader2 size={14} className="mt-0.5 shrink-0 animate-spin"/> : importStatus.state === "success" ? <CheckCircle2 size={14} className="mt-0.5 shrink-0"/> : <AlertTriangle size={14} className="mt-0.5 shrink-0"/>}<div className="min-w-0 flex-1"><p className="break-words">{importStatus.text}</p>{importStatus.state === "working" && importStatus.total ? <div className="mt-2 h-1 overflow-hidden rounded bg-white/10"><div className="h-full bg-gold transition-all" style={{ width: `${Math.round(((importStatus.done || 0) / importStatus.total) * 100)}%` }}/></div> : null}</div></div>)}<p className="mt-3 text-[10px] leading-4 text-white/25">If this block shows local views but no GSC data, the site is tracking readers; only external Search Console rows have not been imported yet.</p></div>
     </section>
     <section className="mt-10 space-y-3">{items.map((guide) => <div key={guide.id} className="flex flex-col gap-4 rounded-xl border border-white/10 bg-white/[0.02] p-5 sm:flex-row sm:items-center"><div className="min-w-0 flex-1"><div className="flex items-center gap-3"><h2 className="truncate font-serif text-xl">{guide.title}</h2><span className={`rounded-full px-2 py-1 text-[9px] uppercase ${guide.published ? "bg-emerald-500/10 text-emerald-400" : guide.scheduledAt && new Date(guide.scheduledAt) > new Date() ? "bg-blue-500/10 text-blue-300" : "bg-white/5 text-white/40"}`}>{guide.published ? "Published" : guide.scheduledAt && new Date(guide.scheduledAt) > new Date() ? "Scheduled" : "Draft"}</span>{guide.seoScore != null && <span className="text-xs text-gold/60">SEO {guide.seoScore}</span>}</div><p className="mt-1 truncate text-xs text-white/35">/guides/{guide.slug}/ · {guide.primaryKeyword || "no keyword"}</p></div><div className="flex gap-2"><button onClick={() => edit(guide)} className="rounded border border-white/10 p-2 text-white/60 hover:text-gold"><Pencil size={17}/></button><button onClick={() => remove(guide.id)} className="rounded border border-white/10 p-2 text-red-400/60 hover:text-red-400"><Trash2 size={17}/></button></div></div>)}</section>
   </div></div>;

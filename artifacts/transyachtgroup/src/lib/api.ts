@@ -454,7 +454,7 @@ export async function updateSeoOpportunity(id: number, status: SeoOpportunity["s
   return res.json();
 }
 
-export async function importGuideSearchMetrics(rows: Array<Record<string, unknown>>): Promise<{ updated: number }> {
+export async function importGuideSearchMetrics(rows: Array<Record<string, unknown>>, onProgress?: (done: number, total: number) => void): Promise<{ updated: number }> {
   // Batches keep each request small (no 413) and let one slow batch finish before the next starts.
   const unique = [...new Map(rows.map((row) => [String(row.url || ""), row])).values()].filter((row) => row.url);
   let updated = 0;
@@ -466,6 +466,7 @@ export async function importGuideSearchMetrics(rows: Array<Record<string, unknow
       throw new Error(`Search metrics import failed after ${updated} rows: ${reason}`);
     }
     updated += (await res.json()).updated || 0;
+    onProgress?.(Math.min(start + 200, unique.length), unique.length);
   }
   return { updated };
 }
