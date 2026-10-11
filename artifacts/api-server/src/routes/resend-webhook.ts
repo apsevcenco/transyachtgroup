@@ -56,7 +56,12 @@ async function handleReceived(data: Record<string, unknown>): Promise<ReceivedOu
         ? htmlToText(data.html)
         : null;
   // The webhook carries metadata only; the body has to be fetched separately.
-  if (!body) body = await fetchReceivedEmailBody(emailId);
+  let bodyProblem: string | null = null;
+  if (!body) {
+    const fetched = await fetchReceivedEmailBody(emailId);
+    body = fetched.body;
+    bodyProblem = fetched.problem;
+  }
 
   const optOut = detectOptOut(subject, body);
   const result = await recordInboundReply({ fromEmail: from, subject, bodyText: body, providerMessageId: emailId, optOut });
@@ -71,12 +76,12 @@ async function handleReceived(data: Record<string, unknown>): Promise<ReceivedOu
       `Subject: ${subject || "(no subject)"}`,
       ...(blocked ? ["", "Marked do_not_contact automatically — they will not be emailed again."] : []),
       "",
-      (body || "(message body not available)").slice(0, 1_000),
+      (body || `(message body not available${bodyProblem ? `: ${bodyProblem}` : ""})`).slice(0, 1_000),
       "",
       `Open the Partner CRM: ${ADMIN_URL}`,
     ].join("\n"),
   );
-  return { result: "stored", detail: { from, matched: result.matched, optOut } };
+  return { result: "stored", detail: { from, matched: result.matched, optOut, ...(bodyProblem ? { bodyProblem } : {}) } };
 }
 
 router.post("/webhooks/resend", async (req, res) => {

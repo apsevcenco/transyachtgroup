@@ -1,6 +1,7 @@
 import { db } from "@workspace/db";
 import { customerReviewsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
+import { describeProviderFailure } from "./providerError";
 
 const LANGS = new Set(["en", "fr", "ru", "ro", "ar"]);
 
@@ -70,7 +71,7 @@ async function sendEmail(to: string, name: string, message: string) {
     }),
     signal: AbortSignal.timeout(15_000),
   });
-  if (!response.ok) throw new Error(`Email provider rejected request (${response.status})`);
+  if (!response.ok) throw new Error(await describeProviderFailure(response, "Email provider"));
 }
 
 async function sendWhatsapp(phone: string, name: string, reviewUrl: string, language: string) {
@@ -99,7 +100,7 @@ async function sendWhatsapp(phone: string, name: string, reviewUrl: string, lang
     }),
     signal: AbortSignal.timeout(15_000),
   });
-  if (!response.ok) throw new Error(`WhatsApp provider rejected request (${response.status})`);
+  if (!response.ok) throw new Error(await describeProviderFailure(response, "WhatsApp provider"));
 }
 
 export async function dispatchReviewRequest(id: number, channels: { whatsapp: boolean; email: boolean }) {

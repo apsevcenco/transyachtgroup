@@ -3,6 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { partnerContactsTable, partnerMessagesTable, siteContentTable } from "@workspace/db/schema";
 import { logger } from "./logger";
+import { describeProviderFailure } from "./providerError";
 import {
   classifyDeliveryEvent,
   followUpAfterSend,
@@ -176,23 +177,38 @@ export async function applyDeliveryEvent(type: string, data: unknown) {
   }
 }
 
-export async function fetchReceivedEmailBody(emailId: string): Promise<string | null> {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return null;
+export type ReceivedBodyResult = { body: string | null; problem: string | null };
+
+async function fetchReceivedEmailBodyOnce(emailId: string, key: string): Promise<ReceivedBodyResult> {
   try {
     const response = await fetch(`https://api.resend.com/emails/receiving/${encodeURIComponent(emailId)}`, {
       headers: { Authorization: `Bearer ${key}` },
       signal: AbortSignal.timeout(10_000),
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      const problem = await describeProviderFailure(response, "Resend (read received email)");
+      logger.error({ emailId, problem }, "Could not read the received email body from Resend");
+      return { body: null, problem };
+    }
     const data = (await response.json()) as { text?: unknown; html?: unknown };
-    if (typeof data.text === "string" && data.text.trim()) return data.text.trim();
-    if (typeof data.html === "string" && data.html.trim()) return htmlToText(data.html);
-    return null;
+    if (typeof data.text === "string" && data.text.trim()) return { body: data.text.trim(), problem: null };
+    if (typeof data.html === "string" && data.html.trim()) return { body: htmlToText(data.html), problem: null };
+    return { body: null, problem: "Resend returned the email without a text or html body" };
   } catch (err) {
     logger.error({ err, emailId }, "Failed to fetch received email body from Resend");
-    return null;
+    return { body: null, problem: "Could not reach Resend to read the email body" };
   }
+}
+
+// The webhook can arrive before the message is readable, so one empty result is retried shortly after.
+export async function fetchReceivedEmailBody(emailId: string): Promise<ReceivedBodyResult> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return { body: null, problem: "RESEND_API_KEY is not configured on the API service" };
+  const first = await fetchReceivedEmailBodyOnce(emailId, key);
+  if (first.body) return first;
+  await new Promise((resolve) => setTimeout(resolve, 2_000));
+  const second = await fetchReceivedEmailBodyOnce(emailId, key);
+  return second.body ? second : { body: null, problem: second.problem ?? first.problem };
 }
 
 async function notificationRecipient(): Promise<string | null> {
